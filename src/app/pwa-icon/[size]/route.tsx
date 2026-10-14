@@ -1,11 +1,12 @@
 import { ImageResponse } from "next/og";
 import { brand } from "@/lib/brand";
 
-const SIZES = new Set([180, 192, 512]);
+const SIZES = new Set(["180", "192", "512"]);
 
 export async function GET(_request: Request, { params }: { params: Promise<{ size: string }> }) {
-  const size = Number((await params).size);
-  if (!SIZES.has(size)) return new Response("not found", { status: 404 });
+  const raw = (await params).size;
+  if (!SIZES.has(raw)) return new Response("not found", { status: 404 });
+  const size = Number(raw);
   return new ImageResponse(
     <div
       style={{
@@ -22,7 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ siz
           width: size * 0.5,
           height: size * 0.5,
           borderRadius: size,
-          border: `${size * 0.09}px solid #e4572e`,
+          border: `${size * 0.09}px solid ${brand.accentColor}`,
         }}
       />
     </div>,

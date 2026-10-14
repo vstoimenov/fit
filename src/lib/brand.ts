@@ -6,5 +6,6 @@ export const brand = {
   description: "Видео тренировки за жени, по програма, с напомняния и прогрес.",
   themeColor: "#161412",
   backgroundColor: "#F4EFE8",
+  accentColor: "#E4572E",
   supportEmail: "hello@example.com",
 } as const;

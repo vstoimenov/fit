@@ -67,6 +67,35 @@ describe("recordVisit", () => {
     expect(visit.data).toHaveLength(1);
   });
 
+  it("does not rewrite last_seen_at within 5 minutes, but does once it is stale", async () => {
+    const user = await createUser(admin, "throttle");
+    const visit = () =>
+      recordVisit(admin, {
+        anonId: randomUUID(),
+        userId: user.id,
+        path: "/app",
+        referrer: "",
+        device: "mobile",
+      });
+    const seenAt = async () =>
+      (await admin.from("profiles").select("last_seen_at").eq("id", user.id).single()).data
+        ?.last_seen_at;
+
+    await visit();
+    const first = await seenAt();
+    expect(first).not.toBeNull();
+
+    await visit();
+    expect(await seenAt()).toBe(first);
+
+    const stale = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    await admin.from("profiles").update({ last_seen_at: stale }).eq("id", user.id);
+    await visit();
+    const refreshed = await seenAt();
+    expect(refreshed).not.toBe(stale);
+    expect(new Date(refreshed!).getTime()).toBeGreaterThan(Date.now() - 60_000);
+  });
+
   it("rejects an invalid device", async () => {
     await expect(
       recordVisit(admin, {
@@ -76,6 +105,6 @@ describe("recordVisit", () => {
         referrer: "",
         device: "toaster" as unknown as "mobile",
       }),
-    ).rejects.toThrow(/record visit failed/);
+    ).rejects.toThrow(/^record visit failed \(code \w+\)$/);
   });
 });
