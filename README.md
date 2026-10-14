@@ -1,36 +1,82 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# fit-platform
 
-## Getting Started
+Online workout platform for women 25-40: a short onboarding questionnaire, one free first workout, then a paid
+subscription with a new workout every few days, a starter week, a library, streaks and progress check-ins.
+Installable PWA, Bulgarian UI. Stage 1 design: `docs/superpowers/specs/2026-10-14-fit-platform-stage1-design.md`.
 
-First, run the development server:
+Stack: Next.js 16 (App Router, `cacheComponents`), React 19, Tailwind 4, Supabase (Postgres + Auth, RLS on every
+table), Zod, Vitest. **Next.js 16 differs from older versions; read `node_modules/next/dist/docs/` before changing
+framework-level code** (see `AGENTS.md`).
+
+## Local setup
+
+Requirements: Node 20+, pnpm, Docker.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# pnpm lives in ~/.npm-global/bin on the dev machine; DOCKER_CONFIG avoids a hanging credential helper.
+export PATH="$HOME/.npm-global/bin:$PATH" DOCKER_CONFIG=/tmp/dockercfg
+
+pnpm install
+pnpm db:start        # local Supabase stack (API on http://127.0.0.1:55321)
+pnpm db:reset        # applies supabase/migrations and runs supabase/seed.sql (demo content)
+pnpm db:types        # regenerate src/lib/supabase/database.types.ts after a migration
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local` from `.env.example`, filling the keys from `pnpm exec supabase status`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable                        | Where it comes from                                               |
+| ------------------------------- | ----------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | `API_URL` (local: `http://127.0.0.1:55321`)                       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `ANON_KEY`                                                        |
+| `SUPABASE_SERVICE_ROLE_KEY`     | `SERVICE_ROLE_KEY` (server only, never `NEXT_PUBLIC_`)            |
+| `APP_URL`                       | public URL of the app (local: `http://localhost:3120`)            |
+| `NEXT_PUBLIC_GOOGLE_AUTH`       | `1` shows the Google button (needs the Google provider), else `0` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm dev             # http://localhost:3120
+```
 
-## Learn More
+Dev helpers (local database only, they refuse any other host):
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+node --env-file=.env.local scripts/dev-grant-access.mjs someone@example.test   # give a user an active subscription
+node --env-file=.env.local scripts/dev-set-duration.mjs 1                      # shorten free/starter workouts to 1 minute
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`pnpm db:reset` undoes both.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Tests and checks
 
-## Deploy on Vercel
+```bash
+pnpm test         # unit tests (Vitest)
+pnpm test:db      # database/RLS/service tests against the running local stack (refuses non-local hosts)
+pnpm typecheck
+pnpm lint         # eslint + prettier --check
+pnpm build
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Never edit an applied migration; add a new one in `supabase/migrations/`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Hosted go-live checklist
+
+1. **Schema:** `supabase link --project-ref <ref>` then `supabase db push`.
+2. **Auth settings:** `supabase config push` (or set them in the dashboard) so the hosted project matches
+   `supabase/config.toml`:
+   - `site_url` = the production URL;
+   - redirect URLs include `https://<production host>/auth/callback`;
+   - minimum password length 10;
+   - email confirmation: **currently off** (users are signed in right after sign-up). If you turn it on, the
+     onboarding wizard needs a "check your email" step first (planned in 1D), otherwise saving the answers fails
+     because there is no session yet.
+3. **Seed content:** `supabase/seed.sql` does **not** run on `db push`. The hosted database needs the plans, one
+   free workout (`kind = 'free'`), the starter week (`kind = 'starter'`, `starter_order` 1-5) and regular
+   workouts, each with a `workout_media` row. Until the 1B admin panel exists, run the relevant parts of the seed
+   SQL manually (SQL editor or `psql`) with real video links. The seed's regular workouts and placeholder
+   videos are demo data.
+4. **Environment variables** (hosting provider): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+   `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `NEXT_PUBLIC_GOOGLE_AUTH`.
+5. **Admin user:** after signing up, promote the owner account with the service role
+   (`update public.profiles set role = 'admin' where email = '...'`).
+6. **Legal, before any traffic:** a privacy-policy page linked from the health-data consent checkbox in the
+   onboarding wizard is still required. The legal text is pending; the consent wording and the deletion/export
+   flows exist, the policy page does not.
