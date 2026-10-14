@@ -9,6 +9,24 @@ export async function saveOnboarding(
   raw: unknown,
 ): Promise<{ freeWorkoutId: string }> {
   const a = onboardingSchema.parse(raw);
+  // Look up the free workout first so a missing seed never leaves a half-written profile.
+  const { data: free, error: freeError } = await db
+    .from("workouts")
+    .select("id")
+    .eq("kind", "free")
+    .maybeSingle();
+  if (freeError || !free)
+    throw new AppError("NOT_FOUND", "Безплатната тренировка още не е качена.");
+
+  // Replay (retry, second tab, stale draft): keep the first answers and the original consent time.
+  const { data: profile, error: profileError } = await db
+    .from("profiles")
+    .select("onboarding_done")
+    .eq("id", userId)
+    .single();
+  if (profileError) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
+  if (profile.onboarding_done) return { freeWorkoutId: free.id };
+
   const { error } = await db
     .from("profiles")
     .update({
@@ -26,15 +44,11 @@ export async function saveOnboarding(
       health_data_consent_at: new Date().toISOString(),
       onboarding_done: true,
     })
-    .eq("id", userId);
-  if (error) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
-
-  const { data: free, error: freeError } = await db
-    .from("workouts")
+    .eq("id", userId)
+    .eq("onboarding_done", false) // a concurrent request that finished first wins
     .select("id")
-    .eq("kind", "free")
     .maybeSingle();
-  if (freeError || !free)
-    throw new AppError("NOT_FOUND", "Безплатната тренировка още не е качена.");
+  if (error) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
+  // No error and no row means another request completed onboarding between our read and write: same outcome.
   return { freeWorkoutId: free.id };
 }

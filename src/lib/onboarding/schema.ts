@@ -2,6 +2,12 @@ import { z } from "zod";
 import { EXPERIENCE, GOALS, PROBLEMS, TIMES, type Experience } from "@/lib/labels";
 import type { Level } from "@/lib/program/types";
 
+/** Accepts how people actually type numbers ("0888-123-456", "(088) 8123456"); stores digits with an optional leading +. */
+const phoneSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.trim().replace(/[\s\-().]/g, "") : value),
+  z.union([z.literal(""), z.string().regex(/^\+?[0-9]{8,15}$/, "Невалиден телефон")]),
+);
+
 export const onboardingSchema = z
   .object({
     name: z.string().trim().min(1, "Как да те наричаме?").max(60),
@@ -19,13 +25,7 @@ export const onboardingSchema = z
       .max(250, "Теглото е между 30 и 250 кг"),
     targetWeightKg: z.number().min(30).max(250),
     time: z.enum(TIMES),
-    phone: z.union([
-      z.literal(""),
-      z
-        .string()
-        .trim()
-        .regex(/^\+?[0-9 ]{8,16}$/, "Невалиден телефон"),
-    ]),
+    phone: phoneSchema,
     phoneCallConsent: z.boolean(),
     healthConsent: z.literal(true, { error: "Без това съгласие не можем да ти направим план." }),
     marketingConsent: z.boolean(),

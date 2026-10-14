@@ -34,6 +34,25 @@ describe("onboardingSchema", () => {
     ).toBe(true);
   });
 
+  it("normalizes phone numbers typed with dashes, brackets and spaces", () => {
+    const phone = (value: string) => onboardingSchema.parse({ ...valid, phone: value }).phone;
+    expect(phone("0888-123-456")).toBe("0888123456");
+    expect(phone("(088) 8123456")).toBe("0888123456");
+    expect(phone("+359 888 123 456")).toBe("+359888123456");
+    expect(phone("   ")).toBe("");
+  });
+
+  it("rejects phone numbers that are not numbers", () => {
+    expect(onboardingSchema.safeParse({ ...valid, phone: "abc" }).success).toBe(false);
+    expect(onboardingSchema.safeParse({ ...valid, phone: "12345" }).success).toBe(false);
+  });
+
+  it("treats a blank phone as missing when she agrees to be called", () => {
+    expect(
+      onboardingSchema.safeParse({ ...valid, phoneCallConsent: true, phone: "   " }).success,
+    ).toBe(false);
+  });
+
   it("rejects impossible body values", () => {
     expect(onboardingSchema.safeParse({ ...valid, heightCm: 90 }).success).toBe(false);
     expect(onboardingSchema.safeParse({ ...valid, weightKg: 400 }).success).toBe(false);

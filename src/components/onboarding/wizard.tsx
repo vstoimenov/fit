@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { completeOnboarding } from "@/app/start/actions";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
@@ -18,6 +18,7 @@ import {
   TIME_LABEL,
   TIMES,
 } from "@/lib/labels";
+import { onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { ChoiceList, NumberSlider } from "./steps";
 import { clearDraft, loadDraftRaw, parseDraft, saveDraft, type Draft } from "./storage";
@@ -36,6 +37,21 @@ const DEFAULTS: Draft = {
 
 const subscribeNever = () => () => {};
 const serverDraft = () => null;
+
+const STEP_OF_FIELD: Record<string, StepId> = {
+  goal: "goal",
+  problems: "problems",
+  experience: "experience",
+  heightCm: "body",
+  weightKg: "body",
+  targetWeightKg: "body",
+  time: "time",
+  name: "contact",
+  phone: "contact",
+  phoneCallConsent: "contact",
+  healthConsent: "contact",
+  marketingConsent: "contact",
+};
 
 type StepId = "goal" | "problems" | "experience" | "body" | "time" | "contact" | "account";
 
@@ -57,14 +73,20 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
   const [edited, setDraft] = useState<Draft | null>(null);
   const draft = edited ?? saved;
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  // Refs, not state: they must be correct in the same tick (double taps) and survive retries.
+  const busyRef = useRef(false);
+  const accountCreated = useRef(false);
 
   const step = steps[index]!;
   const set = (patch: Draft) => {
-    const next = { ...draft, ...patch };
-    setDraft(next);
-    saveDraft(next);
+    setDraft((prev) => ({ ...(prev ?? saved), ...patch }));
+    setFieldErrors({});
   };
+  useEffect(() => {
+    if (edited) saveDraft(edited);
+  }, [edited]);
 
   const canContinue: Record<StepId, boolean> = {
     goal: Boolean(draft.goal),
@@ -79,35 +101,78 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     account: true,
   };
 
-  async function finish() {
+  function lock(): boolean {
+    if (busyRef.current) return false;
+    busyRef.current = true;
     setBusy(true);
     setError("");
-    const result = await completeOnboarding(draft);
+    return true;
+  }
+  function unlock() {
+    busyRef.current = false;
     setBusy(false);
-    if (!result.ok) return setError(result.message);
-    clearDraft();
-    router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
+  }
+
+  /** Validates every answer; on failure shows the message on the step it belongs to. */
+  function validate(): boolean {
+    const result = onboardingSchema.safeParse(draft);
+    if (result.success) {
+      setFieldErrors({});
+      return true;
+    }
+    const errors: Record<string, string> = {};
+    for (const issue of result.error.issues) errors[issue.path.join(".")] ??= issue.message;
+    setFieldErrors(errors);
+    const failedStep = STEP_OF_FIELD[String(result.error.issues[0]?.path[0])] ?? "contact";
+    setIndex(Math.max(steps.indexOf(failedStep), 0));
+    return false;
+  }
+
+  /** Caller holds the lock. The lock stays on after success: the page is navigating away. */
+  async function submitAnswers() {
+    try {
+      const result = await completeOnboarding(draft);
+      if (!result.ok) {
+        unlock();
+        setError(result.message);
+        return;
+      }
+      clearDraft();
+      router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
+    } catch {
+      unlock();
+      setError("Нещо се обърка. Опитай отново.");
+    }
+  }
+
+  async function finish() {
+    if (!validate() || !lock()) return;
+    await submitAnswers();
   }
 
   async function signUp(form: FormData) {
-    setBusy(true);
-    setError("");
-    const { error: signUpError } = await createBrowserSupabaseClient().auth.signUp({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-      options: { data: { name: draft.name } },
-    });
-    if (signUpError) {
-      setBusy(false);
-      return setError(
-        /registered|exists/i.test(signUpError.message)
-          ? "Вече има профил с този имейл. Влез от „Имам профил“."
-          : signUpError.message.includes("Password")
-            ? "Паролата трябва да е поне 10 символа."
-            : "Не успяхме да създадем профила.",
-      );
+    if (busyRef.current || !validate() || !lock()) return;
+    // A retry after the account exists must only save the answers, never sign up again.
+    if (!accountCreated.current) {
+      const { error: signUpError } = await createBrowserSupabaseClient().auth.signUp({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+        options: { data: { name: draft.name } },
+      });
+      if (signUpError) {
+        unlock();
+        setError(
+          /registered|exists/i.test(signUpError.message)
+            ? "Вече има профил с този имейл. Влез от „Имам профил“."
+            : signUpError.message.includes("Password")
+              ? "Паролата трябва да е поне 10 символа."
+              : "Не успяхме да създадем профила.",
+        );
+        return;
+      }
+      accountCreated.current = true;
     }
-    await finish();
+    await submitAnswers();
   }
 
   async function google() {
@@ -118,8 +183,13 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     });
   }
 
-  const next = () =>
-    step === "contact" && signedIn ? finish() : setIndex((i) => Math.min(i + 1, steps.length - 1));
+  function next() {
+    if (step === "contact") {
+      if (signedIn) return void finish();
+      if (!validate()) return;
+    }
+    setIndex((i) => Math.min(i + 1, steps.length - 1));
+  }
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col overflow-x-clip px-6 pb-8 pt-6">
@@ -239,7 +309,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
           {step === "contact" && (
             <>
               <h1 className="font-display text-3xl font-bold leading-tight">Почти готово</h1>
-              <Field label="Как да те наричаме?">
+              <Field label="Как да те наричаме?" error={fieldErrors.name}>
                 <input
                   className={inputClass}
                   value={draft.name ?? ""}
@@ -249,6 +319,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
               </Field>
               <Field
                 label="Телефон (по желание)"
+                error={fieldErrors.phone}
                 hint="Ако нещо не върви, треньорът може да ти звънне."
               >
                 <input
@@ -272,6 +343,9 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                 <strong>Задължително:</strong> съгласна съм да се обработват данните ми за тегло,
                 мерки и здравословни проблеми, за да получа персонален план.
               </Consent>
+              {fieldErrors.healthConsent && (
+                <p className="-mt-3 text-sm text-brick">{fieldErrors.healthConsent}</p>
+              )}
               <Consent
                 checked={draft.marketingConsent === true}
                 onChange={(v) => set({ marketingConsent: v })}
