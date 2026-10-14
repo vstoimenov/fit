@@ -547,7 +547,7 @@ export type Database = {
           user_id: string;
         }[];
       };
-      admin_dashboard: { Args: { p_now?: string }; Returns: Json };
+      admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
