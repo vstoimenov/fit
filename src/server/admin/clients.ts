@@ -73,6 +73,28 @@ export async function listClients(
   return { rows: data.map(toClientRow), total: Number(data[0]?.total_count ?? 0) };
 }
 
+/**
+ * Every client matching the search. The RPC returns at most 1000 rows per call, newest first, so a
+ * single call would silently drop the oldest clients, who are the ones most likely to have drifted away.
+ */
+export async function listAllClients(
+  db: TypedClient,
+  opts: { search?: string; pageSize?: number } = {},
+): Promise<ClientRow[]> {
+  const pageSize = opts.pageSize ?? 1000;
+  const rows: ClientRow[] = [];
+  for (let page = 0; page < 50; page++) {
+    const res = await listClients(db, {
+      search: opts.search,
+      limit: pageSize,
+      offset: page * pageSize,
+    });
+    rows.push(...res.rows);
+    if (res.rows.length === 0 || rows.length >= res.total) return rows;
+  }
+  throw new Error("list all clients failed: too many clients to scan");
+}
+
 const COMPLETIONS_SHOWN = 60;
 
 export async function getClientDetail(db: TypedClient, userId: string) {
