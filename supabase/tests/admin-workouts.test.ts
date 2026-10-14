@@ -172,6 +172,28 @@ describe("admin workouts service", () => {
     }
   });
 
+  it("serializes concurrent reorders: every call succeeds and the result is one of the requested orders", async () => {
+    const before = await listAdminWorkouts(boss, { kind: "starter" });
+    const ids = before
+      .sort((a, b) => (a.starterOrder ?? 0) - (b.starterOrder ?? 0))
+      .map((w) => w.id);
+    const rotate = (k: number) => [...ids.slice(k), ...ids.slice(0, k)];
+    const orders = [[...ids].reverse(), ...ids.map((_, k) => rotate(k))];
+    try {
+      for (let round = 0; round < 10; round++) {
+        const results = await Promise.allSettled(orders.map((o) => reorderStarters(boss, o)));
+        expect(results.map((r) => r.status)).toEqual(orders.map(() => "fulfilled"));
+        const after = await listAdminWorkouts(boss, { kind: "starter" });
+        const final = after
+          .sort((a, b) => (a.starterOrder ?? 0) - (b.starterOrder ?? 0))
+          .map((w) => w.id);
+        expect(orders).toContainEqual(final);
+      }
+    } finally {
+      await reorderStarters(boss, ids);
+    }
+  });
+
   const BUCKET_URL =
     "http://127.0.0.1:54321/storage/v1/object/public/thumbnails/0b9f1c1e-6a52-4e0b-8d3e-5a1c2f3b4d5e.jpg";
 

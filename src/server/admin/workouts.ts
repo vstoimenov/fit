@@ -287,5 +287,6 @@ export async function reorderStarters(db: TypedClient, ids: string[]): Promise<v
   const { error } = await db.rpc("admin_reorder_starters", { p_ids: ids });
   if (error?.code === "22023")
     throw new AppError("INVALID", "Подредбата трябва да съдържа всички стартови тренировки.");
+  if (error?.code === "23505") throw new AppError("CONFLICT", STARTER_CHANGED);
   if (error) throw new Error(`reorder failed: ${error.message}`);
 }
