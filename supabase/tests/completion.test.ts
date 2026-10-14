@@ -82,8 +82,8 @@ describe("markWorkoutComplete", () => {
     await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
     const normalDb = await signedInClient(normal);
     const bossDb = await signedInClient(boss);
-    const normalFirst = await markWorkoutComplete(normalDb, normal.id, freeId);
     const bossFirst = await markWorkoutComplete(bossDb, boss.id, freeId);
+    const normalFirst = await markWorkoutComplete(normalDb, normal.id, freeId);
     const bossSecond = await markWorkoutComplete(bossDb, boss.id, freeId);
     expect(bossFirst.completionId).not.toBe(normalFirst.completionId);
     expect(bossSecond).toEqual({ status: "already", completionId: bossFirst.completionId });
