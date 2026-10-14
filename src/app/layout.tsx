@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Manrope, Unbounded } from "next/font/google";
+import { Suspense } from "react";
+import { VisitBeacon } from "@/components/app/visit-beacon";
 import { brand } from "@/lib/brand";
 import "./globals.css";
 
@@ -29,7 +31,12 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="bg" className={`${display.variable} ${sans.variable}`}>
-      <body className="min-h-dvh antialiased">{children}</body>
+      <body className="min-h-dvh antialiased">
+        {children}
+        <Suspense>
+          <VisitBeacon />
+        </Suspense>
+      </body>
     </html>
   );
 }
