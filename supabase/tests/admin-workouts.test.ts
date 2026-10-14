@@ -8,6 +8,7 @@ import {
   reorderStarters,
   scheduleWorkout,
   updateAdminWorkout,
+  workoutInputSchema,
 } from "@/server/admin/workouts";
 import {
   adminClient,
@@ -168,5 +169,109 @@ describe("admin workouts service", () => {
     } finally {
       await reorderStarters(boss, ids);
     }
+  });
+
+  const BUCKET_URL =
+    "http://127.0.0.1:54321/storage/v1/object/public/thumbnails/0b9f1c1e-6a52-4e0b-8d3e-5a1c2f3b4d5e.jpg";
+
+  it("keeps the stored thumbnail on an update without one, and clears it only on explicit null", async () => {
+    const id = await createAdminWorkout(boss, bossId, input());
+    await admin.from("workouts").update({ thumbnail_url: BUCKET_URL }).eq("id", id);
+    const withoutThumb: Record<string, unknown> = input();
+    delete withoutThumb.thumbnailUrl;
+    await updateAdminWorkout(boss, id, { ...withoutThumb, title: "Нов заглавие" });
+    expect(await getAdminWorkout(boss, id)).toMatchObject({
+      title: "Нов заглавие",
+      thumbnailUrl: BUCKET_URL,
+    });
+    await updateAdminWorkout(boss, id, input({ thumbnailUrl: null }));
+    expect((await getAdminWorkout(boss, id))?.thumbnailUrl).toBeNull();
+  });
+
+  it("accepts only thumbnails from our own bucket", async () => {
+    for (const bad of [
+      "https://img.youtube.com/vi/ml6cT4AZdqI/0.jpg",
+      "https://i.vimeocdn.com/video/1.jpg",
+      "https://evil.example/a.jpg",
+      "javascript:alert(1)",
+      "https://x.example/storage/v1/object/public/thumbnails/../secret.jpg",
+    ]) {
+      expect(workoutInputSchema.safeParse(input({ thumbnailUrl: bad })).success, bad).toBe(false);
+    }
+    expect(workoutInputSchema.safeParse(input({ thumbnailUrl: BUCKET_URL })).success).toBe(true);
+    await expect(
+      createAdminWorkout(
+        boss,
+        bossId,
+        input({ thumbnailUrl: "https://img.youtube.com/vi/x/0.jpg" }),
+      ),
+    ).rejects.toThrow();
+  });
+
+  it("gives each concurrent new starter its own order", async () => {
+    const [a, b] = await Promise.all([
+      createAdminWorkout(
+        boss,
+        bossId,
+        input({ kind: "starter", level: null, title: "Старт гонка A" }),
+      ),
+      createAdminWorkout(
+        boss,
+        bossId,
+        input({ kind: "starter", level: null, title: "Старт гонка B" }),
+      ),
+    ]);
+    try {
+      const [wa, wb] = await Promise.all([getAdminWorkout(boss, a), getAdminWorkout(boss, b)]);
+      expect(wa?.starterOrder).not.toBe(wb?.starterOrder);
+    } finally {
+      await deleteAdminWorkout(boss, a);
+      await deleteAdminWorkout(boss, b);
+    }
+  });
+
+  it("assigns and clears the starter order when the kind changes", async () => {
+    const { data } = await admin
+      .from("workouts")
+      .select("starter_order")
+      .eq("kind", "starter")
+      .order("starter_order", { ascending: false })
+      .limit(1)
+      .single();
+    const id = await createAdminWorkout(boss, bossId, input());
+    expect((await getAdminWorkout(boss, id))?.starterOrder).toBeNull();
+    await updateAdminWorkout(boss, id, input({ kind: "starter", level: null }));
+    expect(await getAdminWorkout(boss, id)).toMatchObject({
+      kind: "starter",
+      level: null,
+      starterOrder: (data?.starter_order ?? 0) + 1,
+    });
+    await updateAdminWorkout(boss, id, input({ kind: "regular", level: "pro" }));
+    expect(await getAdminWorkout(boss, id)).toMatchObject({
+      kind: "regular",
+      level: "pro",
+      starterOrder: null,
+    });
+  });
+
+  it("refuses to turn a workout into a second free one, with the free message", async () => {
+    const id = await createAdminWorkout(boss, bossId, input());
+    await expect(
+      updateAdminWorkout(boss, id, input({ kind: "free", level: null })),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      userMessage: "Вече има безплатна тренировка.",
+    });
+    expect((await getAdminWorkout(boss, id))?.kind).toBe("regular");
+  });
+
+  it("treats %, _ and \\ in the search as literal characters", async () => {
+    const stamp = Date.now();
+    const literal = await createAdminWorkout(boss, bossId, input({ title: `Лит ${stamp}_x%y` }));
+    const other = await createAdminWorkout(boss, bossId, input({ title: `Лит ${stamp}ZxQQy` }));
+    const found = (await listAdminWorkouts(boss, { search: `${stamp}_x%y` })).map((w) => w.id);
+    expect(found).toContain(literal);
+    expect(found).not.toContain(other);
+    expect(await listAdminWorkouts(boss, { search: `${stamp}\\` })).toEqual([]);
   });
 });

@@ -7,6 +7,10 @@ import type { Level, WorkoutKind } from "@/lib/program/types";
 import { normalizeVideoInput, parseVideoUrl } from "@/lib/video/parse-video-url";
 import type { TypedClient } from "@/server/db/types";
 
+/** Only images in our own public thumbnails bucket (a provider URL would carry the video ID). */
+export const THUMBNAIL_URL =
+  /^https?:\/\/[^/]+\/storage\/v1\/object\/public\/thumbnails\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+
 export const workoutInputSchema = z
   .object({
     title: z.string().trim().min(1, "Нужно е заглавие").max(120),
@@ -16,7 +20,7 @@ export const workoutInputSchema = z
     durationMin: z.number().int().min(1, "Поне 1 минута").max(180),
     focus: z.array(z.enum(FOCUS)).max(FOCUS.length),
     videoUrl: z.string().trim().min(1, "Нужен е линк").max(500),
-    thumbnailUrl: z.url().nullable(),
+    thumbnailUrl: z.string().regex(THUMBNAIL_URL, "Невалидна картинка.").nullable().optional(),
     publishAt: z.iso.datetime({ offset: true }).nullable(),
     notify: z.boolean(),
   })
@@ -99,7 +103,7 @@ export async function listAdminWorkouts(
     .limit(500);
   if (filter.level) query = query.eq("level", filter.level);
   if (filter.kind) query = query.eq("kind", filter.kind);
-  if (filter.search) query = query.ilike("title", `%${filter.search.replace(/[%_]/g, "")}%`);
+  if (filter.search) query = query.ilike("title", `%${filter.search.replace(/[\\%_]/g, "\\$&")}%`);
   const { data, error } = await query;
   if (error) throw new Error(`list workouts failed: ${error.message}`);
   const rows = (data as unknown as Row[]).map((r) => toAdminWorkout(r, now));
@@ -136,10 +140,39 @@ function rowFields(w: WorkoutInput) {
     level: w.kind === "regular" ? w.level : null,
     duration_min: w.durationMin,
     focus: w.focus,
-    thumbnail_url: w.thumbnailUrl,
+    // undefined = leave the stored thumbnail alone; null = clear it
+    ...(w.thumbnailUrl !== undefined && { thumbnail_url: w.thumbnailUrl }),
     publish_at: w.publishAt,
     notify: w.notify,
   };
+}
+
+type WriteError = { code?: string; message?: string; details?: string | null } | null;
+
+/** What a failed workouts write means, by constraint name (several unique indexes share 23505). */
+export function classifyWriteError(
+  error: WriteError,
+): "free" | "starter_order" | "thumbnail" | null {
+  if (!error) return null;
+  const text = `${error.message ?? ""} ${error.details ?? ""}`;
+  if (error.code === "23505") {
+    if (text.includes("workouts_single_free")) return "free";
+    if (text.includes("workouts_starter_order")) return "starter_order";
+  }
+  if (error.code === "23514" && text.includes("thumbnail")) return "thumbnail";
+  return null;
+}
+
+const FREE_EXISTS = "Вече има безплатна тренировка.";
+const STARTER_CHANGED = "Подредбата на стартовата седмица се промени — опитай пак.";
+
+/** Throws the AppError a classified failure maps to; other failures become a plain Error. */
+function throwWriteError(error: NonNullable<WriteError>, what: string): never {
+  const kind = classifyWriteError(error);
+  if (kind === "free") throw new AppError("CONFLICT", FREE_EXISTS);
+  if (kind === "starter_order") throw new AppError("CONFLICT", STARTER_CHANGED);
+  if (kind === "thumbnail") throw new AppError("INVALID", "Невалидна картинка.");
+  throw new Error(`${what} failed: ${error.message}`);
 }
 
 export async function createAdminWorkout(
@@ -149,24 +182,37 @@ export async function createAdminWorkout(
 ): Promise<string> {
   const w = workoutInputSchema.parse(raw);
   const ref = parseVideoUrl(w.videoUrl)!;
-  const starter_order = w.kind === "starter" ? await nextStarterOrder(db) : null;
-  const { data, error } = await db
-    .from("workouts")
-    .insert({ ...rowFields(w), starter_order, created_by: userId })
-    .select("id")
-    .single();
-  if (error?.code === "23505") throw new AppError("CONFLICT", "Вече има безплатна тренировка.");
-  if (error) throw new Error(`create workout failed: ${error.message}`);
+  // Two admins adding a starter at once can compute the same order: retry once with a fresh one.
+  let created: { id: string } | null = null;
+  for (let attempt = 0; created === null; attempt++) {
+    const starter_order = w.kind === "starter" ? await nextStarterOrder(db) : null;
+    const { data, error } = await db
+      .from("workouts")
+      .insert({ ...rowFields(w), starter_order, created_by: userId })
+      .select("id")
+      .single();
+    if (!error) {
+      created = data;
+    } else if (classifyWriteError(error) !== "starter_order" || attempt >= 1) {
+      throwWriteError(error, "create workout");
+    }
+  }
   const media = await db.from("workout_media").insert({
-    workout_id: data.id,
+    workout_id: created.id,
     provider: ref.provider,
     video_url: normalizeVideoInput(w.videoUrl),
   });
   if (media.error) {
-    await db.from("workouts").delete().eq("id", data.id);
+    const cleanup = await db.from("workouts").delete().eq("id", created.id);
+    if (cleanup.error) {
+      console.error(
+        "could not remove workout after a failed video link save",
+        cleanup.error.message,
+      );
+    }
     throw new Error(`save video link failed: ${media.error.message}`);
   }
-  return data.id;
+  return created.id;
 }
 
 export async function updateAdminWorkout(db: TypedClient, id: string, raw: unknown): Promise<void> {
@@ -174,18 +220,23 @@ export async function updateAdminWorkout(db: TypedClient, id: string, raw: unkno
   const ref = parseVideoUrl(w.videoUrl)!;
   const current = await getAdminWorkout(db, id);
   if (!current) throw new AppError("NOT_FOUND", "Тренировката не е намерена.");
-  const starter_order =
-    w.kind === "starter"
-      ? current.kind === "starter"
-        ? current.starterOrder
-        : await nextStarterOrder(db)
-      : null;
-  const { error } = await db
-    .from("workouts")
-    .update({ ...rowFields(w), starter_order })
-    .eq("id", id);
-  if (error?.code === "23505") throw new AppError("CONFLICT", "Вече има безплатна тренировка.");
-  if (error) throw new Error(`update workout failed: ${error.message}`);
+  const becomesStarter = w.kind === "starter" && current.kind !== "starter";
+  for (let attempt = 0; ; attempt++) {
+    const starter_order =
+      w.kind === "starter"
+        ? becomesStarter
+          ? await nextStarterOrder(db)
+          : current.starterOrder
+        : null;
+    const { error } = await db
+      .from("workouts")
+      .update({ ...rowFields(w), starter_order })
+      .eq("id", id);
+    if (!error) break;
+    if (classifyWriteError(error) !== "starter_order" || !becomesStarter || attempt >= 1) {
+      throwWriteError(error, "update workout");
+    }
+  }
   const media = await db
     .from("workout_media")
     .upsert(

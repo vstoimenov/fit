@@ -127,7 +127,6 @@ export function WorkoutForm({ action, workout }: { action: FormAction; workout?:
             />
           </Field>
         </div>
-        <input type="hidden" name="thumbnailUrl" value={workout?.thumbnailUrl ?? ""} />
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" name="notify" defaultChecked={workout?.notify ?? true} /> Изпрати
           известие при публикуване

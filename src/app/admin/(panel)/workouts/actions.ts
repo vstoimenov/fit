@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { z } from "zod";
+import { AppError } from "@/lib/app-error";
 import { zonedToUtc } from "@/lib/admin/time";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { formBool, formInt, formList, formString } from "@/lib/form-data";
@@ -13,6 +15,15 @@ import {
   scheduleWorkout,
   updateAdminWorkout,
 } from "@/server/admin/workouts";
+
+const idSchema = z.uuid();
+const idsSchema = z.array(z.uuid()).max(50);
+
+function validId(id: string): string {
+  const parsed = idSchema.safeParse(id);
+  if (!parsed.success) throw new AppError("INVALID", "Невалидна тренировка.");
+  return parsed.data;
+}
 
 function readWorkout(form: FormData) {
   const date = formString(form, "date");
@@ -26,7 +37,6 @@ function readWorkout(form: FormData) {
     durationMin: formInt(form, "durationMin"),
     focus: formList(form, "focus"),
     videoUrl: formString(form, "videoUrl"),
-    thumbnailUrl: formString(form, "thumbnailUrl") || null,
     publishAt: date ? zonedToUtc(date, time) : null,
     notify: formBool(form, "notify"),
   };
@@ -44,6 +54,7 @@ export async function createWorkoutAction(
     return actionFail(error);
   }
   revalidatePath("/admin/workouts");
+  revalidatePath("/admin/calendar");
   redirect(`/admin/workouts/${id}?saved=1`);
 }
 
@@ -54,7 +65,7 @@ export async function updateWorkoutAction(
 ): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireAdmin();
-    await updateAdminWorkout(supabase, id, readWorkout(form));
+    await updateAdminWorkout(supabase, validId(id), readWorkout(form));
     revalidatePath("/admin/workouts");
     revalidatePath("/admin/calendar");
     return actionOk(null);
@@ -66,7 +77,7 @@ export async function updateWorkoutAction(
 export async function unpublishWorkoutAction(id: string): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireAdmin();
-    await scheduleWorkout(supabase, id, null);
+    await scheduleWorkout(supabase, validId(id), null);
     revalidatePath("/admin/workouts");
     revalidatePath("/admin/calendar");
     return actionOk(null);
@@ -78,18 +89,21 @@ export async function unpublishWorkoutAction(id: string): Promise<ActionResult<n
 export async function deleteWorkoutAction(id: string): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireAdmin();
-    await deleteAdminWorkout(supabase, id);
+    await deleteAdminWorkout(supabase, validId(id));
   } catch (error) {
     return actionFail(error);
   }
   revalidatePath("/admin/workouts");
+  revalidatePath("/admin/calendar");
   redirect("/admin/workouts");
 }
 
 export async function reorderStartersAction(ids: string[]): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireAdmin();
-    await reorderStarters(supabase, ids);
+    const parsed = idsSchema.safeParse(ids);
+    if (!parsed.success) throw new AppError("INVALID", "Невалидна подредба.");
+    await reorderStarters(supabase, parsed.data);
     revalidatePath("/admin/workouts");
     return actionOk(null);
   } catch (error) {

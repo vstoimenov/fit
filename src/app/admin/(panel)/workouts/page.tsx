@@ -34,7 +34,7 @@ async function Workouts({ searchParams }: { searchParams: Search }) {
   const search = one(sp.q)?.slice(0, 60);
   const { supabase } = await requireAdmin();
   const filter = {
-    level: level && level in LEVEL_LABEL ? level : undefined,
+    level: level && Object.hasOwn(LEVEL_LABEL, level) ? level : undefined,
     kind: kind && ["free", "starter", "regular"].includes(kind) ? kind : undefined,
     status: status && ["draft", "scheduled", "published"].includes(status) ? status : undefined,
     search,

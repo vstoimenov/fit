@@ -1,6 +1,7 @@
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
+import { z } from "zod";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { getAdminWorkout } from "@/server/admin/workouts";
@@ -33,7 +34,7 @@ async function EditWorkout({
   await connection();
   const [{ id }, { saved }] = await Promise.all([params, searchParams]);
   const { supabase } = await requireAdmin();
-  const workout = /^[0-9a-f-]{36}$/i.test(id) ? await getAdminWorkout(supabase, id) : null;
+  const workout = z.uuid().safeParse(id).success ? await getAdminWorkout(supabase, id) : null;
   if (!workout) notFound();
   return (
     <div className="space-y-6">
