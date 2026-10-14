@@ -46,6 +46,9 @@ export function ActionForm({
         const result = await action(previous, data);
         setState(result);
         if (result.ok && resetOnSuccess) form.reset();
+      } catch {
+        // A thrown or rejected action: keep what was typed and show an inline error.
+        setState({ ok: false, message: "Нещо се обърка. Опитай отново." });
       } finally {
         inFlight.current = false;
       }
