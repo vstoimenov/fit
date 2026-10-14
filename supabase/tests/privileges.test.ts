@@ -33,18 +33,21 @@ describe("table privileges of API roles", () => {
     expect(actual.split(",")).toEqual([...TABLES].sort());
   });
 
-  it.each(ROLES)("grants %s no TRUNCATE, REFERENCES, TRIGGER or MAINTAIN on any public table", (role) => {
-    const granted: string[] = [];
-    for (const table of TABLES) {
-      for (const privilege of PRIVILEGES) {
-        const has = psql(
-          `select has_table_privilege('${role}', 'public.${table}', '${privilege}')`,
-        );
-        if (has !== "f") granted.push(`${role} ${privilege} on ${table} (=${has})`);
+  it.each(ROLES)(
+    "grants %s no TRUNCATE, REFERENCES, TRIGGER or MAINTAIN on any public table",
+    (role) => {
+      const granted: string[] = [];
+      for (const table of TABLES) {
+        for (const privilege of PRIVILEGES) {
+          const has = psql(
+            `select has_table_privilege('${role}', 'public.${table}', '${privilege}')`,
+          );
+          if (has !== "f") granted.push(`${role} ${privilege} on ${table} (=${has})`);
+        }
       }
-    }
-    expect(granted).toEqual([]);
-  });
+      expect(granted).toEqual([]);
+    },
+  );
 
   it("does not hand these privileges to API roles on tables created later", () => {
     const name = `priv_probe_${Date.now()}`;

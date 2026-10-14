@@ -107,6 +107,31 @@ describe("saveOnboarding", () => {
     expect(second.data?.health_data_consent_at).toBe(first.data?.health_data_consent_at);
   });
 
+  it("stores the browser timezone sent with the answers", async () => {
+    const user = await createUser(admin, "onb-tz");
+    await saveOnboarding(await signedInClient(user), user.id, {
+      ...answers,
+      timezone: "America/New_York",
+    });
+    const { data } = await admin
+      .from("profiles")
+      .select("timezone, onboarding_done")
+      .eq("id", user.id)
+      .single();
+    expect(data).toEqual({ timezone: "America/New_York", onboarding_done: true });
+  });
+
+  it("keeps Europe/Sofia and still finishes onboarding when the timezone is unknown", async () => {
+    const user = await createUser(admin, "onb-badtz");
+    await saveOnboarding(await signedInClient(user), user.id, { ...answers, timezone: "Bad/Zone" });
+    const { data } = await admin
+      .from("profiles")
+      .select("timezone, onboarding_done, name")
+      .eq("id", user.id)
+      .single();
+    expect(data).toEqual({ timezone: "Europe/Sofia", onboarding_done: true, name: "Мария" });
+  });
+
   it("ignores extra keys: level comes from experience and the role stays client", async () => {
     const user = await createUser(admin, "onb-hostile");
     await saveOnboarding(await signedInClient(user), user.id, {

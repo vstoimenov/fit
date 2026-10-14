@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { completeOnboarding } from "@/app/start/actions";
 import { clearDraft, loadDraft } from "@/components/onboarding/storage";
+import { browserTimezone } from "@/lib/timezone";
 
 /** After Google sign-in (or a returning user without onboarding): submit the saved answers. */
 export default function FinishPage() {
@@ -16,15 +17,21 @@ export default function FinishPage() {
     started.current = true;
     const draft = loadDraft();
     if (!draft) return router.replace("/start");
-    completeOnboarding(draft).then((result) => {
-      if (!result.ok) {
-        setError(result.message);
+    completeOnboarding({ ...draft, timezone: browserTimezone() })
+      .then((result) => {
+        if (!result.ok) {
+          setError(result.message);
+          setTimeout(() => router.replace("/start"), 2500);
+          return;
+        }
+        clearDraft();
+        router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
+      })
+      .catch(() => {
+        // Network or server failure: say so and go back to the wizard, which keeps her answers.
+        setError("Нещо се обърка. Опитай отново.");
         setTimeout(() => router.replace("/start"), 2500);
-        return;
-      }
-      clearDraft();
-      router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
-    });
+      });
   }, [router]);
 
   return (

@@ -27,27 +27,36 @@ export async function saveOnboarding(
   if (profileError) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
   if (profile.onboarding_done) return { freeWorkoutId: free.id };
 
-  const { error } = await db
-    .from("profiles")
-    .update({
-      name: a.name,
-      goal: a.goal,
-      problems: a.problems,
-      level: levelFromExperience(a.experience),
-      height_cm: a.heightCm,
-      weight_kg: a.weightKg,
-      target_weight_kg: a.targetWeightKg,
-      time_per_session: a.time,
-      phone: a.phone === "" ? null : a.phone,
-      phone_call_consent: a.phoneCallConsent,
-      marketing_consent: a.marketingConsent,
-      health_data_consent_at: new Date().toISOString(),
-      onboarding_done: true,
-    })
-    .eq("id", userId)
-    .eq("onboarding_done", false) // a concurrent request that finished first wins
-    .select("id")
-    .maybeSingle();
+  const fields = {
+    name: a.name,
+    goal: a.goal,
+    problems: a.problems,
+    level: levelFromExperience(a.experience),
+    height_cm: a.heightCm,
+    weight_kg: a.weightKg,
+    target_weight_kg: a.targetWeightKg,
+    time_per_session: a.time,
+    phone: a.phone === "" ? null : a.phone,
+    phone_call_consent: a.phoneCallConsent,
+    marketing_consent: a.marketingConsent,
+    health_data_consent_at: new Date().toISOString(),
+    onboarding_done: true,
+  };
+  const write = (extra: { timezone?: string }) =>
+    db
+      .from("profiles")
+      .update({ ...fields, ...extra })
+      .eq("id", userId)
+      .eq("onboarding_done", false) // a concurrent request that finished first wins
+      .select("id")
+      .maybeSingle();
+
+  let { error } = await write(a.timezone ? { timezone: a.timezone } : {});
+  // A zone the database does not know (check_violation from the timezone guard) must not block
+  // onboarding: keep the default and finish.
+  if (error?.code === "23514" && /time zone/i.test(error.message) && a.timezone) {
+    ({ error } = await write({}));
+  }
   if (error) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
   // No error and no row means another request completed onboarding between our read and write: same outcome.
   return { freeWorkoutId: free.id };

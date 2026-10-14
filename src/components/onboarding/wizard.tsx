@@ -20,6 +20,7 @@ import {
 } from "@/lib/labels";
 import { onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
+import { browserTimezone } from "@/lib/timezone";
 import { ChoiceList, NumberSlider } from "./steps";
 import { clearDraft, loadDraftRaw, parseDraft, saveDraft, type Draft } from "./storage";
 
@@ -131,7 +132,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
   /** Caller holds the lock. The lock stays on after success: the page is navigating away. */
   async function submitAnswers() {
     try {
-      const result = await completeOnboarding(draft);
+      const result = await completeOnboarding({ ...draft, timezone: browserTimezone() });
       if (!result.ok) {
         unlock();
         setError(result.message);
@@ -154,20 +155,27 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     if (busyRef.current || !validate() || !lock()) return;
     // A retry after the account exists must only save the answers, never sign up again.
     if (!accountCreated.current) {
-      const { error: signUpError } = await createBrowserSupabaseClient().auth.signUp({
-        email: String(form.get("email")),
-        password: String(form.get("password")),
-        options: { data: { name: draft.name } },
-      });
-      if (signUpError) {
+      try {
+        const { error: signUpError } = await createBrowserSupabaseClient().auth.signUp({
+          email: String(form.get("email")),
+          password: String(form.get("password")),
+          options: { data: { name: draft.name } },
+        });
+        if (signUpError) {
+          unlock();
+          setError(
+            /registered|exists/i.test(signUpError.message)
+              ? "Вече има профил с този имейл. Влез от „Имам профил“."
+              : signUpError.message.includes("Password")
+                ? "Паролата трябва да е поне 10 символа."
+                : "Не успяхме да създадем профила.",
+          );
+          return;
+        }
+      } catch {
+        // Network failure or a thrown client error: release the lock so she can retry.
         unlock();
-        setError(
-          /registered|exists/i.test(signUpError.message)
-            ? "Вече има профил с този имейл. Влез от „Имам профил“."
-            : signUpError.message.includes("Password")
-              ? "Паролата трябва да е поне 10 символа."
-              : "Не успяхме да създадем профила.",
-        );
+        setError("Нещо се обърка. Опитай отново.");
         return;
       }
       accountCreated.current = true;
@@ -268,16 +276,16 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
               <NumberSlider
                 label="Ръст"
                 unit="см"
-                min={140}
-                max={200}
+                min={120}
+                max={230}
                 value={draft.heightCm ?? 165}
                 onChange={(v) => set({ heightCm: v })}
               />
               <NumberSlider
                 label="Тегло"
                 unit="кг"
-                min={40}
-                max={150}
+                min={30}
+                max={250}
                 step={0.5}
                 value={draft.weightKg ?? 68}
                 onChange={(v) => set({ weightKg: v })}
@@ -285,8 +293,8 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
               <NumberSlider
                 label="Цел"
                 unit="кг"
-                min={40}
-                max={150}
+                min={30}
+                max={250}
                 step={0.5}
                 value={draft.targetWeightKg ?? 62}
                 onChange={(v) => set({ targetWeightKg: v })}
