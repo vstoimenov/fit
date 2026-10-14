@@ -4,10 +4,18 @@ const optionalId = (re: RegExp, message: string) => z.string().trim().regex(re, 
 
 export const SETTINGS = {
   risk: z.object({
-    inactiveDays: z.number().int().min(1, "Поне 1 ден").max(60, "До 60 дни"),
-    minCompletionPct: z.number().int().min(0).max(100),
+    inactiveDays: z
+      .number("Въведи брой дни")
+      .int("Въведи цяло число")
+      .min(1, "Поне 1 ден")
+      .max(60, "До 60 дни"),
+    minCompletionPct: z
+      .number("Въведи процент")
+      .int("Въведи цяло число")
+      .min(0, "От 0 до 100")
+      .max(100, "От 0 до 100"),
   }),
-  payment_provider: z.object({ provider: z.enum(["stripe", "revolut"]) }),
+  payment_provider: z.object({ provider: z.enum(["stripe", "revolut"], "Избери доставчик") }),
   tracking: z.object({
     metaPixelId: optionalId(/^\d{0,20}$/, "Само цифри"),
     ga4Id: optionalId(/^(G-[A-Z0-9]{4,12})?$/, "Формат G-XXXXXXX"),

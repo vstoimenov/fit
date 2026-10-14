@@ -1,3 +1,121 @@
-export default function AdminHome() {
-  return <h1 className="font-display text-2xl font-bold">Табло</h1>;
+import Link from "next/link";
+import { connection } from "next/server";
+import { Suspense } from "react";
+import { serverEnv } from "@/env";
+import { formatPrice } from "@/lib/format";
+import { getDashboard } from "@/server/admin/dashboard";
+import { requireAdmin } from "@/server/admin/require-admin";
+
+export const metadata = { title: "Табло" };
+
+function Tile({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
+  return (
+    <div className="rounded-2xl bg-white p-4 ring-1 ring-line">
+      <p className="text-sm text-ink-soft">{label}</p>
+      <p className="font-display text-3xl font-bold tabular-nums">{value}</p>
+      {hint && <p className="text-xs text-ink-soft">{hint}</p>}
+    </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<p aria-busy="true">Зареждане…</p>}>
+      <Dashboard />
+    </Suspense>
+  );
+}
+
+async function Dashboard() {
+  await connection();
+  const { supabase } = await requireAdmin();
+  const d = await getDashboard(supabase, new Date(), new URL(serverEnv.APP_URL).host);
+  const { active, canceled_30 } = d.subscriptions;
+  const churn =
+    active + canceled_30 > 0 ? Math.round((canceled_30 / (active + canceled_30)) * 100) : 0;
+  const step = (a: number, b: number) => (a > 0 ? `${Math.round((b / a) * 100)}%` : "—");
+
+  return (
+    <div className="space-y-8">
+      <h1 className="font-display text-2xl font-bold">Табло</h1>
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <Tile label="Посещения днес" value={d.visits.today} />
+        <Tile label="Посещения 7 дни" value={d.visits.d7} />
+        <Tile
+          label="Посещения 30 дни"
+          value={d.visits.d30}
+          hint={`${d.visits.unique_d30} уникални`}
+        />
+        <Tile
+          label="Регистрации 7 / 30 дни"
+          value={`${d.registrations.d7} / ${d.registrations.d30}`}
+        />
+        <Tile label="Активни абонаменти" value={active} />
+        <Tile label="MRR" value={formatPrice(d.subscriptions.mrr_cents, "EUR")} />
+        <Tile label="Откази 30 дни" value={canceled_30} hint={`churn ≈ ${churn}%`} />
+      </section>
+
+      <section className="space-y-2">
+        <h2 className="font-semibold">Фуния (30 дни)</h2>
+        <div className="grid gap-2 sm:grid-cols-4">
+          <Tile label="Посетители" value={d.funnel.visitors} />
+          <Tile
+            label="Регистрации"
+            value={d.funnel.signups}
+            hint={step(d.funnel.visitors, d.funnel.signups)}
+          />
+          <Tile
+            label="Безплатна тренировка"
+            value={d.funnel.free_done}
+            hint={step(d.funnel.signups, d.funnel.free_done)}
+          />
+          <Tile
+            label="Платили"
+            value={d.funnel.paid}
+            hint={step(d.funnel.free_done, d.funnel.paid)}
+          />
+        </div>
+      </section>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="space-y-2">
+          <h2 className="font-semibold">Източници (30 дни, посетители)</h2>
+          <ul className="rounded-2xl bg-white p-4 text-sm ring-1 ring-line">
+            {d.sources.map((s) => (
+              <li
+                key={s.source}
+                className="flex justify-between gap-3 border-b border-line py-1 last:border-0"
+              >
+                <span className="min-w-0 break-words">{s.source}</span>
+                <span className="tabular-nums">{s.visitors}</span>
+              </li>
+            ))}
+            {d.sources.length === 0 && <li className="text-ink-soft">Още няма посещения.</li>}
+          </ul>
+        </section>
+        <section className="space-y-2">
+          <h2 className="font-semibold">Най-гледани (30 дни)</h2>
+          <ul className="rounded-2xl bg-white p-4 text-sm ring-1 ring-line">
+            {d.top_workouts.map((w) => (
+              <li
+                key={w.id}
+                className="flex justify-between gap-3 border-b border-line py-1 last:border-0"
+              >
+                <Link
+                  href={`/admin/workouts/${w.id}`}
+                  className="min-w-0 break-words hover:underline"
+                >
+                  {w.title}
+                </Link>
+                <span className="tabular-nums">{w.completions}</span>
+              </li>
+            ))}
+            {d.top_workouts.length === 0 && (
+              <li className="text-ink-soft">Още няма завършени тренировки.</li>
+            )}
+          </ul>
+        </section>
+      </div>
+    </div>
+  );
 }
