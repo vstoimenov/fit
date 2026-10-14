@@ -6,6 +6,7 @@ type Feeling = "easy" | "right" | "hard";
 /** Records „Завърших". A second tap the same day returns the existing completion. */
 export async function markWorkoutComplete(
   db: TypedClient,
+  userId: string,
   workoutId: string,
 ): Promise<{ status: "done" | "already"; completionId: string }> {
   const inserted = await db
@@ -19,7 +20,9 @@ export async function markWorkoutComplete(
     const { data } = await db
       .from("workout_completions")
       .select("id")
+      .eq("user_id", userId)
       .eq("workout_id", workoutId)
+      .order("local_date", { ascending: false })
       .order("completed_at", { ascending: false })
       .limit(1)
       .single();

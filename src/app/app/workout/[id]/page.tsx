@@ -41,6 +41,9 @@ async function WorkoutScreen({
   if (result.state === "broken") {
     return (
       <main className="space-y-4 px-5 pt-8">
+        <Link href="/app" className="text-sm font-semibold text-ink-soft">
+          ← Назад
+        </Link>
         <h1 className="font-display text-2xl font-bold">{result.workout.title}</h1>
         <p className="text-ink-soft">
           Видеото се обновява. Опитай пак след малко или избери друга тренировка.
@@ -55,6 +58,9 @@ async function WorkoutScreen({
   if (result.state === "locked") {
     return (
       <main className="space-y-6 px-5 pt-8">
+        <Link href="/app" className="text-sm font-semibold text-ink-soft">
+          ← Назад
+        </Link>
         <WorkoutCover
           level={result.workout.level}
           kind={result.workout.kind}

@@ -68,21 +68,39 @@ describe("getWorkoutForPlayer", () => {
 
 describe("markWorkoutComplete", () => {
   it("is idempotent within a day", async () => {
-    const db = await signedInClient(await createUser(admin, "twice"));
-    const first = await markWorkoutComplete(db, freeId);
-    const second = await markWorkoutComplete(db, freeId);
+    const user = await createUser(admin, "twice");
+    const db = await signedInClient(user);
+    const first = await markWorkoutComplete(db, user.id, freeId);
+    const second = await markWorkoutComplete(db, user.id, freeId);
     expect(first.status).toBe("done");
     expect(second).toEqual({ status: "already", completionId: first.completionId });
   });
 
+  it("returns the caller's own completion on a second tap even when an admin can see everyone's", async () => {
+    const normal = await createUser(admin, "normal-done");
+    const boss = await createUser(admin, "boss-done");
+    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const normalDb = await signedInClient(normal);
+    const bossDb = await signedInClient(boss);
+    const normalFirst = await markWorkoutComplete(normalDb, normal.id, freeId);
+    const bossFirst = await markWorkoutComplete(bossDb, boss.id, freeId);
+    const bossSecond = await markWorkoutComplete(bossDb, boss.id, freeId);
+    expect(bossFirst.completionId).not.toBe(normalFirst.completionId);
+    expect(bossSecond).toEqual({ status: "already", completionId: bossFirst.completionId });
+  });
+
   it("refuses a locked workout with a readable error", async () => {
-    const db = await signedInClient(await createUser(admin, "locked"));
-    await expect(markWorkoutComplete(db, paidId)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    const user = await createUser(admin, "locked");
+    const db = await signedInClient(user);
+    await expect(markWorkoutComplete(db, user.id, paidId)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
   });
 
   it("stores how the workout felt", async () => {
-    const db = await signedInClient(await createUser(admin, "feel"));
-    const { completionId } = await markWorkoutComplete(db, freeId);
+    const user = await createUser(admin, "feel");
+    const db = await signedInClient(user);
+    const { completionId } = await markWorkoutComplete(db, user.id, freeId);
     await setCompletionFeeling(db, completionId, "hard");
     const { data } = await admin
       .from("workout_completions")

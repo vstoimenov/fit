@@ -15,10 +15,12 @@ export async function getWorkoutForPlayer(
   workoutId: string,
 ): Promise<PlayerView | null> {
   if (!UUID.test(workoutId)) return null;
-  const [{ data: row }, { data: media }] = await Promise.all([
+  const [{ data: row, error: rowError }, { data: media, error: mediaError }] = await Promise.all([
     db.from("workouts").select(WORKOUT_COLUMNS).eq("id", workoutId).maybeSingle(),
     db.from("workout_media").select("video_url").eq("workout_id", workoutId).maybeSingle(),
   ]);
+  if (rowError) throw new Error(`load workout failed: ${rowError.message}`);
+  if (mediaError) throw new Error(`load workout media failed: ${mediaError.message}`);
   if (!row) return null;
   const workout = toSummary(row);
   if (!media) return { workout, state: "locked" };

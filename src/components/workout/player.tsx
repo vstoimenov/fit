@@ -4,7 +4,7 @@ import confetti from "canvas-confetti";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { completeWorkout, rateWorkout } from "@/app/app/workout/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { FEELING_LABEL } from "@/lib/labels";
@@ -32,6 +32,9 @@ export function Player({
   const [phase, setPhase] = useState<Phase>("watching");
   const [completionId, setCompletionId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  // Refs block a second tap in the same tick; state disables the buttons for the user.
+  const busy = useRef(false);
+  const [pending, setPending] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -44,23 +47,45 @@ export function Player({
   const remainingMin = Math.max(1, Math.ceil((unlockAfterSec - elapsed) / 60));
 
   async function finish() {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
     setError("");
-    const result = await completeWorkout(workout.id);
-    if (!result.ok) return setError(result.message);
-    setCompletionId(result.data.completionId);
-    setPhase("rating");
-    confetti({
-      particleCount: 140,
-      spread: 80,
-      origin: { y: 0.7 },
-      colors: ["#e4572e", "#161412", "#d29a1e", "#f4efe8"],
-    });
+    try {
+      const result = await completeWorkout(workout.id);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setCompletionId(result.data.completionId);
+      setPhase("rating");
+      confetti({
+        particleCount: 140,
+        spread: 80,
+        origin: { y: 0.7 },
+        colors: ["#e4572e", "#161412", "#d29a1e", "#f4efe8"],
+      });
+    } catch {
+      setError("Нещо се обърка. Опитай отново.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
   }
 
   async function rate(feeling: keyof typeof FEELING_LABEL) {
-    if (completionId) await rateWorkout(completionId, feeling);
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    try {
+      if (completionId) await rateWorkout(completionId, feeling);
+    } catch {
+      // The completion is already saved; a lost rating must not trap her on this screen.
+    }
     if (first) return router.push("/app/plan?after=first");
     setPhase("done");
+    busy.current = false;
+    setPending(false);
   }
 
   // -mb-28 cancels the app layout's bottom-nav padding so no light strip shows under the dark player.
@@ -90,7 +115,7 @@ export function Player({
         <AnimatePresence mode="wait">
           {phase === "watching" && (
             <motion.div key="w" exit={{ opacity: 0, y: 10 }} className="space-y-2">
-              <Button onClick={finish} disabled={!unlocked} className="w-full">
+              <Button onClick={finish} disabled={!unlocked || pending} className="w-full">
                 {unlocked ? "Завърших!" : `Завърших (след ~${remainingMin} мин)`}
               </Button>
               {error && (
@@ -115,6 +140,7 @@ export function Player({
                     variant="quiet"
                     size="md"
                     className="bg-paper/10 text-paper"
+                    disabled={pending}
                     onClick={() => rate(f)}
                   >
                     {FEELING_LABEL[f]}

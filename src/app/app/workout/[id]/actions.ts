@@ -10,8 +10,12 @@ export async function completeWorkout(
   workoutId: string,
 ): Promise<ActionResult<{ completionId: string }>> {
   try {
-    const { supabase } = await requireUser();
-    const { completionId } = await markWorkoutComplete(supabase, z.uuid().parse(workoutId));
+    const { user, supabase } = await requireUser();
+    const { completionId } = await markWorkoutComplete(
+      supabase,
+      user.id,
+      z.uuid().parse(workoutId),
+    );
     revalidatePath("/app");
     return actionOk({ completionId });
   } catch (error) {
