@@ -1,6 +1,7 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   adminClient,
+  anonClient,
   createAal1Admin,
   createAdminUser,
   createUser,
@@ -79,6 +80,9 @@ describe("admin writes on workouts", () => {
     expect(refused.data).toEqual([]);
     const { data: still } = await admin.from("workouts").select("id").eq("id", freeId);
     expect(still).toHaveLength(1);
+    // Even a service-role delete is stopped by the foreign key.
+    const hard = await admin.from("workouts").delete().eq("id", freeId);
+    expect(hard.error?.code).toBe("23503");
   });
 
   it("reorders the starter week in one call", async () => {
@@ -242,21 +246,185 @@ describe("settings", () => {
 
 describe("thumbnails bucket", () => {
   const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+  const exists = async (path: string) => {
+    const { data, error } = await admin.storage.from("thumbnails").list("", { search: path });
+    expect(error).toBeNull();
+    return (data ?? []).some((o) => o.name === path);
+  };
 
-  it("lets an admin upload and anyone read by public URL; clients cannot upload", async () => {
+  it("lets an admin upload, replace and remove; anyone reads by public URL", async () => {
     const path = `test-${crypto.randomUUID()}.png`;
-    const up = await boss.storage
-      .from("thumbnails")
-      .upload(path, png, { contentType: "image/png" });
-    expect(up.error).toBeNull();
-    const { data } = boss.storage.from("thumbnails").getPublicUrl(path);
-    const res = await fetch(data.publicUrl);
-    expect(res.status).toBe(200);
-    const clientDb = await signedInClient(await createUser(admin, "tbl-thumb"));
-    const denied = await clientDb.storage
-      .from("thumbnails")
-      .upload(`x-${crypto.randomUUID()}.png`, png, { contentType: "image/png" });
-    expect(denied.error).not.toBeNull();
-    await boss.storage.from("thumbnails").remove([path]);
+    try {
+      const up = await boss.storage
+        .from("thumbnails")
+        .upload(path, png, { contentType: "image/png" });
+      expect(up.error).toBeNull();
+      const { data } = boss.storage.from("thumbnails").getPublicUrl(path);
+      const res = await fetch(data.publicUrl);
+      expect(res.status).toBe(200);
+
+      const replaced = await boss.storage
+        .from("thumbnails")
+        .upload(path, png, { contentType: "image/png", upsert: true });
+      expect(replaced.error).toBeNull();
+
+      const removed = await boss.storage.from("thumbnails").remove([path]);
+      expect(removed.error).toBeNull();
+      expect(removed.data).toHaveLength(1);
+      expect(await exists(path)).toBe(false);
+    } finally {
+      await admin.storage.from("thumbnails").remove([path]);
+    }
+  });
+
+  it("refuses uploads and removals from clients, aal1 admins and anonymous visitors", async () => {
+    const path = `test-${crypto.randomUUID()}.png`;
+    try {
+      const up = await boss.storage
+        .from("thumbnails")
+        .upload(path, png, { contentType: "image/png" });
+      expect(up.error).toBeNull();
+      const client = await signedInClient(await createUser(admin, "tbl-thumb"));
+      const { db: half } = await createAal1Admin(admin, "tbl-thumb-half");
+      for (const db of [client, half, anonClient()]) {
+        const denied = await db.storage
+          .from("thumbnails")
+          .upload(`x-${crypto.randomUUID()}.png`, png, { contentType: "image/png" });
+        expect(denied.error).not.toBeNull();
+        const overwrite = await db.storage
+          .from("thumbnails")
+          .upload(path, png, { contentType: "image/png", upsert: true });
+        expect(overwrite.error).not.toBeNull();
+        const removed = await db.storage.from("thumbnails").remove([path]);
+        expect(removed.data ?? []).toEqual([]);
+      }
+      expect(await exists(path)).toBe(true);
+    } finally {
+      await admin.storage.from("thumbnails").remove([path]);
+    }
+  });
+});
+
+describe("everyone but an aal2 admin is locked out of the admin tables", () => {
+  let target: string;
+  let plainWorkout: string;
+  let planId: string;
+
+  beforeAll(async () => {
+    target = await createWorkout(admin, workout("Защитена"));
+    plainWorkout = (await admin.from("workouts").insert(workout("Без медия")).select("id").single())
+      .data!.id;
+    planId = (await admin.from("plans").select("id").limit(1).single()).data!.id;
+    await admin.from("settings").upsert({ key: "rls_probe", value: { a: 1 } });
+    await admin.from("client_notes").insert({
+      user_id: bossId,
+      kind: "note",
+      body: "само за админи",
+    });
+  });
+
+  afterAll(async () => {
+    await admin.from("settings").delete().eq("key", "rls_probe");
+  });
+
+  const actors = async () => {
+    const client = await signedInClient(await createUser(admin, "lock-client"));
+    const half = await createAal1Admin(admin, "lock-half");
+    return [
+      { label: "client", db: client, id: (await client.auth.getUser()).data.user!.id },
+      { label: "aal1 admin", db: half.db, id: half.user.id },
+    ];
+  };
+
+  it("refuses inserts into media, plans, subscriptions, notes and settings", async () => {
+    for (const { label, db, id } of await actors()) {
+      const results = {
+        media: await db.from("workout_media").insert({
+          workout_id: plainWorkout,
+          provider: "youtube",
+          video_url: "https://youtu.be/x",
+        }),
+        plan: await db
+          .from("plans")
+          .insert({ name: "Безплатно", interval: "month", price_cents: 1 }),
+        selfGrant: await db
+          .from("subscriptions")
+          .insert({ user_id: id, provider: "manual", status: "active" }),
+        paid: await db
+          .from("subscriptions")
+          .insert({ user_id: id, provider: "stripe", status: "active" }),
+        note: await db.from("client_notes").insert({ user_id: id, kind: "note", body: "x" }),
+        setting: await db.from("settings").insert({ key: "rls_other", value: {} }),
+      };
+      for (const [name, r] of Object.entries(results)) {
+        expect(r.error?.code, `${label}: ${name}`).toBe("42501");
+      }
+      const { data: subs } = await admin.from("subscriptions").select("user_id").eq("user_id", id);
+      expect(subs, `${label} must not hold a subscription`).toEqual([]);
+    }
+    const { data: media } = await admin
+      .from("workout_media")
+      .select("workout_id")
+      .eq("workout_id", plainWorkout);
+    expect(media).toEqual([]);
+    const { data: other } = await admin.from("settings").select("key").eq("key", "rls_other");
+    expect(other).toEqual([]);
+  });
+
+  it("changes nothing on update or delete of media, plans and settings", async () => {
+    for (const { label, db } of await actors()) {
+      const delMedia = await db
+        .from("workout_media")
+        .delete()
+        .eq("workout_id", target)
+        .select("workout_id");
+      expect(delMedia.error, label).toBeNull();
+      expect(delMedia.data, label).toEqual([]);
+      const updPlan = await db
+        .from("plans")
+        .update({ price_cents: 1 })
+        .eq("id", planId)
+        .select("id");
+      expect(updPlan.error, label).toBeNull();
+      expect(updPlan.data, label).toEqual([]);
+      const delSetting = await db.from("settings").delete().eq("key", "rls_probe").select("key");
+      expect(delSetting.error, label).toBeNull();
+      expect(delSetting.data, label).toEqual([]);
+      const updSetting = await db
+        .from("settings")
+        .update({ value: { a: 2 } })
+        .eq("key", "rls_probe")
+        .select("key");
+      expect(updSetting.data, label).toEqual([]);
+    }
+    const { data: media } = await admin
+      .from("workout_media")
+      .select("workout_id")
+      .eq("workout_id", target);
+    expect(media).toHaveLength(1);
+    const { data: plan } = await admin
+      .from("plans")
+      .select("price_cents")
+      .eq("id", planId)
+      .single();
+    expect(plan?.price_cents).not.toBe(1);
+    const { data: setting } = await admin
+      .from("settings")
+      .select("value")
+      .eq("key", "rls_probe")
+      .single();
+    expect(setting?.value).toEqual({ a: 1 });
+  });
+
+  it("shows nothing from audit_log, client_notes or settings", async () => {
+    for (const table of ["audit_log", "client_notes", "settings"] as const) {
+      const { data: real } = await admin.from(table).select("*").limit(1);
+      expect(real?.length, `${table} must hold a row so the check is not vacuous`).toBe(1);
+      for (const { label, db } of await actors()) {
+        const { data, error } = await db.from(table).select("*");
+        expect(error, `${label}: ${table}`).toBeNull();
+        expect(data, `${label}: ${table}`).toEqual([]);
+      }
+    }
   });
 });
