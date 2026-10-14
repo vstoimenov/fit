@@ -148,7 +148,11 @@ export function WorkoutForm({ action, workout }: { action: FormAction; workout?:
               variant="quiet"
               size="md"
               disabled={pending}
-              onClick={() => run(() => unpublishWorkoutAction(workout.id))}
+              onClick={() =>
+                (workout.completions === 0 ||
+                  confirm("Тази тренировка вече е правена от клиентки. Да я скрия?")) &&
+                run(() => unpublishWorkoutAction(workout.id))
+              }
             >
               Скрий (чернова)
             </Button>

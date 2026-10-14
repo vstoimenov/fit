@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import type { AdminWorkout } from "@/server/admin/workouts";
 import { moveWorkoutAction } from "./actions";
 
+const MOVE_CONFIRM = "Тази тренировка вече е правена от клиентки. Да я преместя?";
 const TONE = { beginner: "border-moss", advanced: "border-mustard", pro: "border-brick" } as const;
 
 export function MonthView({
@@ -26,6 +27,12 @@ export function MonthView({
   const [pending, startTransition] = useTransition();
 
   function drop(date: string, id: string) {
+    if (!id) return;
+    // Clients have already done this workout: moving it changes what her history refers to.
+    const card = Object.values(byDate)
+      .flat()
+      .find((w) => w.id === id);
+    if (card && card.completions > 0 && !confirm(MOVE_CONFIRM)) return;
     startTransition(async () => {
       const r = await moveWorkoutAction(id, date);
       setMessage(r.ok ? `Преместена за ${formatDateBg(date)} ✓` : r.message);
