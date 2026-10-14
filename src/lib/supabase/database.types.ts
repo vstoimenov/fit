@@ -518,6 +518,36 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_client_stats: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string };
+        Returns: {
+          current_period_end: string;
+          done_30: number;
+          done_7: number;
+          done_regular_14: number;
+          email: string;
+          has_access: boolean;
+          joined_at: string;
+          last_done_at: string;
+          last_seen_at: string;
+          level: Database["public"]["Enums"]["workout_level"];
+          minutes_30: number;
+          minutes_7: number;
+          name: string;
+          onboarding_done: boolean;
+          paid_without_workout: boolean;
+          phone: string;
+          phone_call_consent: boolean;
+          published_14: number;
+          snoozed_until: string;
+          sub_provider: Database["public"]["Enums"]["payment_provider"];
+          sub_status: Database["public"]["Enums"]["subscription_status"];
+          total_count: number;
+          total_done: number;
+          user_id: string;
+        }[];
+      };
+      admin_dashboard: { Args: { p_now?: string }; Returns: Json };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
