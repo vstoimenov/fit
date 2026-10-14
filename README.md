@@ -67,6 +67,9 @@ Never edit an applied migration; add a new one in `supabase/migrations/`.
 - First visit to `/admin` asks for TOTP enrolment (Google Authenticator / 1Password). Every new session needs the 6-digit code.
   Without it the account is treated as a normal client everywhere (the database enforces this via `is_admin()` = role admin + aal2).
 - Hosted Supabase: enable **Authentication -> Multi-factor -> TOTP** (enroll + verify), or `supabase config push`.
+- **Lost authenticator (admin locked out):** in the Supabase SQL editor run
+  `delete from auth.mfa_factors where user_id = (select id from auth.users where email = '…');`,
+  then sign in and enrol again at `/admin/mfa`. Only the project owner (SQL editor access) can do this.
 - Optional email for "Изпрати съобщение": `BREVO_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`.
   **The sender address must be verified in Brevo**, otherwise Brevo rejects the send. Without Brevo (or with a
   rejected send) the message is recorded on the client as **NOT sent**; nothing is delivered.
