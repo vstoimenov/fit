@@ -18,10 +18,10 @@ export function ProfileForms({ name, level }: { name: string; level: Level }) {
       <form action={save} className="space-y-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
         <h2 className="font-semibold">Данни</h2>
         <Field label="Име">
-          <input name="name" defaultValue={name} className={inputClass} />
+          <input key={name} name="name" defaultValue={name} className={inputClass} />
         </Field>
         <Field label="Ниво" hint="Можеш да го сменяш по всяко време.">
-          <select name="level" defaultValue={level} className={inputClass}>
+          <select key={level} name="level" defaultValue={level} className={inputClass}>
             {(Object.keys(LEVEL_LABEL) as Level[]).map((l) => (
               <option key={l} value={l}>
                 {LEVEL_LABEL[l]}
