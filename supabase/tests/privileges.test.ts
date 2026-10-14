@@ -1,7 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 
-// PostgREST never needs TRUNCATE / REFERENCES / TRIGGER; they must not be granted to API roles.
+// PostgREST never needs TRUNCATE / REFERENCES / TRIGGER / MAINTAIN; they must not be granted to API roles.
 // Checked through the local stack's own database container (never any other project's).
 const DB_CONTAINER = "supabase_db_fit-platform";
 const TABLES = [
@@ -15,7 +15,8 @@ const TABLES = [
   "visits",
 ];
 const ROLES = ["anon", "authenticated"];
-const PRIVILEGES = ["TRUNCATE", "REFERENCES", "TRIGGER"];
+// MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).
+const PRIVILEGES = ["TRUNCATE", "REFERENCES", "TRIGGER", "MAINTAIN"];
 
 function psql(sql: string): string {
   return execFileSync("docker", ["exec", DB_CONTAINER, "psql", "-U", "postgres", "-tAc", sql], {
@@ -32,7 +33,7 @@ describe("table privileges of API roles", () => {
     expect(actual.split(",")).toEqual([...TABLES].sort());
   });
 
-  it.each(ROLES)("grants %s no TRUNCATE, REFERENCES or TRIGGER on any public table", (role) => {
+  it.each(ROLES)("grants %s no TRUNCATE, REFERENCES, TRIGGER or MAINTAIN on any public table", (role) => {
     const granted: string[] = [];
     for (const table of TABLES) {
       for (const privilege of PRIVILEGES) {
