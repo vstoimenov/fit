@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { distributeDates } from "@/lib/admin/schedule";
@@ -21,6 +21,9 @@ export function BulkAdd({ today }: { today: string }) {
   const [days, setDays] = useState<number[]>([1, 3, 5]);
   const [time, setTime] = useState("07:00");
   const [message, setMessage] = useState("");
+  const [hint, setHint] = useState("");
+  // errors from the last save, keyed by the row's video link (unique per row)
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const [pending, startTransition] = useTransition();
 
   function preview() {
@@ -42,12 +45,23 @@ export function BulkAdd({ today }: { today: string }) {
             thumbnailSourceUrl: p.thumbnailSourceUrl ?? null,
           })),
       );
+      setRowErrors({});
+      setHint("");
       setMessage("");
     });
   }
 
   function distribute() {
-    const dates = distributeDates({ startDate: start, weekdays: days, time, count: rows.length });
+    if (!start) return setHint("Избери начална дата.");
+    if (days.length === 0) return setHint("Избери поне един ден от седмицата.");
+    if (!time) return setHint("Избери час.");
+    setHint("");
+    let dates: string[];
+    try {
+      dates = distributeDates({ startDate: start, weekdays: days, time, count: rows.length });
+    } catch {
+      return setHint("Невалидна дата или час.");
+    }
     setRows(
       rows.map((row, i) => ({
         ...row,
@@ -59,6 +73,9 @@ export function BulkAdd({ today }: { today: string }) {
   }
 
   function update(i: number, patch: Partial<BulkRow>) {
+    const key = rows[i]?.videoUrl;
+    if (key && rowErrors[key])
+      setRowErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => k !== key)));
     setRows(rows.map((row, j) => (j === i ? { ...row, ...patch } : row)));
   }
 
@@ -66,13 +83,29 @@ export function BulkAdd({ today }: { today: string }) {
     startTransition(async () => {
       const r = await saveBulkAction(rows);
       if (!r.ok) return setMessage(r.message);
-      const failed = r.data.errors.map((e) => `ред ${e.index + 1}: ${e.message}`).join("; ");
-      setMessage(`Създадени: ${r.data.created}.${failed ? ` Грешки — ${failed}` : ""}`);
-      if (r.data.errors.length === 0) {
+      const { created, errors } = r.data;
+      if (errors.length === 0) {
+        setMessage(`Създадени: ${created}.`);
         setText("");
         setPreviews([]);
         setRows([]);
+        setRowErrors({});
+        return;
       }
+      // Keep only the rows that failed, so a retry cannot create the saved ones twice.
+      const failedAt = new Map(errors.map((e) => [e.index, e.message]));
+      const failedRows = rows.filter((_, i) => failedAt.has(i));
+      setRows(failedRows);
+      setRowErrors(
+        Object.fromEntries(
+          failedRows.map((row) => [row.videoUrl, failedAt.get(rows.indexOf(row))!]),
+        ),
+      );
+      setText("");
+      setPreviews([]);
+      setMessage(
+        `Създадени: ${created}. Остават ${failedRows.length} с грешка — поправи ги и запази отново.`,
+      );
     });
   }
 
@@ -130,7 +163,7 @@ export function BulkAdd({ today }: { today: string }) {
             </label>
             <fieldset className="space-y-1">
               <legend className="font-semibold">Дни</legend>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-x-2 gap-y-1">
                 {WEEKDAYS.map((d, i) => (
                   <label key={d} className="flex items-center gap-1">
                     <input
@@ -157,6 +190,11 @@ export function BulkAdd({ today }: { today: string }) {
             <Button variant="quiet" size="md" onClick={distribute}>
               Разпредели автоматично
             </Button>
+            {hint && (
+              <p role="alert" className="basis-full text-brick">
+                {hint}
+              </p>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -173,67 +211,76 @@ export function BulkAdd({ today }: { today: string }) {
               </thead>
               <tbody>
                 {rows.map((row, i) => (
-                  <tr key={row.videoUrl} className="border-t border-line">
-                    <td className="p-2">
-                      <input
-                        value={row.title}
-                        onChange={(e) => update(i, { title: e.target.value })}
-                        className={inputClass + " h-10"}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <select
-                        value={row.level}
-                        onChange={(e) => update(i, { level: e.target.value as Level })}
-                        className={inputClass + " h-10"}
-                      >
-                        {Object.entries(LEVEL_LABEL).map(([v, l]) => (
-                          <option key={v} value={v}>
-                            {l}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="number"
-                        min={1}
-                        max={180}
-                        value={row.durationMin}
-                        onChange={(e) => update(i, { durationMin: Number(e.target.value) })}
-                        className={inputClass + " h-10 w-20"}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="date"
-                        value={row.date}
-                        onChange={(e) => update(i, { date: e.target.value })}
-                        className={inputClass + " h-10"}
-                      />
-                    </td>
-                    <td className="p-2">
-                      <input
-                        type="time"
-                        value={row.time}
-                        onChange={(e) => update(i, { time: e.target.value })}
-                        className={inputClass + " h-10"}
-                      />
-                    </td>
-                    <td className="p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={row.notify}
-                        onChange={(e) => update(i, { notify: e.target.checked })}
-                      />
-                    </td>
-                  </tr>
+                  <Fragment key={row.videoUrl}>
+                    <tr className="border-t border-line">
+                      <td className="p-2">
+                        <input
+                          value={row.title}
+                          onChange={(e) => update(i, { title: e.target.value })}
+                          className={inputClass + " h-10"}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <select
+                          value={row.level}
+                          onChange={(e) => update(i, { level: e.target.value as Level })}
+                          className={inputClass + " h-10"}
+                        >
+                          {Object.entries(LEVEL_LABEL).map(([v, l]) => (
+                            <option key={v} value={v}>
+                              {l}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="number"
+                          min={1}
+                          max={180}
+                          value={row.durationMin}
+                          onChange={(e) => update(i, { durationMin: Number(e.target.value) })}
+                          className={inputClass + " h-10 w-20"}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="date"
+                          value={row.date}
+                          onChange={(e) => update(i, { date: e.target.value })}
+                          className={inputClass + " h-10"}
+                        />
+                      </td>
+                      <td className="p-2">
+                        <input
+                          type="time"
+                          value={row.time}
+                          onChange={(e) => update(i, { time: e.target.value })}
+                          className={inputClass + " h-10"}
+                        />
+                      </td>
+                      <td className="p-2 text-center">
+                        <input
+                          type="checkbox"
+                          checked={row.notify}
+                          onChange={(e) => update(i, { notify: e.target.checked })}
+                        />
+                      </td>
+                    </tr>
+                    {rowErrors[row.videoUrl] && (
+                      <tr>
+                        <td colSpan={6} className="px-2 pb-2 text-sm text-brick">
+                          {rowErrors[row.videoUrl]}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
           </div>
           <Button size="md" disabled={pending || rows.some((r) => !r.date)} onClick={save}>
-            Запази {rows.length} тренировки
+            Запази {rows.length} {rows.length === 1 ? "тренировка" : "тренировки"}
           </Button>
         </>
       )}

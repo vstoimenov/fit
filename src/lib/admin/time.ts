@@ -75,3 +75,8 @@ export function addDays(date: string, delta: number): string {
 export function weekdayOf(date: string): number {
   return (new Date(`${date}T12:00:00Z`).getUTCDay() + 6) % 7;
 }
+
+/** "2026-10-16" -> "16.10.2026" */
+export function formatDateBg(date: string): string {
+  return date.split("-").reverse().join(".");
+}

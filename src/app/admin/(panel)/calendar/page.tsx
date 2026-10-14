@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { levelGaps, monthGrid, weekOf } from "@/lib/admin/calendar";
-import { addDays, utcToZoned } from "@/lib/admin/time";
+import { addDays, formatDateBg, utcToZoned } from "@/lib/admin/time";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { listAdminWorkouts } from "@/server/admin/workouts";
@@ -54,7 +54,11 @@ async function Calendar({ searchParams }: { searchParams: Search }) {
 
   const prevHref = week ? `?view=week&d=${addDays(anchor, -7)}` : `?m=${shiftMonth(month, -1)}`;
   const nextHref = week ? `?view=week&d=${addDays(anchor, 7)}` : `?m=${shiftMonth(month, 1)}`;
-  const label = week ? `${weeks[0]![0]} – ${weeks[0]![6]}` : month;
+  const label = week
+    ? `${formatDateBg(weeks[0]![0]!)} – ${formatDateBg(weeks[0]![6]!)}`
+    : new Intl.DateTimeFormat("bg-BG", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+        new Date(`${month}-01T12:00:00Z`),
+      );
 
   return (
     <div className="space-y-6">
@@ -63,7 +67,7 @@ async function Calendar({ searchParams }: { searchParams: Search }) {
         <Link href={prevHref} aria-label="Назад" className={buttonClass("quiet", "md")}>
           ←
         </Link>
-        <span className="font-semibold tabular-nums">{label}</span>
+        <span className="font-semibold tabular-nums first-letter:uppercase">{label}</span>
         <Link href={nextHref} aria-label="Напред" className={buttonClass("quiet", "md")}>
           →
         </Link>
@@ -81,7 +85,7 @@ async function Calendar({ searchParams }: { searchParams: Search }) {
             <li key={g.level}>
               ⚠ Ниво „{LEVEL_LABEL[g.level]}“{" "}
               {g.lastAt
-                ? `няма планирано съдържание след ${utcToZoned(g.lastAt).date}`
+                ? `няма планирано съдържание след ${formatDateBg(utcToZoned(g.lastAt).date)}`
                 : "няма нито една тренировка"}
               .
             </li>
@@ -89,22 +93,13 @@ async function Calendar({ searchParams }: { searchParams: Search }) {
         </ul>
       )}
 
-      <MonthView weeks={weeks} month={week ? "" : month} today={today} byDate={byDate} />
-
-      {drafts.length > 0 && (
-        <section className="space-y-2">
-          <h2 className="font-semibold">Чернови без дата</h2>
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {drafts.map((w) => (
-              <li key={w.id}>
-                <Link href={`/admin/workouts/${w.id}`} className="rounded-full bg-ink/5 px-3 py-1">
-                  {w.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+      <MonthView
+        weeks={weeks}
+        month={week ? "" : month}
+        today={today}
+        byDate={byDate}
+        drafts={drafts.map((w) => ({ id: w.id, title: w.title }))}
+      />
 
       <BulkAdd today={today} />
     </div>

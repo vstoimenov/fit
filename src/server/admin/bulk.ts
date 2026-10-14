@@ -13,6 +13,7 @@ import { fetchVideoMeta, type VideoMeta } from "./video-meta";
 import { createAdminWorkout } from "./workouts";
 
 const MAX_LINES = 30;
+const CONCURRENCY = 5;
 const DEFAULT_MINUTES = 30;
 
 export interface LinkPreview {
@@ -27,6 +28,24 @@ export interface LinkPreview {
   thumbnailSourceUrl?: string | null;
 }
 
+/** Runs `fn` over `items` with at most `limit` in flight; results keep the input order. */
+export async function mapLimit<T, R>(
+  items: readonly T[],
+  limit: number,
+  fn: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let next = 0;
+  async function worker() {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]!, i);
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
 export async function previewLinks(
   text: string,
   fetchMeta: (ref: VideoRef) => Promise<VideoMeta> = (ref) => fetchVideoMeta(ref),
@@ -37,11 +56,9 @@ export async function previewLinks(
     .filter((l) => l.input);
   const seen = new Map<string, number>();
   const out: LinkPreview[] = [];
+  const valid: { slot: number; ref: VideoRef; input: string; number: number }[] = [];
+  // Only valid links count against the cap; junk and duplicates just get their own error.
   for (const { input, line } of lines) {
-    if (out.length === MAX_LINES) {
-      out.push({ line, input, ok: false, error: `Наведнъж до ${MAX_LINES} линка.` });
-      break;
-    }
     const ref = parseVideoUrl(input);
     if (!ref) {
       out.push({ line, input, ok: false, error: "Не е видео линк (YouTube, Vimeo, Bunny)." });
@@ -53,27 +70,40 @@ export async function previewLinks(
       out.push({ line, input, ok: false, error: `Повтаря ред ${first}.` });
       continue;
     }
+    if (valid.length === MAX_LINES) {
+      out.push({ line, input, ok: false, error: `Наведнъж до ${MAX_LINES} линка.` });
+      break;
+    }
     seen.set(key, line);
-    const meta = await fetchMeta(ref);
-    out.push({
-      line,
-      input,
+    valid.push({ slot: out.length, ref, input, number: valid.length + 1 });
+    out.push({ line, input, ok: true });
+  }
+  const metas = await mapLimit(valid, CONCURRENCY, (v) => fetchMeta(v.ref));
+  for (const [i, v] of valid.entries()) {
+    const meta = metas[i]!;
+    out[v.slot] = {
+      line: out[v.slot]!.line,
+      input: v.input,
       ok: true,
-      videoUrl: normalizeVideoInput(input),
-      provider: ref.provider,
-      title: meta.title ?? `Тренировка ${out.length + 1}`,
+      videoUrl: normalizeVideoInput(v.input),
+      provider: v.ref.provider,
+      title: meta.title ?? `Тренировка ${v.number}`,
       durationMin: meta.durationMin ?? DEFAULT_MINUTES,
       thumbnailSourceUrl: meta.thumbnailSourceUrl,
-    });
+    };
   }
   return out;
 }
 
 export const bulkRowSchema = z.object({
   videoUrl: z.string().min(1),
-  title: z.string().trim().min(1).max(120),
+  title: z.string().trim().min(1, "Нужно е заглавие").max(120, "Заглавието е твърде дълго"),
   level: z.enum(["beginner", "advanced", "pro"]),
-  durationMin: z.number().int().min(1).max(180),
+  durationMin: z
+    .number("Невалидни минути")
+    .int("Невалидни минути")
+    .min(1, "Поне 1 минута")
+    .max(180, "Най-много 180 минути"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Избери дата"),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   notify: z.boolean(),
@@ -89,9 +119,7 @@ export async function saveBulk(
   copy: typeof copyThumbnail = copyThumbnail,
 ): Promise<{ created: number; errors: { index: number; message: string }[] }> {
   const rows = z.array(z.unknown()).max(MAX_LINES).parse(raw);
-  let created = 0;
-  const errors: { index: number; message: string }[] = [];
-  for (const [index, item] of rows.entries()) {
+  const results = await mapLimit(rows, CONCURRENCY, async (item) => {
     try {
       const row = bulkRowSchema.parse(item);
       const thumbnailUrl = row.thumbnailSourceUrl ? await copy(db, row.thumbnailSourceUrl) : null;
@@ -107,10 +135,13 @@ export async function saveBulk(
         publishAt: zonedToUtc(row.date, row.time),
         notify: row.notify,
       });
-      created++;
+      return null;
     } catch (error) {
-      errors.push({ index, message: actionFail(error).message });
+      return actionFail(error).message;
     }
-  }
-  return { created, errors };
+  });
+  const errors = results.flatMap((message, index) =>
+    message === null ? [] : [{ index, message }],
+  );
+  return { created: rows.length - errors.length, errors };
 }

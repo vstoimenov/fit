@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { AppError } from "@/lib/app-error";
-import { utcToZoned, zonedToUtc } from "./time";
+import { formatDateBg, utcToZoned, zonedToUtc } from "./time";
 
 describe("zonedToUtc", () => {
   it("converts Sofia summer and winter time", () => {
@@ -52,5 +52,11 @@ describe("zonedToUtc validation and DST edge cases", () => {
 
   it("pins the ambiguous hour (03:30 happens twice on 2026-10-25 in Sofia)", () => {
     expect(zonedToUtc("2026-10-25", "03:30")).toBe("2026-10-25T01:30:00.000Z");
+  });
+});
+
+describe("formatDateBg", () => {
+  it("writes dd.mm.yyyy", () => {
+    expect(formatDateBg("2026-10-16")).toBe("16.10.2026");
   });
 });
