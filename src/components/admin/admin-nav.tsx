@@ -28,6 +28,7 @@ export function AdminNav() {
             <li key={item.href}>
               <Link
                 href={item.href}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "block whitespace-nowrap rounded-xl px-3 py-2 text-sm font-semibold",
                   active ? "bg-ink text-paper" : "text-ink-soft hover:bg-ink/5",
