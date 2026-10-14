@@ -44,3 +44,9 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 - English zod defaults still reachable on free numeric inputs (profile height decimals → add `step="1"` / BG messages).
 - Covers: decorative ring vs "no icon-in-circle"; long Cyrillic first words get cropped.
 - Hosted Supabase setup: see README "Hosted go-live checklist" (seed content, auth config push, env vars).
+
+## From the plan 1B final review
+- Go-live: decide `audit_log` retention / pseudonymisation after account deletion; document that `client_notes` is the client-relationship trail (or merge it into the audit viewer); owner decision on sending „Липсваш ни" without marketing consent + an opt-out line in the template.
+- 1C: a `public_settings()` (or server-side service-role) read path for `payment_provider` and tracking IDs (settings are admin-only today); switch `subscriptions`/`plans` to column grants or definer RPCs before adding any client-facing write policy; keep admin price edits in sync with Stripe/Revolut price ids (or freeze price once a provider price exists); consider an `actor_kind` column so webhook audit rows ("система") can be filtered; a service-role-only function for any cron that needs at-risk data (admin RPCs refuse the service role).
+- 1D: CSP must allow `img-src data:` (MFA QR) and the Supabase storage origin (thumbnails); a cached tracking-settings reader needs `revalidateTag` from `saveTrackingAction`; random-window DB tests (~0.2% collision) before CI.
+- Later: calendar confirm for re-publishing a completed draft dragged from the drafts list; concurrent manual grants may lose an increment.
