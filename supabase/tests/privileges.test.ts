@@ -44,4 +44,23 @@ describe("table privileges of API roles", () => {
     }
     expect(granted).toEqual([]);
   });
+
+  it("does not hand these privileges to API roles on tables created later", () => {
+    const name = `priv_probe_${Date.now()}`;
+    try {
+      psql(`create table public.${name} (id int)`);
+      const granted: string[] = [];
+      for (const role of ROLES) {
+        for (const privilege of PRIVILEGES) {
+          const has = psql(
+            `select has_table_privilege('${role}', 'public.${name}', '${privilege}')`,
+          );
+          if (has !== "f") granted.push(`${role} ${privilege}`);
+        }
+      }
+      expect(granted).toEqual([]);
+    } finally {
+      psql(`drop table if exists public.${name}`);
+    }
+  });
 });

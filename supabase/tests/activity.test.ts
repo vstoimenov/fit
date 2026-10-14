@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   adminClient,
@@ -26,6 +27,15 @@ beforeAll(async () => {
   if (error || !data) throw error ?? new Error("seed has no published regular workout");
   paidId = data.id;
 });
+
+const DB_CONTAINER = "supabase_db_fit-platform"; // this project's local stack only
+
+function psql(sql: string): string {
+  return execFileSync("docker", ["exec", DB_CONTAINER, "psql", "-U", "postgres", "-tAc", sql], {
+    encoding: "utf8",
+    env: { ...process.env, DOCKER_CONFIG: process.env.DOCKER_CONFIG ?? "/tmp/dockercfg" },
+  }).trim();
+}
 
 /** Completions the service role can see for a user (proves a rejected/hidden row really is absent/present). */
 async function completionCount(userId: string, workoutId?: string): Promise<number> {
@@ -232,6 +242,58 @@ describe("workout_completions", () => {
     expect(after?.starter_week_done_at).not.toBeNull();
   });
 
+  it("ignores unpublished starters when deciding the starter week is done", async () => {
+    const user = await createUser(admin, "starter-unpub");
+    const { data: starters } = await admin
+      .from("workouts")
+      .select("id")
+      .eq("kind", "starter")
+      .lte("publish_at", new Date().toISOString())
+      .order("starter_order");
+    const published = starters ?? [];
+    expect(published.length).toBeGreaterThan(1);
+    const { data: draft, error: draftError } = await admin
+      .from("workouts")
+      .insert({
+        title: "Чернова старт",
+        kind: "starter",
+        starter_order: 100 + Math.floor(Math.random() * 800),
+        duration_min: 10,
+        publish_at: null,
+      })
+      .select("id")
+      .single();
+    expect(draftError).toBeNull();
+    try {
+      // Everything but the last published starter, plus the unpublished draft (service role only).
+      const rows = [...published.slice(0, -1), draft!].map((w) => ({
+        user_id: user.id,
+        workout_id: w.id,
+      }));
+      const inserted = await admin.from("workout_completions").insert(rows);
+      expect(inserted.error).toBeNull();
+      const { data: mid } = await admin
+        .from("profiles")
+        .select("starter_week_done_at")
+        .eq("id", user.id)
+        .single();
+      expect(mid?.starter_week_done_at).toBeNull();
+
+      const last = await admin
+        .from("workout_completions")
+        .insert({ user_id: user.id, workout_id: published[published.length - 1]!.id });
+      expect(last.error).toBeNull();
+      const { data: done } = await admin
+        .from("profiles")
+        .select("starter_week_done_at")
+        .eq("id", user.id)
+        .single();
+      expect(done?.starter_week_done_at).not.toBeNull();
+    } finally {
+      await admin.from("workouts").delete().eq("id", draft!.id);
+    }
+  });
+
   it("does not end the starter week for free or regular completions", async () => {
     const user = await createUser(admin, "no-starter");
     await grantAccess(admin, user.id);
@@ -244,6 +306,61 @@ describe("workout_completions", () => {
       .eq("id", user.id)
       .single();
     expect(data?.starter_week_done_at).toBeNull();
+  });
+});
+
+describe("profile timezone", () => {
+  it("rejects an invalid timezone on update and keeps the stored value", async () => {
+    const user = await createUser(admin, "tz-bad");
+    const db = await signedInClient(user);
+    const bad = await db.from("profiles").update({ timezone: "Bad/Zone" }).eq("id", user.id);
+    expect(bad.error?.code).toBe("23514");
+    const { data } = await admin.from("profiles").select("timezone").eq("id", user.id).single();
+    expect(data?.timezone).toBe("Europe/Sofia");
+
+    const good = await db
+      .from("profiles")
+      .update({ timezone: "America/New_York" })
+      .eq("id", user.id)
+      .select("timezone");
+    expect(good.error).toBeNull();
+    expect(good.data).toEqual([{ timezone: "America/New_York" }]);
+  });
+
+  it("still dates a completion (Sofia fallback) when a bad zone is already stored", async () => {
+    const user = await createUser(admin, "tz-legacy");
+    // The write-time trigger (rightly) blocks bad zones, so simulate legacy bad data by disabling it
+    // for a single statement through the local stack's own DB container. Always re-enabled in finally.
+    try {
+      psql(
+        "alter table public.profiles disable trigger profiles_validate_timezone; " +
+          `update public.profiles set timezone = 'Bad/Zone' where id = '${user.id}'; ` +
+          "alter table public.profiles enable trigger profiles_validate_timezone;",
+      );
+    } finally {
+      psql("alter table public.profiles enable trigger profiles_validate_timezone");
+    }
+    const { data: stored } = await admin
+      .from("profiles")
+      .select("timezone")
+      .eq("id", user.id)
+      .single();
+    expect(stored?.timezone).toBe("Bad/Zone");
+
+    const { data, error } = await admin
+      .from("workout_completions")
+      .insert({ user_id: user.id, workout_id: freeId, completed_at: "2026-10-14T21:30:00Z" })
+      .select("local_date")
+      .single();
+    expect(error).toBeNull();
+    // 21:30 UTC on 14 Oct = 15 Oct in Sofia.
+    expect(data?.local_date).toBe("2026-10-15");
+  });
+
+  it("keeps the trigger enabled", () => {
+    expect(
+      psql("select tgenabled from pg_trigger where tgname = 'profiles_validate_timezone'"),
+    ).toBe("O");
   });
 });
 
@@ -366,7 +483,7 @@ describe("visits", () => {
     const anonWrite = await anonClient().from("visits").insert(row);
     expect(anonWrite.error?.code).toBe("42501");
     const anonRead = await anonClient().from("visits").select("id");
-    // anon has no table privilege at all: an error, never rows.
+    // anon keeps table SELECT; RLS (admin-only policy) returns zero rows.
     expect(anonRead.data ?? []).toEqual([]);
   });
 
