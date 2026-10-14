@@ -106,3 +106,38 @@ export async function signedInClient(user: TestUser): Promise<TypedClient> {
   if (error) throw error;
   return client;
 }
+
+type SubStatus = Database["public"]["Enums"]["subscription_status"];
+type WorkoutInsert = Database["public"]["Tables"]["workouts"]["Insert"];
+
+/** Gives a user a subscription row (default: active, manual). */
+export async function grantAccess(
+  admin: TypedClient,
+  userId: string,
+  status: SubStatus = "active",
+  extra: { current_period_end?: string | null; grace_until?: string | null } = {},
+): Promise<void> {
+  const { error } = await admin
+    .from("subscriptions")
+    .upsert({ user_id: userId, provider: "manual", status, ...extra });
+  if (error) throw error;
+}
+
+export async function freeWorkoutId(admin: TypedClient): Promise<string> {
+  const { data, error } = await admin.from("workouts").select("id").eq("kind", "free").single();
+  if (error || !data) throw error ?? new Error("seed has no free workout — run pnpm db:reset");
+  return data.id;
+}
+
+/** Inserts a workout plus a YouTube media row; returns its id. */
+export async function createWorkout(admin: TypedClient, fields: WorkoutInsert): Promise<string> {
+  const { data, error } = await admin.from("workouts").insert(fields).select("id").single();
+  if (error || !data) throw error ?? new Error("createWorkout failed");
+  const media = await admin.from("workout_media").insert({
+    workout_id: data.id,
+    provider: "youtube",
+    video_url: "https://youtu.be/ml6cT4AZdqI",
+  });
+  if (media.error) throw media.error;
+  return data.id;
+}

@@ -23,6 +23,40 @@ export type Database = {
   };
   public: {
     Tables: {
+      plans: {
+        Row: {
+          active: boolean;
+          currency: string;
+          id: string;
+          interval: Database["public"]["Enums"]["plan_interval"];
+          name: string;
+          price_cents: number;
+          provider_price_ids: NonNullable<Json>;
+          sort: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          currency?: string;
+          id?: string;
+          interval: Database["public"]["Enums"]["plan_interval"];
+          name: string;
+          price_cents: number;
+          provider_price_ids?: NonNullable<Json>;
+          sort?: number;
+        };
+        Update: {
+          active?: boolean;
+          currency?: string;
+          id?: string;
+          interval?: Database["public"]["Enums"]["plan_interval"];
+          name?: string;
+          price_cents?: number;
+          provider_price_ids?: NonNullable<Json>;
+          sort?: number;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           email: string;
@@ -105,12 +139,161 @@ export type Database = {
         };
         Relationships: [];
       };
+      subscriptions: {
+        Row: {
+          current_period_end: string | null;
+          grace_until: string | null;
+          plan_id: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id: string | null;
+          provider_sub_id: string | null;
+          status: Database["public"]["Enums"]["subscription_status"];
+          updated_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          current_period_end?: string | null;
+          grace_until?: string | null;
+          plan_id?: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id?: string | null;
+          provider_sub_id?: string | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          current_period_end?: string | null;
+          grace_until?: string | null;
+          plan_id?: string | null;
+          provider?: Database["public"]["Enums"]["payment_provider"];
+          provider_customer_id?: string | null;
+          provider_sub_id?: string | null;
+          status?: Database["public"]["Enums"]["subscription_status"];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey";
+            columns: ["plan_id"];
+            isOneToOne: false;
+            referencedRelation: "plans";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "subscriptions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workout_media: {
+        Row: {
+          provider: Database["public"]["Enums"]["video_provider"];
+          video_url: string;
+          workout_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          provider: Database["public"]["Enums"]["video_provider"];
+          video_url: string;
+          workout_id: string;
+        };
+        Update: {
+          provider?: Database["public"]["Enums"]["video_provider"];
+          video_url?: string;
+          workout_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workout_media_workout_id_fkey";
+            columns: ["workout_id"];
+            isOneToOne: true;
+            referencedRelation: "workouts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workouts: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          duration_min: number;
+          focus: string[];
+          id: string;
+          kind: Database["public"]["Enums"]["workout_kind"];
+          level: Database["public"]["Enums"]["workout_level"] | null;
+          notified_at: string | null;
+          notify: boolean;
+          publish_at: string | null;
+          starter_order: number | null;
+          thumbnail_url: string | null;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          duration_min: number;
+          focus?: string[];
+          id?: string;
+          kind?: Database["public"]["Enums"]["workout_kind"];
+          level?: Database["public"]["Enums"]["workout_level"] | null;
+          notified_at?: string | null;
+          notify?: boolean;
+          publish_at?: string | null;
+          starter_order?: number | null;
+          thumbnail_url?: string | null;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          duration_min?: number;
+          focus?: string[];
+          id?: string;
+          kind?: Database["public"]["Enums"]["workout_kind"];
+          level?: Database["public"]["Enums"]["workout_level"] | null;
+          notified_at?: string | null;
+          notify?: boolean;
+          publish_at?: string | null;
+          starter_order?: number | null;
+          thumbnail_url?: string | null;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workouts_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
+      can_watch: { Args: { p_workout_id: string }; Returns: boolean };
+      has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      my_access: { Args: Record<PropertyKey, never>; Returns: boolean };
+      next_drop_at: {
+        Args: { p_level: Database["public"]["Enums"]["workout_level"] };
+        Returns: string;
+      };
     };
     Enums: {
       feeling: "easy" | "right" | "hard";
