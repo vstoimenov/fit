@@ -5,7 +5,8 @@ export function formString(form: FormData, key: string): string {
 
 export function formInt(form: FormData, key: string): number {
   const raw = formString(form, key);
-  return /^-?\d+$/.test(raw) ? Number(raw) : Number.NaN;
+  const n = /^-?\d+$/.test(raw) ? Number(raw) : Number.NaN;
+  return Number.isSafeInteger(n) ? n : Number.NaN;
 }
 
 export function formBool(form: FormData, key: string): boolean {

@@ -52,4 +52,19 @@ describe("levelGaps", () => {
       { level: "pro", lastAt: null },
     ]);
   });
+
+  it("orders timestamps by instant, not by string", () => {
+    const gaps = levelGaps(
+      [
+        { kind: "regular", level: "beginner", publishAt: "2026-10-30T04:00:00Z" },
+        { kind: "regular", level: "beginner", publishAt: "2026-10-22T04:00:00.000Z" },
+        { kind: "regular", level: "advanced", publishAt: "2026-10-27T12:00:00Z" },
+        { kind: "regular", level: "advanced", publishAt: "2026-10-27T14:00:00+05:00" },
+        { kind: "regular", level: "pro", publishAt: "2026-11-30T04:00:00Z" },
+      ],
+      now,
+      7,
+    );
+    expect(gaps).toEqual([]);
+  });
 });

@@ -18,4 +18,10 @@ describe("form-data helpers", () => {
     expect(formBool(form, "missing")).toBe(false);
     expect(formList(form, "focus")).toEqual(["core", "upper"]);
   });
+
+  it("rejects integers beyond the safe range", () => {
+    const f = new FormData();
+    f.set("big", "99999999999999999999");
+    expect(Number.isNaN(formInt(f, "big"))).toBe(true);
+  });
 });

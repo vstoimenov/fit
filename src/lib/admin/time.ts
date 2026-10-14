@@ -1,3 +1,5 @@
+import { AppError } from "@/lib/app-error";
+
 export const ADMIN_TZ = "Europe/Sofia";
 
 /** Wall-clock minus UTC (ms) for `timeZone` at instant `at`. */
@@ -24,10 +26,19 @@ function offsetMs(at: number, timeZone: string): number {
   return asUtc - Math.floor(at / 1000) * 1000;
 }
 
-/** UTC instant (ISO) of a wall-clock date + time in a zone, e.g. ("2026-10-26", "07:00"). */
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+const invalid = () => new AppError("INVALID", "Невалидна дата или час.");
+
+/** UTC instant (ISO) of a wall-clock date + time in a zone (throws AppError INVALID on bad input), e.g. ("2026-10-26", "07:00"). */
 export function zonedToUtc(date: string, time: string, timeZone: string = ADMIN_TZ): string {
+  if (!DATE_RE.test(date) || !TIME_RE.test(time)) throw invalid();
   const [y, m, d] = date.split("-").map(Number);
   const [hh, mm] = time.split(":").map(Number);
+  const check = new Date(Date.UTC(y!, m! - 1, d!));
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== m! - 1 || check.getUTCDate() !== d) {
+    throw invalid();
+  }
   const wall = Date.UTC(y!, m! - 1, d!, hh!, mm!);
   let ts = wall - offsetMs(wall, timeZone);
   ts = wall - offsetMs(ts, timeZone); // second pass settles DST transitions

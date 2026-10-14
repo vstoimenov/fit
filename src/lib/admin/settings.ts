@@ -41,5 +41,7 @@ export function parseSetting<K extends SettingKey>(key: K, raw: unknown): Settin
 }
 
 export function renderTemplate(tpl: string, vars: Record<string, string>): string {
-  return tpl.replace(/\{\{(\w+)\}\}/g, (match, name: string) => vars[name] ?? match);
+  return tpl.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+    Object.hasOwn(vars, name) ? vars[name]! : match,
+  );
 }

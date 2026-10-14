@@ -29,4 +29,21 @@ describe("distributeDates", () => {
       distributeDates({ startDate: "2026-10-20", weekdays: [1], time: "07:00", count: 0 }),
     ).toEqual([]);
   });
+
+  it("ignores non-integer weekdays instead of looping forever", () => {
+    expect(
+      distributeDates({ startDate: "2026-10-20", weekdays: [1.5], time: "07:00", count: 3 }),
+    ).toEqual([]);
+  });
+
+  it("caps the count at 100", () => {
+    expect(
+      distributeDates({
+        startDate: "2026-10-20",
+        weekdays: [0, 1, 2, 3, 4, 5, 6],
+        time: "07:00",
+        count: 1000,
+      }),
+    ).toHaveLength(100);
+  });
 });

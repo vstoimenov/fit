@@ -38,7 +38,7 @@ export function levelGaps(
     const times = items
       .filter((i) => i.kind === "regular" && i.level === level && i.publishAt)
       .map((i) => i.publishAt!);
-    const lastAt = times.sort().at(-1) ?? null;
+    const lastAt = times.sort((a, b) => Date.parse(a) - Date.parse(b)).at(-1) ?? null;
     return lastAt === null || Date.parse(lastAt) < horizon ? [{ level, lastAt }] : [];
   });
 }

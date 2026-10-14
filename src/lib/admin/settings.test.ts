@@ -31,4 +31,10 @@ describe("settings", () => {
   it("renders template placeholders and leaves unknown ones visible", () => {
     expect(renderTemplate("Здравей, {{name}}! {{x}}", { name: "Ани" })).toBe("Здравей, Ани! {{x}}");
   });
+
+  it("does not resolve inherited properties as placeholders", () => {
+    expect(renderTemplate("{{toString}} {{__proto__}} {{constructor}}", {})).toBe(
+      "{{toString}} {{__proto__}} {{constructor}}",
+    );
+  });
 });
