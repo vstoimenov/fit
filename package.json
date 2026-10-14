@@ -10,7 +10,7 @@
     "format": "prettier --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:db": "vitest run --config vitest.db.config.ts",
+    "test:db": "vitest run --config vitest.db.config.mts",
     "db:start": "supabase start -x realtime,edgeruntime,logflare,vector,imgproxy,studio",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",

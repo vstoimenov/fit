@@ -1,2 +1,5 @@
 pnpm-lock.yaml
 .next
+docs
+.superpowers
+supabase/.temp
