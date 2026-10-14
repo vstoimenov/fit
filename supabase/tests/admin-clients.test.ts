@@ -161,7 +161,10 @@ describe("clients service", () => {
         .select("status, current_period_end")
         .eq("user_id", user.id)
         .single();
-      return { status: data!.status, daysLeft: (Date.parse(data!.current_period_end!) - Date.now()) / day };
+      return {
+        status: data!.status,
+        daysLeft: (Date.parse(data!.current_period_end!) - Date.now()) / day,
+      };
     };
     const extended = await read();
     expect(extended.status).toBe("active");
