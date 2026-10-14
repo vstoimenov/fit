@@ -2,14 +2,38 @@
 
 import { useActionState, useState } from "react";
 import { clearDraft } from "@/components/onboarding/storage";
+import type { ActionResult } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
+import { Consent } from "@/components/ui/consent";
 import { Field, inputClass } from "@/components/ui/field";
-import { LEVEL_LABEL } from "@/lib/labels";
+import { GOAL_LABEL, GOALS, LEVEL_LABEL, PROBLEM_LABEL, PROBLEMS } from "@/lib/labels";
+import type { Goal, Problem } from "@/lib/labels";
 import type { Level } from "@/lib/program/types";
-import { deleteMyAccount, saveProfile } from "./actions";
+import { deleteMyAccount, saveAnswers, saveProfile } from "./actions";
 
-export function ProfileForms({ name, level }: { name: string; level: Level }) {
+export interface SavedAnswers {
+  goal: Goal | "";
+  problems: Problem[];
+  heightCm: number | null;
+  weightKg: number | null;
+  targetWeightKg: number | null;
+  phone: string;
+  phoneCallConsent: boolean;
+  marketingConsent: boolean;
+}
+
+export function ProfileForms({
+  name,
+  level,
+  answers,
+}: {
+  name: string;
+  level: Level;
+  answers: SavedAnswers;
+}) {
   const [saveState, save, saving] = useActionState(saveProfile, null);
+  // Held here, not in AnswersForm: the form below remounts on a successful save and must not lose the result.
+  const [answersState, saveAnswersAction, savingAnswers] = useActionState(saveAnswers, null);
   const [deleteState, remove, removing] = useActionState(deleteMyAccount, null);
   const [showDelete, setShowDelete] = useState(false);
 
@@ -40,7 +64,20 @@ export function ProfileForms({ name, level }: { name: string; level: Level }) {
         </Button>
       </form>
 
+      {/* Keyed by the saved values: a successful save remounts it with the new state. */}
+      <AnswersForm
+        key={JSON.stringify(answers)}
+        answers={answers}
+        state={answersState}
+        save={saveAnswersAction}
+        saving={savingAnswers}
+      />
+
       <section className="space-y-3">
+        <p className="text-sm text-ink-soft">
+          Съгласието за обработка на здравни данни (тегло, мерки, здравословни проблеми) е
+          необходимо, за да работи профилът. Ако го оттеглиш, профилът ти се изтрива.
+        </p>
         {!showDelete ? (
           <button
             type="button"
@@ -75,5 +112,135 @@ export function ProfileForms({ name, level }: { name: string; level: Level }) {
         )}
       </section>
     </>
+  );
+}
+
+/** Controlled, so a failed save keeps what she typed (React 19 resets uncontrolled fields after every action). */
+function AnswersForm({
+  answers,
+  state,
+  save,
+  saving,
+}: {
+  answers: SavedAnswers;
+  state: ActionResult<null> | null;
+  save: (form: FormData) => void;
+  saving: boolean;
+}) {
+  const [goal, setGoal] = useState(answers.goal);
+  const [problems, setProblems] = useState(answers.problems);
+  const [height, setHeight] = useState(String(answers.heightCm ?? ""));
+  const [weight, setWeight] = useState(String(answers.weightKg ?? ""));
+  const [target, setTarget] = useState(String(answers.targetWeightKg ?? ""));
+  const [phone, setPhone] = useState(answers.phone);
+  const [callConsent, setCallConsent] = useState(answers.phoneCallConsent);
+  const [marketing, setMarketing] = useState(answers.marketingConsent);
+  const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
+
+  return (
+    <form
+      action={save}
+      noValidate
+      className="space-y-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-line"
+    >
+      <h2 className="font-semibold">Моите отговори</h2>
+      <Field label="Цел" error={errors.goal}>
+        <select
+          name="goal"
+          value={goal}
+          onChange={(e) => setGoal(e.target.value as Goal | "")}
+          className={inputClass}
+        >
+          <option value="" disabled>
+            Избери
+          </option>
+          {GOALS.map((g) => (
+            <option key={g} value={g}>
+              {GOAL_LABEL[g]}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-semibold">Какво те притеснява</legend>
+        {PROBLEMS.map((p) => (
+          <Consent
+            key={p}
+            checked={problems.includes(p)}
+            onChange={(on) =>
+              setProblems((prev) => (on ? [...prev, p] : prev.filter((x) => x !== p)))
+            }
+          >
+            {PROBLEM_LABEL[p]}
+          </Consent>
+        ))}
+        {problems.map((p) => (
+          <input key={p} type="hidden" name="problems" value={p} />
+        ))}
+      </fieldset>
+      <Field label="Ръст (см)" error={errors.heightCm}>
+        <input
+          name="heightCm"
+          type="number"
+          inputMode="numeric"
+          value={height}
+          onChange={(e) => setHeight(e.target.value)}
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Тегло (кг)" error={errors.weightKg}>
+        <input
+          name="weightKg"
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          value={weight}
+          onChange={(e) => setWeight(e.target.value)}
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Целево тегло (кг)" error={errors.targetWeightKg}>
+        <input
+          name="targetWeightKg"
+          type="number"
+          inputMode="decimal"
+          step="0.1"
+          value={target}
+          onChange={(e) => setTarget(e.target.value)}
+          className={inputClass}
+        />
+      </Field>
+      <Field
+        label="Телефон"
+        error={errors.phone}
+        hint="Празно поле изтрива номера. Без телефон не можем да ти звъним."
+      >
+        <input
+          name="phone"
+          type="tel"
+          autoComplete="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className={inputClass}
+        />
+      </Field>
+      <Consent name="phoneCallConsent" checked={callConsent} onChange={setCallConsent}>
+        Съгласна съм треньорът да ми се обади.
+      </Consent>
+      <Consent name="marketingConsent" checked={marketing} onChange={setMarketing}>
+        Искам да получавам съвети и оферти по имейл.
+      </Consent>
+      {state &&
+        (state.ok ? (
+          <p className="text-moss">Запазено ✓</p>
+        ) : (
+          <p role="alert" className="text-brick">
+            {state.message}
+          </p>
+        ))}
+      <Button type="submit" size="md" disabled={saving} className="w-full">
+        Запази отговорите
+      </Button>
+    </form>
   );
 }

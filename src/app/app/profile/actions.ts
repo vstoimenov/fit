@@ -5,10 +5,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
+import { profileFormToAnswers } from "@/lib/onboarding/profile-form";
 import { requireUser } from "@/server/auth/require-user";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
-import { deleteAccount, updateProfileBasics } from "@/server/profile/profile";
+import { deleteAccount, updateProfileAnswers, updateProfileBasics } from "@/server/profile/profile";
 
 const basicsSchema = z.object({
   name: z.string().trim().min(1, "Името е задължително").max(60),
@@ -19,6 +20,18 @@ export async function saveProfile(_prev: unknown, form: FormData): Promise<Actio
   try {
     const { user, supabase } = await requireUser();
     await updateProfileBasics(supabase, user.id, basicsSchema.parse(Object.fromEntries(form)));
+    revalidatePath("/app", "layout");
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** Questionnaire answers, phone and the phone/marketing consents (withdrawal included). */
+export async function saveAnswers(_prev: unknown, form: FormData): Promise<ActionResult<null>> {
+  try {
+    const { user, supabase } = await requireUser();
+    await updateProfileAnswers(supabase, user.id, profileFormToAnswers(form));
     revalidatePath("/app", "layout");
     return actionOk(null);
   } catch (error) {

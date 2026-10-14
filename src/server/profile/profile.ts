@@ -1,3 +1,4 @@
+import { profileAnswersSchema } from "@/lib/onboarding/schema";
 import type { CheckInInput } from "@/lib/progress/check-in-schema";
 import type { Level } from "@/lib/program/types";
 import type { TypedClient } from "@/server/db/types";
@@ -12,6 +13,33 @@ export async function updateProfileBasics(
     .update({ name: input.name, level: input.level })
     .eq("id", userId);
   if (error) throw new Error(`update profile failed: ${error.message}`);
+}
+
+/**
+ * Lets a member correct her questionnaire answers and withdraw or give the phone/marketing consents.
+ * Same validation as onboarding; unknown keys (role, level, ...) are dropped by the schema, and the
+ * column grants keep privileged fields out of reach regardless. Throws ZodError on invalid input.
+ */
+export async function updateProfileAnswers(
+  db: TypedClient,
+  userId: string,
+  raw: unknown,
+): Promise<void> {
+  const a = profileAnswersSchema.parse(raw);
+  const { error } = await db
+    .from("profiles")
+    .update({
+      goal: a.goal,
+      problems: a.problems,
+      height_cm: a.heightCm,
+      weight_kg: a.weightKg,
+      target_weight_kg: a.targetWeightKg,
+      phone: a.phone === "" ? null : a.phone,
+      phone_call_consent: a.phoneCallConsent,
+      marketing_consent: a.marketingConsent,
+    })
+    .eq("id", userId);
+  if (error) throw new Error(`update profile answers failed: ${error.message}`);
 }
 
 export async function addCheckIn(db: TypedClient, input: CheckInInput): Promise<void> {

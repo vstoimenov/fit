@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { completeOnboarding } from "@/app/start/actions";
 import { Button } from "@/components/ui/button";
+import { Consent } from "@/components/ui/consent";
 import { Field, inputClass } from "@/components/ui/field";
 import { clientEnv } from "@/env";
 import {
@@ -419,27 +420,5 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
         </Button>
       )}
     </main>
-  );
-}
-
-function Consent({
-  checked,
-  onChange,
-  children,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="flex gap-3 text-sm leading-snug">
-      <input
-        type="checkbox"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-ember)]"
-      />
-      <span>{children}</span>
-    </label>
   );
 }
