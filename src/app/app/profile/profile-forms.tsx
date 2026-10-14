@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { clearDraft } from "@/components/onboarding/storage";
 import type { ActionResult } from "@/lib/action-result";
 import { Button } from "@/components/ui/button";
@@ -115,7 +115,11 @@ export function ProfileForms({
   );
 }
 
-/** Controlled, so a failed save keeps what she typed (React 19 resets uncontrolled fields after every action). */
+/**
+ * Controlled and submitted through onSubmit + a transition instead of `<form action>`: React 19 resets
+ * the form's DOM fields after every action, which would revert the checkboxes (and any typed value)
+ * on a failed save while the state still holds them.
+ */
 function AnswersForm({
   answers,
   state,
@@ -136,10 +140,15 @@ function AnswersForm({
   const [callConsent, setCallConsent] = useState(answers.phoneCallConsent);
   const [marketing, setMarketing] = useState(answers.marketingConsent);
   const errors = state && !state.ok ? (state.fieldErrors ?? {}) : {};
+  const [, startTransition] = useTransition();
 
   return (
     <form
-      action={save}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const data = new FormData(e.currentTarget);
+        startTransition(() => save(data));
+      }}
       noValidate
       className="space-y-4 rounded-[1.75rem] bg-white p-5 ring-1 ring-line"
     >
@@ -234,9 +243,12 @@ function AnswersForm({
         (state.ok ? (
           <p className="text-moss">Запазено ✓</p>
         ) : (
-          <p role="alert" className="text-brick">
-            {state.message}
-          </p>
+          // A field-level error already says it next to the field.
+          Object.keys(errors).length === 0 && (
+            <p role="alert" className="text-brick">
+              {state.message}
+            </p>
+          )
         ))}
       <Button type="submit" size="md" disabled={saving} className="w-full">
         Запази отговорите
