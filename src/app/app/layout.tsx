@@ -21,12 +21,14 @@ async function AppGate({ children }: { children: React.ReactNode }) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/app");
-  const { data: profile } = await supabase
+  const { data: profile, error } = await supabase
     .from("profiles")
     .select("onboarding_done")
     .eq("id", user.id)
     .single();
-  if (!profile?.onboarding_done) redirect("/start/finish");
+  // A failed query must not look like "not onboarded" (that would bounce her into the funnel).
+  if (error) throw new Error(`load onboarding state failed: ${error.message}`);
+  if (!profile.onboarding_done) redirect("/start/finish");
   return (
     <div className="mx-auto min-h-dvh max-w-md pb-28">
       {children}

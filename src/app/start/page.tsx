@@ -23,12 +23,14 @@ async function StartGate() {
     data: { user },
   } = await supabase.auth.getUser();
   if (user) {
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("profiles")
       .select("onboarding_done")
       .eq("id", user.id)
       .single();
-    if (profile?.onboarding_done) return <DraftResetRedirect to="/app" />;
+    // A failed query must not look like "not onboarded".
+    if (error) throw new Error(`load onboarding state failed: ${error.message}`);
+    if (profile.onboarding_done) return <DraftResetRedirect to="/app" />;
   }
   return <Wizard signedIn={user !== null} />;
 }
