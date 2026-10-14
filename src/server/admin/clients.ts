@@ -170,18 +170,25 @@ export async function grantManualAccess(
   const d = daysSchema.parse(days);
   const { data: existing, error: loadError } = await db
     .from("subscriptions")
-    .select("provider")
+    .select("provider, status, current_period_end")
     .eq("user_id", userId)
     .maybeSingle();
   if (loadError) throw new Error(`load subscription failed: ${loadError.message}`);
   if (existing && existing.provider !== "manual")
     throw new AppError("CONFLICT", "Клиентката има платен абонамент.");
+  // Adding days to a grant that still runs extends it; a canceled or lapsed one restarts from now.
+  const now = Date.now();
+  const runsUntil =
+    existing?.status === "active" && existing.current_period_end
+      ? Date.parse(existing.current_period_end)
+      : 0;
+  const start = Number.isFinite(runsUntil) ? Math.max(now, runsUntil) : now;
   const { error } = await db.from("subscriptions").upsert(
     {
       user_id: userId,
       provider: "manual",
       status: "active",
-      current_period_end: new Date(Date.now() + d * 86_400_000).toISOString(),
+      current_period_end: new Date(start + d * 86_400_000).toISOString(),
       grace_until: null,
       canceled_at: null,
     },

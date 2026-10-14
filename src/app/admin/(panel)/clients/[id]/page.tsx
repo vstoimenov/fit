@@ -105,7 +105,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
               successMessage="Достъпът е даден ✓"
               className="flex flex-wrap items-end gap-2"
             >
-              <Field label="Ръчен достъп, дни">
+              <Field label="Добави дни ръчен достъп">
                 <input
                   name="days"
                   type="number"

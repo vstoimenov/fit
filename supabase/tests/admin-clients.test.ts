@@ -145,6 +145,44 @@ describe("clients service", () => {
     expect(await access(user.id)).toBe(true);
   });
 
+  it("extends a still-active manual grant instead of overwriting it, and restarts a lapsed one from now", async () => {
+    const user = await createUser(admin, "cl-extend");
+    const day = 86_400_000;
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "manual",
+      status: "active",
+      current_period_end: new Date(Date.now() + 200 * day).toISOString(),
+    });
+    await grantManualAccess(boss, user.id, 30);
+    const read = async () => {
+      const { data } = await admin
+        .from("subscriptions")
+        .select("status, current_period_end")
+        .eq("user_id", user.id)
+        .single();
+      return { status: data!.status, daysLeft: (Date.parse(data!.current_period_end!) - Date.now()) / day };
+    };
+    const extended = await read();
+    expect(extended.status).toBe("active");
+    expect(extended.daysLeft).toBeGreaterThan(229);
+    expect(extended.daysLeft).toBeLessThan(231);
+
+    await revokeManualAccess(boss, user.id);
+    await grantManualAccess(boss, user.id, 10);
+    const restarted = await read();
+    expect(restarted.daysLeft).toBeGreaterThan(9);
+    expect(restarted.daysLeft).toBeLessThan(11);
+
+    // an expired (not revoked) grant also starts from now
+    await admin
+      .from("subscriptions")
+      .update({ current_period_end: new Date(Date.now() - 5 * day).toISOString() })
+      .eq("user_id", user.id);
+    await grantManualAccess(boss, user.id, 10);
+    expect((await read()).daysLeft).toBeLessThan(11);
+  });
+
   it("refuses manual access over a paid subscription and leaves it untouched", async () => {
     const user = await createUser(admin, "cl-paid");
     await admin
