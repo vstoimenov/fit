@@ -12,11 +12,31 @@ interface LocalKeys {
 
 let cachedKeys: LocalKeys | undefined;
 
+const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** These tests create users and promote admins with a service-role key: never run them against a real project. */
+function assertLocalUrl(url: string): void {
+  if (process.env.ALLOW_REMOTE_SUPABASE_TESTS === "1") return;
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error(`Refusing to run DB tests: "${url}" is not a valid URL.`);
+  }
+  if (!LOCAL_HOSTNAMES.has(hostname)) {
+    throw new Error(
+      `Refusing to run DB tests against non-local Supabase host "${hostname}". ` +
+        "Set ALLOW_REMOTE_SUPABASE_TESTS=1 only for a disposable stack.",
+    );
+  }
+}
+
 /** Keys of the stack under test: env vars in CI, `supabase status` locally. */
 export function localKeys(): LocalKeys {
   if (cachedKeys) return cachedKeys;
   const { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY } = process.env;
   if (SUPABASE_URL && SUPABASE_ANON_KEY && SUPABASE_SERVICE_ROLE_KEY) {
+    assertLocalUrl(SUPABASE_URL);
     cachedKeys = {
       url: SUPABASE_URL,
       anonKey: SUPABASE_ANON_KEY,
@@ -33,6 +53,7 @@ export function localKeys(): LocalKeys {
   if (!status.API_URL || !status.ANON_KEY || !status.SERVICE_ROLE_KEY) {
     throw new Error("supabase status returned no keys. Is `pnpm db:start` running?");
   }
+  assertLocalUrl(status.API_URL);
   cachedKeys = {
     url: status.API_URL,
     anonKey: status.ANON_KEY,

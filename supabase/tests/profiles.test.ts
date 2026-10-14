@@ -28,30 +28,49 @@ describe("profiles", () => {
 
     const { error } = await db.from("profiles").update({ name: "Ани" }).eq("id", a.id);
     expect(error).toBeNull();
+    const { data: renamed } = await admin.from("profiles").select("name").eq("id", a.id).single();
+    expect(renamed?.name).toBe("Ани");
 
     await db.from("profiles").update({ name: "hack" }).eq("id", b.id);
     const { data: other } = await admin.from("profiles").select("name").eq("id", b.id).single();
     expect(other?.name).toBe("");
   });
 
-  it("refuses role escalation and server-only columns", async () => {
+  const serverOnlyUpdates = [
+    ["role", "admin"],
+    ["starter_week_done_at", "2026-01-01T00:00:00.000Z"],
+    ["email", "someone-else@example.test"],
+    ["first_utm", { utm_source: "hack" }],
+    ["fbclid", "hack"],
+    ["gclid", "hack"],
+    ["last_seen_at", "2026-01-01T00:00:00.000Z"],
+    ["id", "00000000-0000-0000-0000-000000000000"],
+    ["joined_at", "2020-01-01T00:00:00.000Z"],
+  ] as const;
+
+  it.each(serverOnlyUpdates)("refuses a user writing %s", async (column, value) => {
     const user = await createUser(admin, "esc");
     const db = await signedInClient(user);
-    const { error: roleError } = await db
+    const { data: before } = await admin.from("profiles").select(column).eq("id", user.id).single();
+
+    const { error } = await db
       .from("profiles")
-      .update({ role: "admin" })
+      .update({ [column]: value })
       .eq("id", user.id);
-    expect(roleError?.code).toBe("42501");
-    const { error: starterError } = await db
-      .from("profiles")
-      .update({ starter_week_done_at: new Date().toISOString() })
-      .eq("id", user.id);
-    expect(starterError?.code).toBe("42501");
+    expect(error?.code).toBe("42501");
+
+    const { data: after } = await admin.from("profiles").select(column).eq("id", user.id).single();
+    expect(after).toEqual(before);
   });
 
   it("hides profiles from anonymous visitors", async () => {
-    const { data } = await anonClient().from("profiles").select("id");
-    expect(data ?? []).toEqual([]);
+    const user = await createUser(admin, "anon-target");
+    const { data: real } = await admin.from("profiles").select("id").eq("id", user.id);
+    expect(real).toHaveLength(1);
+
+    const { data, error } = await anonClient().from("profiles").select("id");
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
   });
 
   it("lets an admin read every profile", async () => {
