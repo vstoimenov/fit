@@ -1,0 +1,48 @@
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import { clientEnv } from "@/env";
+import { decideAuthRedirect } from "@/lib/auth-redirect";
+
+/** Refreshes the Supabase session cookie and applies optimistic auth redirects. */
+export async function proxy(request: NextRequest) {
+  let response = NextResponse.next({ request });
+
+  const supabase = createServerClient(
+    clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+    clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          for (const { name, value } of cookiesToSet) request.cookies.set(name, value);
+          response = NextResponse.next({ request });
+          for (const { name, value, options } of cookiesToSet)
+            response.cookies.set(name, value, options);
+        },
+      },
+    },
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const target = decideAuthRedirect({
+    pathname: request.nextUrl.pathname,
+    search: request.nextUrl.search,
+    hasSession: user !== null,
+  });
+  if (!target) return response;
+
+  const redirect = NextResponse.redirect(new URL(target, request.url));
+  for (const cookie of response.cookies.getAll()) redirect.cookies.set(cookie);
+  return redirect;
+}
+
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|pwa-icon|manifest.webmanifest|api/visit).*)",
+  ],
+};
