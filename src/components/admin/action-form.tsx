@@ -1,5 +1,6 @@
 "use client";
 
+import { unstable_rethrow } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/action-result";
@@ -46,8 +47,11 @@ export function ActionForm({
         const result = await action(previous, data);
         setState(result);
         if (result.ok && resetOnSuccess) form.reset();
-      } catch {
-        // A thrown or rejected action: keep what was typed and show an inline error.
+      } catch (error) {
+        // Let Next's redirect/notFound control flow through; anything else is a real failure:
+        // keep what was typed and show an inline error.
+        unstable_rethrow(error);
+        console.error("admin action failed", error);
         setState({ ok: false, message: "Нещо се обърка. Опитай отново." });
       } finally {
         inFlight.current = false;

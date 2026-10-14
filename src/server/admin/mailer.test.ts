@@ -40,4 +40,26 @@ describe("createMailer", () => {
     ).toEqual({ delivered: false });
     expect((f as unknown as { mock: { calls: unknown[] } }).mock.calls).toHaveLength(0);
   });
+
+  it("logs only the status or 'network' on failure, never the key or body", async () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const bad = vi.fn(
+      async () => new Response("secret-body", { status: 401 }),
+    ) as unknown as typeof fetch;
+    await createMailer({ BREVO_API_KEY: "sekret", EMAIL_FROM_ADDRESS: "hi@example.com" }, bad).send(
+      { to: "a@example.test", subject: "s", text: "t" },
+    );
+    const down = vi.fn(async () => {
+      throw new Error("boom sekret");
+    }) as unknown as typeof fetch;
+    await createMailer(
+      { BREVO_API_KEY: "sekret", EMAIL_FROM_ADDRESS: "hi@example.com" },
+      down,
+    ).send({ to: "a@example.test", subject: "s", text: "t" });
+    expect(spy.mock.calls).toEqual([
+      ["brevo send failed", 401],
+      ["brevo send failed", "network"],
+    ]);
+    spy.mockRestore();
+  });
 });

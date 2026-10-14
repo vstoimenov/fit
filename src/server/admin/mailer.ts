@@ -36,8 +36,10 @@ export function createMailer(
           }),
           signal: AbortSignal.timeout(10_000),
         });
+        if (!res.ok) console.error("brevo send failed", res.status);
         return { delivered: res.ok };
       } catch {
+        console.error("brevo send failed", "network");
         return { delivered: false };
       }
     },

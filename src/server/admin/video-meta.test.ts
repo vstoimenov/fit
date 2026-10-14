@@ -74,4 +74,28 @@ describe("fetchVideoMeta", () => {
     });
     expect((f as unknown as { mock: { calls: unknown[] } }).mock.calls).toHaveLength(0);
   });
+
+  it("refuses redirects on the provider fetch and survives a rejected redirect", async () => {
+    const f = fakeFetch({ title: "x" });
+    await fetchVideoMeta(parseVideoUrl("https://youtu.be/ml6cT4AZdqI")!, f);
+    const init = (f as unknown as { mock: { calls: [string, RequestInit][] } }).mock.calls[0]![1];
+    expect(init.redirect).toBe("error");
+    const redirected = vi.fn(async () => {
+      throw new TypeError("fetch failed: unexpected redirect");
+    }) as unknown as typeof fetch;
+    expect(
+      await fetchVideoMeta(parseVideoUrl("https://youtu.be/ml6cT4AZdqI")!, redirected),
+    ).toEqual({
+      title: null,
+      durationMin: null,
+      thumbnailSourceUrl: null,
+    });
+  });
+
+  it("drops thumbnails with an explicit port", async () => {
+    const f = fakeFetch({ title: "x", thumbnail_url: "https://i.ytimg.com:8443/x.jpg" });
+    expect(
+      (await fetchVideoMeta(parseVideoUrl("https://youtu.be/ml6cT4AZdqI")!, f)).thumbnailSourceUrl,
+    ).toBeNull();
+  });
 });

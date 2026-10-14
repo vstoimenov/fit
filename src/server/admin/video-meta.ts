@@ -13,7 +13,9 @@ function safeThumb(raw: unknown): string | null {
   if (typeof raw !== "string") return null;
   try {
     const url = new URL(raw);
-    return url.protocol === "https:" && THUMBNAIL_HOSTS.has(url.hostname) ? url.toString() : null;
+    return url.protocol === "https:" && url.port === "" && THUMBNAIL_HOSTS.has(url.hostname)
+      ? url.toString()
+      : null;
   } catch {
     return null;
   }
@@ -40,7 +42,7 @@ export async function fetchVideoMeta(
   const url = oembedUrl(ref);
   if (!url) return NONE;
   try {
-    const res = await fetchImpl(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetchImpl(url, { redirect: "error", signal: AbortSignal.timeout(5000) });
     if (!res.ok) return NONE;
     const body = (await res.json()) as {
       title?: unknown;
