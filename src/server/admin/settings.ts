@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AppError } from "@/lib/app-error";
 import { parseSetting, SETTINGS, type SettingKey, type Settings } from "@/lib/admin/settings";
 import type { TypedClient } from "@/server/db/types";
 
@@ -58,8 +59,12 @@ export async function savePlan(db: TypedClient, id: string | null, raw: unknown)
     active: p.active,
     sort: p.sort,
   };
-  const { error } = id
-    ? await db.from("plans").update(row).eq("id", id)
-    : await db.from("plans").insert(row);
+  if (id) {
+    const { data, error } = await db.from("plans").update(row).eq("id", id).select("id");
+    if (error) throw new Error(`save plan failed: ${error.message}`);
+    if (data.length === 0) throw new AppError("NOT_FOUND", "Планът не е намерен.");
+    return;
+  }
+  const { error } = await db.from("plans").insert(row);
   if (error) throw new Error(`save plan failed: ${error.message}`);
 }

@@ -43,7 +43,7 @@ describe("clients service", () => {
 
   it("pages through clients with identical join times without gaps or repeats", async () => {
     const token = `cl-tie-${Math.random().toString(36).slice(2, 8)}`;
-    const users = await Promise.all([1, 2, 3, 4, 5].map(() => createUser(admin, token)));
+    const users = await Promise.all([1, 2, 3, 4, 5, 6].map(() => createUser(admin, token)));
     const same = new Date(Date.now() - 86_400_000).toISOString();
     await admin
       .from("profiles")
@@ -53,11 +53,12 @@ describe("clients service", () => {
         users.map((u) => u.id),
       );
     const seen: string[] = [];
-    for (let offset = 0; offset < 6; offset += 2) {
+    for (let offset = 0; offset < 8; offset += 2) {
       const { rows } = await listClients(boss, { search: token, limit: 2, offset });
       seen.push(...rows.map((r) => r.userId));
     }
-    expect([...seen].sort()).toEqual(users.map((u) => u.id).sort());
+    // Equal join times fall back to the id, so the order is exactly ascending by id across every page.
+    expect(seen).toEqual(users.map((u) => u.id).sort());
   });
 
   it("listAllClients returns one row per client even if a page repeats a row", async () => {

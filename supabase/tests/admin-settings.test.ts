@@ -115,6 +115,18 @@ describe("plans", () => {
     expect(data).toEqual([]);
   });
 
+  it("throws NOT_FOUND when editing a plan that does not exist", async () => {
+    await expect(
+      savePlan(boss, crypto.randomUUID(), {
+        name: "Няма ме",
+        interval: "month",
+        priceCents: 100,
+        active: false,
+        sort: 0,
+      }),
+    ).rejects.toMatchObject({ code: "NOT_FOUND", userMessage: "Планът не е намерен." });
+  });
+
   it("lists inactive plans for the admin", async () => {
     const plan = await newPlan(`Скрит ${rand()}`);
     expect((await listPlans(boss)).some((p) => p.id === plan.id)).toBe(true);

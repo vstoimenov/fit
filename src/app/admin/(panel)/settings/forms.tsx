@@ -44,6 +44,7 @@ function PlanForm({ plan }: { plan?: Plan }) {
       <Field label="Цена €">
         <input
           name="price"
+          title="Промяната на цена/период важи и за текущите абонати в MRR."
           inputMode="decimal"
           defaultValue={plan ? (plan.price_cents / 100).toFixed(2) : ""}
           required
@@ -74,7 +75,7 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
         <h2 className="font-semibold">Планове и цени</h2>
         <p className="text-sm text-ink-soft">
           Плановете не се трият — изключи „Активен“, за да спре да се предлага. Свързването със
-          Stripe/Revolut идва в 1C.
+          Stripe/Revolut идва в 1C. Промяната на цена/период важи и за текущите абонати в MRR.
         </p>
         {plans.map((p) => (
           <PlanForm key={p.id} plan={p} />

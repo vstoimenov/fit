@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { serverEnv } from "@/env";
+import { stepRate } from "@/lib/admin/funnel";
 import { formatPrice } from "@/lib/format";
 import { getDashboard } from "@/server/admin/dashboard";
 import { requireAdmin } from "@/server/admin/require-admin";
@@ -10,9 +11,11 @@ export const metadata = { title: "Табло" };
 
 function Tile({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-line">
-      <p className="text-sm text-ink-soft">{label}</p>
-      <p className="font-display text-3xl font-bold tabular-nums">{value}</p>
+    <div className="min-w-0 rounded-2xl bg-white p-4 ring-1 ring-line">
+      <p className="break-words text-sm text-ink-soft">{label}</p>
+      <p className="break-words font-display text-2xl font-bold tabular-nums sm:text-3xl">
+        {value}
+      </p>
       {hint && <p className="text-xs text-ink-soft">{hint}</p>}
     </div>
   );
@@ -33,7 +36,6 @@ async function Dashboard() {
   const { active, canceled_30 } = d.subscriptions;
   const churn =
     active + canceled_30 > 0 ? Math.round((canceled_30 / (active + canceled_30)) * 100) : 0;
-  const step = (a: number, b: number) => (a > 0 ? `${Math.round((b / a) * 100)}%` : "—");
 
   return (
     <div className="space-y-8">
@@ -62,19 +64,23 @@ async function Dashboard() {
           <Tile
             label="Регистрации"
             value={d.funnel.signups}
-            hint={step(d.funnel.visitors, d.funnel.signups)}
+            hint={stepRate(d.funnel.visitors, d.funnel.signups)}
           />
           <Tile
             label="Безплатна тренировка"
             value={d.funnel.free_done}
-            hint={step(d.funnel.signups, d.funnel.free_done)}
+            hint={stepRate(d.funnel.signups, d.funnel.free_done)}
           />
           <Tile
             label="Платили"
             value={d.funnel.paid}
-            hint={step(d.funnel.free_done, d.funnel.paid)}
+            hint={stepRate(d.funnel.free_done, d.funnel.paid)}
           />
         </div>
+        <p className="text-xs text-ink-soft">
+          Регистрациите могат да надвишат проследените посетители (блокери на реклами, директни
+          регистрации).
+        </p>
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">

@@ -59,7 +59,8 @@ export async function sendNudge(
     if (!result.delivered) throw recordError;
     console.error(
       "nudge delivered but note not recorded",
-      recordError instanceof Error ? recordError.message : recordError,
+      userId,
+      recordError instanceof Error ? recordError.message : "unknown error",
     );
     return { delivered: true, recorded: false };
   }
