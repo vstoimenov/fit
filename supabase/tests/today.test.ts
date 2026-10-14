@@ -1,8 +1,10 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { getTodayView } from "@/server/content/today";
+import { listPublishedWorkouts } from "@/server/content/workouts";
 import {
   adminClient,
   createUser,
+  createWorkout,
   freeWorkoutId,
   grantAccess,
   signedInClient,
@@ -42,5 +44,67 @@ describe("getTodayView", () => {
     const view = await getTodayView(db, user.id);
     expect(view.doneTotal).toBe(1);
     expect(view.pick).toEqual({ kind: "locked" });
+  });
+});
+
+describe("admins see drafts through RLS but the services only treat published workouts as content", () => {
+  const day = 86_400_000;
+
+  async function adminUser() {
+    const user = await createUser(admin, "today-admin");
+    const { error } = await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
+    expect(error).toBeNull();
+    return user;
+  }
+
+  it("lists no unpublished or future workout in the library", async () => {
+    const user = await adminUser();
+    const db = await signedInClient(user);
+    const draftId = await createWorkout(admin, {
+      title: "Чернова",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      publish_at: null,
+    });
+    const futureId = await createWorkout(admin, {
+      title: "Утрешна",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      publish_at: new Date(Date.now() + day).toISOString(),
+    });
+    // Precondition: RLS lets the admin read both, so the filter below is what hides them.
+    const raw = await db.from("workouts").select("id").in("id", [draftId, futureId]);
+    expect(raw.data).toHaveLength(2);
+
+    const ids = (await listPublishedWorkouts(db)).map((w) => w.id);
+    expect(ids).not.toContain(draftId);
+    expect(ids).not.toContain(futureId);
+    expect(ids).toContain(await freeWorkoutId(admin));
+  });
+
+  it("does not let unpublished workouts into the week strip or the streak", async () => {
+    const adminDb = await signedInClient(await adminUser());
+    const adminUserRow = (await adminDb.auth.getUser()).data.user!;
+    const client = await createUser(admin, "today-client");
+    await createWorkout(admin, {
+      title: "Скрита чернова",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      publish_at: null,
+    });
+    await createWorkout(admin, {
+      title: "Скрита утрешна",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      publish_at: new Date(Date.now() + day).toISOString(),
+    });
+    const asAdmin = await getTodayView(adminDb, adminUserRow.id);
+    const asClient = await getTodayView(await signedInClient(client), client.id);
+    expect(asAdmin.week.map((d) => d.slot)).toEqual(asClient.week.map((d) => d.slot));
+    expect(asAdmin.streak).toBe(asClient.streak);
   });
 });

@@ -74,7 +74,12 @@ export async function getTodayView(
       .select("name, level, timezone, starter_week_done_at")
       .eq("id", userId)
       .single(),
-    db.from("workouts").select(WORKOUT_COLUMNS),
+    // Explicit publish filter: RLS also lets admins read drafts and scheduled workouts.
+    db
+      .from("workouts")
+      .select(WORKOUT_COLUMNS)
+      .not("publish_at", "is", null)
+      .lte("publish_at", now.toISOString()),
     db.from("workout_completions").select("workout_id, local_date").eq("user_id", userId),
     db.rpc("my_access"),
   ]);

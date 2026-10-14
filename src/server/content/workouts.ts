@@ -28,11 +28,16 @@ export async function getWorkoutForPlayer(
   return ref ? { workout, state: "ok", embedUrl: ref.embedUrl } : { workout, state: "broken" };
 }
 
-/** Every published workout the viewer can see, newest first. */
+/**
+ * Every published workout, newest first. The publish filter is explicit because RLS also lets
+ * admins read drafts and scheduled workouts.
+ */
 export async function listPublishedWorkouts(db: TypedClient): Promise<WorkoutSummary[]> {
   const { data, error } = await db
     .from("workouts")
     .select(WORKOUT_COLUMNS)
+    .not("publish_at", "is", null)
+    .lte("publish_at", new Date().toISOString())
     .order("publish_at", { ascending: false });
   if (error) throw new Error(`list workouts failed: ${error.message}`);
   return data.map(toSummary);
