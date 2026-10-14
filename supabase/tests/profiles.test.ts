@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import type { TablesUpdate } from "@/lib/supabase/database.types";
 import { adminClient, anonClient, createUser, signedInClient, type TypedClient } from "./helpers";
 
 let admin: TypedClient;
@@ -55,7 +56,7 @@ describe("profiles", () => {
 
     const { error } = await db
       .from("profiles")
-      .update({ [column]: value })
+      .update({ [column]: value } as TablesUpdate<"profiles">)
       .eq("id", user.id);
     expect(error?.code).toBe("42501");
 
