@@ -25,10 +25,11 @@ export function Button({
   variant = "primary",
   size = "lg",
   className,
+  type = "button",
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & {
   variant?: keyof typeof VARIANT;
   size?: keyof typeof SIZE;
 }) {
-  return <button className={cn(buttonClass(variant, size), className)} {...props} />;
+  return <button type={type} className={cn(buttonClass(variant, size), className)} {...props} />;
 }

@@ -9,6 +9,15 @@ import { clientEnv } from "@/env";
 import { safeNext } from "@/lib/auth-redirect";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
+function signInErrorMessage(error: { status?: number; code?: string }): string {
+  if (error.status === 429 || error.code === "over_request_rate_limit") {
+    return "Твърде много опити. Опитай пак след малко.";
+  }
+  if (error.code === "invalid_credentials" || error.status === 400)
+    return "Грешен имейл или парола.";
+  return "Нещо се обърка. Опитай отново.";
+}
+
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -21,12 +30,17 @@ function LoginForm() {
   async function onSubmit(form: FormData) {
     setBusy(true);
     setError("");
-    const { error: signInError } = await createBrowserSupabaseClient().auth.signInWithPassword({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-    });
-    setBusy(false);
-    if (signInError) return setError("Грешен имейл или парола.");
+    try {
+      const { error: signInError } = await createBrowserSupabaseClient().auth.signInWithPassword({
+        email: String(form.get("email")),
+        password: String(form.get("password")),
+      });
+      if (signInError) return setError(signInErrorMessage(signInError));
+    } catch {
+      return setError("Нещо се обърка. Опитай отново.");
+    } finally {
+      setBusy(false);
+    }
     router.replace(next);
     router.refresh();
   }

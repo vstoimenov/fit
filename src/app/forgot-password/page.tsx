@@ -7,11 +7,22 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
   async function onSubmit(form: FormData) {
-    await createBrowserSupabaseClient().auth.resetPasswordForEmail(String(form.get("email")), {
-      redirectTo: `${location.origin}/auth/callback?next=/reset-password`,
-    });
+    setError("");
+    try {
+      const { error: resetError } = await createBrowserSupabaseClient().auth.resetPasswordForEmail(
+        String(form.get("email")),
+        {
+          redirectTo: `${location.origin}/auth/callback?next=/reset-password`,
+        },
+      );
+      // Supabase answers success for unknown emails too, so any returned error is infrastructure (rate limit, network).
+      if (resetError) return setError("Нещо се обърка. Опитай отново.");
+    } catch {
+      return setError("Нещо се обърка. Опитай отново.");
+    }
     // Same answer whether or not the email exists, so accounts cannot be enumerated.
     setSent(true);
   }
@@ -23,7 +34,7 @@ export default function ForgotPasswordPage() {
         <p>Ако имаш профил с този имейл, ще получиш линк до минута.</p>
       ) : (
         <form action={onSubmit} className="space-y-4">
-          <Field label="Имейл">
+          <Field label="Имейл" error={error || undefined}>
             <input name="email" type="email" required className={inputClass} />
           </Field>
           <Button type="submit" className="w-full">

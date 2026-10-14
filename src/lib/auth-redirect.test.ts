@@ -32,4 +32,22 @@ describe("safeNext", () => {
     expect(safeNext("/\\evil.com")).toBe("/app");
     expect(safeNext(null, "/start/finish")).toBe("/start/finish");
   });
+
+  it("rejects control-character and scheme bypasses", () => {
+    expect(safeNext("/\t/evil.com")).toBe("/app");
+    expect(safeNext("/\n/evil.com")).toBe("/app");
+    expect(safeNext("/\r//evil.com")).toBe("/app");
+    expect(safeNext("javascript:alert(1)")).toBe("/app");
+    expect(safeNext("")).toBe("/app");
+  });
+
+  it("keeps encoded slashes as a same-site path", () => {
+    const result = safeNext("/%2F%2Fevil.com");
+    expect(result.startsWith("/")).toBe(true);
+    expect(result.startsWith("//")).toBe(false);
+  });
+
+  it("keeps query and hash on same-site paths", () => {
+    expect(safeNext("/app/plan?week=2#top")).toBe("/app/plan?week=2#top");
+  });
 });
