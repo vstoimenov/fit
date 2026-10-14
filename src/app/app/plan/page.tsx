@@ -80,7 +80,9 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
           <div key={label} className="min-w-0 rounded-3xl bg-white px-2 py-4 ring-1 ring-line">
             <dt className="sr-only">{label}</dt>
             <dd className="font-display text-sm font-bold break-words">{value}</dd>
-            <dd className="text-xs text-ink-soft">{label}</dd>
+            <dd aria-hidden="true" className="text-xs text-ink-soft">
+              {label}
+            </dd>
           </div>
         ))}
       </dl>

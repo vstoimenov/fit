@@ -66,10 +66,11 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const filter = parseLibraryFilter(await searchParams);
   const { supabase } = await requireUser();
-  const [workouts, { data: hasAccess }] = await Promise.all([
+  const [workouts, { data: hasAccess, error: accessError }] = await Promise.all([
     listPublishedWorkouts(supabase),
     supabase.rpc("my_access"),
   ]);
+  if (accessError) throw new Error(`load access failed: ${accessError.message}`);
   const shown = filterLibrary(workouts, filter);
 
   return (
