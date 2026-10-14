@@ -23,6 +23,51 @@ export type Database = {
   };
   public: {
     Tables: {
+      check_ins: {
+        Row: {
+          created_at: string;
+          energy: number | null;
+          hips_cm: number | null;
+          id: string;
+          mood: number | null;
+          note: string | null;
+          user_id: string;
+          waist_cm: number | null;
+          weight_kg: number | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          energy?: number | null;
+          hips_cm?: number | null;
+          id?: string;
+          mood?: number | null;
+          note?: string | null;
+          user_id?: string;
+          waist_cm?: number | null;
+          weight_kg?: number | null;
+        };
+        Update: {
+          created_at?: string;
+          energy?: number | null;
+          hips_cm?: number | null;
+          id?: string;
+          mood?: number | null;
+          note?: string | null;
+          user_id?: string;
+          waist_cm?: number | null;
+          weight_kg?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       plans: {
         Row: {
           active: boolean;
@@ -187,6 +232,91 @@ export type Database = {
             columns: ["user_id"];
             isOneToOne: true;
             referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      visits: {
+        Row: {
+          anon_id: string;
+          created_at: string;
+          device: string;
+          id: number;
+          path: string;
+          referrer: string | null;
+          user_id: string | null;
+          utm: Json | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          anon_id: string;
+          created_at?: string;
+          device: string;
+          id?: never;
+          path: string;
+          referrer?: string | null;
+          user_id?: string | null;
+          utm?: Json | null;
+        };
+        Update: {
+          anon_id?: string;
+          created_at?: string;
+          device?: string;
+          id?: never;
+          path?: string;
+          referrer?: string | null;
+          user_id?: string | null;
+          utm?: Json | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "visits_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      workout_completions: {
+        Row: {
+          completed_at: string;
+          feeling: Database["public"]["Enums"]["feeling"] | null;
+          id: string;
+          local_date: string;
+          user_id: string;
+          workout_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          completed_at?: string;
+          feeling?: Database["public"]["Enums"]["feeling"] | null;
+          id?: string;
+          local_date?: string;
+          user_id?: string;
+          workout_id: string;
+        };
+        Update: {
+          completed_at?: string;
+          feeling?: Database["public"]["Enums"]["feeling"] | null;
+          id?: string;
+          local_date?: string;
+          user_id?: string;
+          workout_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workout_completions_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workout_completions_workout_id_fkey";
+            columns: ["workout_id"];
+            isOneToOne: false;
+            referencedRelation: "workouts";
             referencedColumns: ["id"];
           },
         ];
