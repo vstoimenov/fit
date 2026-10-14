@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { saveBulk } from "@/server/admin/bulk";
 import {
   createAdminWorkout,
   deleteAdminWorkout,
@@ -273,5 +274,40 @@ describe("admin workouts service", () => {
     expect(found).toContain(literal);
     expect(found).not.toContain(other);
     expect(await listAdminWorkouts(boss, { search: `${stamp}\\` })).toEqual([]);
+  });
+});
+
+describe("saveBulk", () => {
+  it("creates valid rows and reports invalid ones", async () => {
+    const row = {
+      videoUrl: "https://youtu.be/ml6cT4AZdqI",
+      title: "Bulk 1",
+      level: "beginner",
+      durationMin: 20,
+      date: "2031-11-04",
+      time: "07:00",
+      notify: true,
+      thumbnailSourceUrl: null,
+    };
+    const result = await saveBulk(
+      boss,
+      bossId,
+      [
+        row,
+        { ...row, title: "", date: "x" },
+        { ...row, title: "Bulk 3", videoUrl: "https://example.com" },
+      ],
+      async () => null,
+    );
+    expect(result.created).toBe(1);
+    expect(result.errors.map((e) => e.index)).toEqual([1, 2]);
+    const { data } = await admin
+      .from("workouts")
+      .select("publish_at")
+      .eq("title", "Bulk 1")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    expect(Date.parse(data!.publish_at!)).toBe(Date.parse("2031-11-04T05:00:00Z"));
   });
 });
