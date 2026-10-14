@@ -16,4 +16,23 @@ describe("parseEnv", () => {
       /SUPABASE_SERVICE_ROLE_KEY.*APP_URL|APP_URL.*SUPABASE_SERVICE_ROLE_KEY/,
     );
   });
+
+  it("treats empty optional mail variables as unset", () => {
+    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, BREVO_API_KEY: "", EMAIL_FROM_ADDRESS: "", EMAIL_FROM_NAME: "" },
+      "server",
+    );
+    expect(env.BREVO_API_KEY).toBeUndefined();
+    expect(env.EMAIL_FROM_ADDRESS).toBeUndefined();
+    expect(env.EMAIL_FROM_NAME).toBeUndefined();
+  });
+
+  it("rejects an invalid EMAIL_FROM_ADDRESS", () => {
+    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    expect(() =>
+      parseEnv(serverEnvSchema, { ...base, EMAIL_FROM_ADDRESS: "not-an-email" }, "server"),
+    ).toThrow(/EMAIL_FROM_ADDRESS/);
+  });
 });
