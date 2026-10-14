@@ -18,5 +18,9 @@ export function Countdown({ to }: { to: string }) {
     const timer = setInterval(() => setLeft(Date.parse(to) - Date.now()), 30_000);
     return () => clearInterval(timer);
   }, [to]);
-  return <span className="tabular-nums">{format(left)}</span>;
+  return (
+    <span className="tabular-nums" suppressHydrationWarning>
+      {format(left)}
+    </span>
+  );
 }

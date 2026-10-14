@@ -78,7 +78,7 @@ async function Today() {
         <section className="space-y-2 rounded-[2rem] bg-white p-6 ring-1 ring-line">
           <p className="font-display text-2xl font-bold">Днес е за почивка</p>
           <p className="text-ink-soft">
-            Направи всичко публикувано. Повтори любима тренировка от{" "}
+            Направила си всичко публикувано. Повтори любима тренировка от{" "}
             <Link href="/app/library" className="underline">
               библиотеката
             </Link>

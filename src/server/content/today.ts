@@ -113,7 +113,10 @@ export async function getTodayView(
     .map((w) => toLocalDate(w.publishAt!, profile.timezone));
   const completionDates = completions.map((c) => c.local_date);
 
-  const { data: nextDropAt } = await db.rpc("next_drop_at", { p_level: profile.level });
+  const { data: nextDropAt, error: nextDropError } = await db.rpc("next_drop_at", {
+    p_level: profile.level,
+  });
+  if (nextDropError) throw new Error(`next drop failed: ${nextDropError.message}`);
 
   return {
     name: profile.name,
