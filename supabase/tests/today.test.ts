@@ -3,6 +3,7 @@ import { getTodayView } from "@/server/content/today";
 import { listPublishedWorkouts } from "@/server/content/workouts";
 import {
   adminClient,
+  createAdminUser,
   createUser,
   createWorkout,
   freeWorkoutId,
@@ -51,15 +52,11 @@ describe("admins see drafts through RLS but the services only treat published wo
   const day = 86_400_000;
 
   async function adminUser() {
-    const user = await createUser(admin, "today-admin");
-    const { error } = await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
-    expect(error).toBeNull();
-    return user;
+    return createAdminUser(admin, "today-admin");
   }
 
   it("lists no unpublished or future workout in the library", async () => {
-    const user = await adminUser();
-    const db = await signedInClient(user);
+    const { db } = await adminUser();
     const draftId = await createWorkout(admin, {
       title: "Чернова",
       kind: "regular",
@@ -85,8 +82,7 @@ describe("admins see drafts through RLS but the services only treat published wo
   });
 
   it("does not let unpublished workouts into the week strip or the streak", async () => {
-    const adminDb = await signedInClient(await adminUser());
-    const adminUserRow = (await adminDb.auth.getUser()).data.user!;
+    const { user: adminUserRow, db: adminDb } = await adminUser();
     const client = await createUser(admin, "today-client");
     await createWorkout(admin, {
       title: "Скрита чернова",

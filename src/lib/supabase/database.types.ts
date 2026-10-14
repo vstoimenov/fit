@@ -186,6 +186,8 @@ export type Database = {
       };
       subscriptions: {
         Row: {
+          canceled_at: string | null;
+          created_at: string;
           current_period_end: string | null;
           grace_until: string | null;
           plan_id: string | null;
@@ -198,6 +200,8 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          canceled_at?: string | null;
+          created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;
@@ -209,6 +213,8 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          canceled_at?: string | null;
+          created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;

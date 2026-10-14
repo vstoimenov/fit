@@ -1,6 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { TablesUpdate } from "@/lib/supabase/database.types";
-import { adminClient, anonClient, createUser, signedInClient, type TypedClient } from "./helpers";
+import {
+  adminClient,
+  anonClient,
+  createAal1Admin,
+  createAdminUser,
+  createUser,
+  signedInClient,
+  type TypedClient,
+} from "./helpers";
 
 let admin: TypedClient;
 
@@ -75,11 +83,17 @@ describe("profiles", () => {
   });
 
   it("lets an admin read every profile", async () => {
-    const boss = await createUser(admin, "boss");
-    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const { db } = await createAdminUser(admin, "boss");
     const other = await createUser(admin, "seen");
-    const db = await signedInClient(boss);
     const { data } = await db.from("profiles").select("id").eq("id", other.id);
     expect(data).toHaveLength(1);
+  });
+
+  it("does not let an admin who skipped the second factor read another profile", async () => {
+    const { db } = await createAal1Admin(admin, "boss-aal1");
+    const other = await createUser(admin, "unseen");
+    const { data, error } = await db.from("profiles").select("id").eq("id", other.id);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
   });
 });

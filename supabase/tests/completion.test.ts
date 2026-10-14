@@ -3,6 +3,7 @@ import { markWorkoutComplete, setCompletionFeeling } from "@/server/content/comp
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 import {
   adminClient,
+  createAdminUser,
   createUser,
   createWorkout,
   freeWorkoutId,
@@ -78,10 +79,8 @@ describe("markWorkoutComplete", () => {
 
   it("returns the caller's own completion on a second tap even when an admin can see everyone's", async () => {
     const normal = await createUser(admin, "normal-done");
-    const boss = await createUser(admin, "boss-done");
-    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const { user: boss, db: bossDb } = await createAdminUser(admin, "boss-done");
     const normalDb = await signedInClient(normal);
-    const bossDb = await signedInClient(boss);
     const bossFirst = await markWorkoutComplete(bossDb, boss.id, freeId);
     const normalFirst = await markWorkoutComplete(normalDb, normal.id, freeId);
     const bossSecond = await markWorkoutComplete(bossDb, boss.id, freeId);

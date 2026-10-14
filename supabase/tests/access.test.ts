@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   adminClient,
+  createAdminUser,
   anonClient,
   createUser,
   createWorkout,
@@ -122,10 +123,7 @@ describe("content access", () => {
   });
 
   it("lets an admin see every video, published or not", async () => {
-    const user = await createUser(admin, "admin-view");
-    const promote = await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
-    expect(promote.error).toBeNull();
-    const db = await signedInClient(user);
+    const { db } = await createAdminUser(admin, "admin-view");
     expect(await mediaVisible(db, futureId)).toBe(true);
     expect(await mediaVisible(db, paidId)).toBe(true);
     const { data: access, error } = await db.rpc("my_access");
