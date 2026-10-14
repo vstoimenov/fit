@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseVideoUrl } from "./parse-video-url";
+import { normalizeVideoInput, parseVideoUrl } from "./parse-video-url";
 
 const yt = (id: string) =>
   `https://www.youtube-nocookie.com/embed/${id}?rel=0&modestbranding=1&playsinline=1`;
@@ -57,5 +57,29 @@ describe("parseVideoUrl", () => {
     "https://vimeo.com/channels/staffpicks",
   ])("rejects %s", (url) => {
     expect(parseVideoUrl(url)).toBeNull();
+  });
+});
+
+describe("scheme-less and hostile input", () => {
+  it("accepts links pasted without https://", () => {
+    expect(parseVideoUrl("youtu.be/ml6cT4AZdqI")?.id).toBe("ml6cT4AZdqI");
+    expect(parseVideoUrl("www.youtube.com/watch?v=ml6cT4AZdqI")?.id).toBe("ml6cT4AZdqI");
+    expect(normalizeVideoInput(" youtu.be/ml6cT4AZdqI ")).toBe("https://youtu.be/ml6cT4AZdqI");
+    expect(normalizeVideoInput("https://youtu.be/ml6cT4AZdqI")).toBe(
+      "https://youtu.be/ml6cT4AZdqI",
+    );
+  });
+
+  it.each([
+    "https://youtube.com.evil.com/watch?v=ml6cT4AZdqI",
+    "https://evilyoutube.com/watch?v=ml6cT4AZdqI",
+    "https://youtube.com@evil.com/watch?v=ml6cT4AZdqI",
+    "ftp://youtu.be/ml6cT4AZdqI",
+  ])("rejects %s", (url) => {
+    expect(parseVideoUrl(url)).toBeNull();
+  });
+
+  it("accepts an uppercase host", () => {
+    expect(parseVideoUrl("https://YOUTU.BE/ml6cT4AZdqI")?.id).toBe("ml6cT4AZdqI");
   });
 });
