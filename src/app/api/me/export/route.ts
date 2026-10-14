@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { isAppError } from "@/lib/app-error";
+import { createAdminSupabaseClient } from "@/server/db/admin";
 import { requireUser } from "@/server/auth/require-user";
 import { exportMyData } from "@/server/profile/profile";
 
 export async function GET() {
   try {
     const { user, supabase } = await requireUser();
-    const data = await exportMyData(supabase, user.id);
+    const data = await exportMyData(supabase, user.id, createAdminSupabaseClient());
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {
         "Content-Type": "application/json; charset=utf-8",

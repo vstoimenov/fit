@@ -39,7 +39,7 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
       .from("check_ins")
       .select("created_at, weight_kg, waist_cm")
       .eq("user_id", user.id)
-      .order("created_at")
+      .order("created_at", { ascending: false })
       .limit(30),
     supabase
       .from("subscriptions")
@@ -52,8 +52,12 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
       `load profile failed: ${(profileError ?? checkInsError ?? subError)?.message ?? "unknown"}`,
     );
   }
-  const weights = (checkIns ?? []).map((c) => c.weight_kg).filter((w): w is number => w !== null);
-  const waists = (checkIns ?? []).map((c) => c.waist_cm).filter((w): w is number => w !== null);
+  // Newest 30, charted oldest to newest.
+  const recent = [...(checkIns ?? [])].reverse();
+  const weights = recent.map((c) => c.weight_kg).filter((w): w is number => w !== null);
+  const waists = recent.map((c) => c.waist_cm).filter((w): w is number => w !== null);
+
+  const subscribed = sub !== null && ["active", "trialing"].includes(sub.status);
 
   return (
     <main className="space-y-8 px-5 pt-8">
@@ -91,12 +95,8 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
 
       <section className="space-y-2 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
         <h2 className="font-semibold">Абонамент</h2>
-        <p className="text-ink-soft">
-          {sub && ["active", "trialing"].includes(sub.status)
-            ? "Активен"
-            : "Нямаш активен абонамент"}
-        </p>
-        {!sub && (
+        <p className="text-ink-soft">{subscribed ? "Активен" : "Нямаш активен абонамент"}</p>
+        {!subscribed && (
           <Link href="/app/plan" className="font-semibold underline underline-offset-4">
             Виж плановете
           </Link>

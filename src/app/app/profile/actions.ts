@@ -40,7 +40,15 @@ export async function deleteMyAccount(_prev: unknown, form: FormData): Promise<A
     }
     const { user, supabase } = await requireUser();
     await deleteAccount(createAdminSupabaseClient(), user.id);
-    await supabase.auth.signOut();
+    // The account is gone: whatever happens to the sign-out, the user must leave this page.
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error(
+        "sign-out after deletion failed",
+        error instanceof Error ? error.message : error,
+      );
+    }
   } catch (error) {
     return actionFail(error);
   }
