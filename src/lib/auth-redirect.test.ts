@@ -41,6 +41,14 @@ describe("safeNext", () => {
     expect(safeNext("")).toBe("/app");
   });
 
+  it("rejects dot-segment paths that normalize into a protocol-relative URL", () => {
+    expect(safeNext("/app/../..//evil.com")).toBe("/app");
+    expect(safeNext("/..//evil.com")).toBe("/app");
+    expect(safeNext("/a/..//evil.com")).toBe("/app");
+    expect(safeNext("/./\\evil.com")).toBe("/app");
+    expect(safeNext("/..\\/evil.com")).toBe("/app");
+  });
+
   it("keeps encoded slashes as a same-site path", () => {
     const result = safeNext("/%2F%2Fevil.com");
     expect(result.startsWith("/")).toBe(true);

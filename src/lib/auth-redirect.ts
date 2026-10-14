@@ -23,7 +23,10 @@ export function safeNext(next: string | null, fallback = "/app"): string {
   try {
     const url = new URL(next, LOCAL_ORIGIN);
     if (url.origin !== LOCAL_ORIGIN) return fallback;
-    return url.pathname + url.search + url.hash;
+    const path = url.pathname + url.search + url.hash;
+    // Dot segments can normalize into a protocol-relative URL ("//evil.com"), so check the result too.
+    if (path.startsWith("//") || path.startsWith("/\\")) return fallback;
+    return path;
   } catch {
     return fallback;
   }
