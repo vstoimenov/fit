@@ -80,7 +80,7 @@ describe("sendNudge", () => {
       nudgeSubject: "Хей, {{name}}",
       nudgeBody: "Здравей, {{name}}!",
     });
-    expect(result).toEqual({ delivered: true });
+    expect(result).toEqual({ delivered: true, recorded: true });
     expect(send).toHaveBeenCalledWith({
       to: user.email,
       toName: "Деси",
@@ -89,6 +89,32 @@ describe("sendNudge", () => {
     });
     const { data } = await admin.from("client_notes").select("kind, body").eq("user_id", user.id);
     expect(data).toEqual([{ kind: "message", body: "Хей, Деси\n\nЗдравей, Деси!" }]);
+  });
+
+  it("reports an email that went out but could not be noted, instead of throwing", async () => {
+    const user = await createUser(admin, "risk-norecord", { name: "Мая" });
+    const send = vi.fn(async () => ({ delivered: true }));
+    const failingNotes = new Proxy(boss, {
+      get(target, prop, receiver) {
+        if (prop !== "from") return Reflect.get(target, prop, receiver);
+        return (table: string) =>
+          table === "client_notes"
+            ? { insert: async () => ({ error: { message: "boom" } }) }
+            : target.from(table as never);
+      },
+    }) as TypedClient;
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const result = await sendNudge(
+      failingNotes,
+      { send },
+      user.id,
+      SETTING_DEFAULTS.email_templates,
+    );
+    logged.mockRestore();
+    expect(result).toEqual({ delivered: true, recorded: false });
+    expect(send).toHaveBeenCalledTimes(1);
+    const { data } = await admin.from("client_notes").select("id").eq("user_id", user.id);
+    expect(data).toEqual([]);
   });
 
   it("records an undelivered message honestly", async () => {

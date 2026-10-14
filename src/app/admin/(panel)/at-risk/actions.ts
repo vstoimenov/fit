@@ -11,7 +11,9 @@ import { requireAdmin } from "@/server/admin/require-admin";
 import { sendNudge } from "@/server/admin/risk";
 import { getSettings } from "@/server/admin/settings";
 
-export async function nudgeAction(userId: string): Promise<ActionResult<{ delivered: boolean }>> {
+export async function nudgeAction(
+  userId: string,
+): Promise<ActionResult<{ delivered: boolean; recorded: boolean }>> {
   try {
     const id = z.uuid().parse(userId);
     const { supabase } = await requireAdmin();

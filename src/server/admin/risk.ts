@@ -23,13 +23,17 @@ export async function listAtRisk(
     );
 }
 
-/** Emails the nudge template to one client and always records what happened as a "message" note. */
+/**
+ * Emails the nudge template to one client and records what happened as a "message" note.
+ * If the email went out but the note could not be saved, this reports `recorded: false` instead of
+ * throwing, so the admin does not retry and email the client twice.
+ */
 export async function sendNudge(
   db: TypedClient,
   mailer: Mailer,
   userId: string,
   templates: Settings["email_templates"],
-): Promise<{ delivered: boolean }> {
+): Promise<{ delivered: boolean; recorded: boolean }> {
   const { data: profile, error } = await db
     .from("profiles")
     .select("name, email")
@@ -49,6 +53,15 @@ export async function sendNudge(
   const prefix = result.delivered
     ? ""
     : "(НЕ Е ИЗПРАТЕНО — няма настроен имейл доставчик или грешка)\n";
-  await recordMessage(db, userId, `${prefix}${subject}\n\n${text}`);
-  return result;
+  try {
+    await recordMessage(db, userId, `${prefix}${subject}\n\n${text}`);
+  } catch (recordError) {
+    if (!result.delivered) throw recordError;
+    console.error(
+      "nudge delivered but note not recorded",
+      recordError instanceof Error ? recordError.message : recordError,
+    );
+    return { delivered: true, recorded: false };
+  }
+  return { delivered: result.delivered, recorded: true };
 }

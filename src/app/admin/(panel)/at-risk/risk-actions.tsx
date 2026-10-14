@@ -43,6 +43,7 @@ export function RiskActions({ userId, phone }: { userId: string; phone: string |
             run(async () => {
               const r = await nudgeAction(userId);
               if (!r.ok) return r.message;
+              if (!r.data.recorded) return "Изпратено, но бележката не е записана";
               return r.data.delivered
                 ? "Изпратено ✓"
                 : "Записано, но НЕ е изпратено (няма имейл доставчик)";

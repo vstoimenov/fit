@@ -2,6 +2,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   getClientDetail,
   grantManualAccess,
+  listAllClients,
   listClients,
   revokeManualAccess,
 } from "@/server/admin/clients";
@@ -38,6 +39,68 @@ describe("clients service", () => {
     const { rows, total } = await listClients(boss, { search: user.email });
     expect(total).toBe(1);
     expect(rows[0]).toMatchObject({ userId: user.id, name: "Яна", hasAccess: false, totalDone: 0 });
+  });
+
+  it("pages through clients with identical join times without gaps or repeats", async () => {
+    const token = `cl-tie-${Math.random().toString(36).slice(2, 8)}`;
+    const users = await Promise.all([1, 2, 3, 4, 5].map(() => createUser(admin, token)));
+    const same = new Date(Date.now() - 86_400_000).toISOString();
+    await admin
+      .from("profiles")
+      .update({ joined_at: same })
+      .in(
+        "id",
+        users.map((u) => u.id),
+      );
+    const seen: string[] = [];
+    for (let offset = 0; offset < 6; offset += 2) {
+      const { rows } = await listClients(boss, { search: token, limit: 2, offset });
+      seen.push(...rows.map((r) => r.userId));
+    }
+    expect([...seen].sort()).toEqual(users.map((u) => u.id).sort());
+  });
+
+  it("listAllClients returns one row per client even if a page repeats a row", async () => {
+    const user = await createUser(admin, "cl-dupe");
+    const real = (await listClients(boss, { search: user.email })).rows[0]!;
+    const row = {
+      user_id: real.userId,
+      name: real.name,
+      email: real.email,
+      phone: null,
+      phone_call_consent: false,
+      level: real.level,
+      joined_at: real.joinedAt,
+      last_seen_at: null,
+      onboarding_done: false,
+      sub_status: null,
+      sub_provider: null,
+      current_period_end: null,
+      has_access: false,
+      total_done: 0,
+      last_done_at: null,
+      done_7: 0,
+      done_30: 0,
+      minutes_7: 0,
+      minutes_30: 0,
+      published_14: 0,
+      done_regular_14: 0,
+      paid_without_workout: false,
+      snoozed_until: null,
+    };
+    // Page 1 and page 2 both contain the same client, as when a signup shifts the offsets mid-scan.
+    const pages = [
+      [{ ...row, total_count: 3 }],
+      [{ ...row, total_count: 3 }],
+      [{ ...row, user_id: crypto.randomUUID(), total_count: 3 }],
+    ];
+    let call = 0;
+    const fake = {
+      rpc: async () => ({ data: pages[call++], error: null }),
+    } as unknown as TypedClient;
+    const all = await listAllClients(fake, { pageSize: 1 });
+    expect(all.map((c) => c.userId).filter((id) => id === user.id)).toHaveLength(1);
+    expect(all).toHaveLength(2);
   });
 
   it("reports the real workout total while listing only the latest 60", async () => {

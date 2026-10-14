@@ -82,15 +82,18 @@ export async function listAllClients(
   opts: { search?: string; pageSize?: number } = {},
 ): Promise<ClientRow[]> {
   const pageSize = opts.pageSize ?? 1000;
-  const rows: ClientRow[] = [];
+  const byId = new Map<string, ClientRow>();
+  let fetched = 0;
   for (let page = 0; page < 50; page++) {
     const res = await listClients(db, {
       search: opts.search,
       limit: pageSize,
       offset: page * pageSize,
     });
-    rows.push(...res.rows);
-    if (res.rows.length === 0 || rows.length >= res.total) return rows;
+    fetched += res.rows.length;
+    // A client who joins mid-scan shifts the pages and can repeat a row: keep one per user.
+    for (const row of res.rows) byId.set(row.userId, row);
+    if (res.rows.length === 0 || fetched >= res.total) return [...byId.values()];
   }
   throw new Error("list all clients failed: too many clients to scan");
 }
