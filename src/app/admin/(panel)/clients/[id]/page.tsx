@@ -146,7 +146,12 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
       </section>
 
       <section className="space-y-2 rounded-2xl bg-white p-4 ring-1 ring-line">
-        <h2 className="font-semibold">Тренировки ({c.completions.length})</h2>
+        <h2 className="font-semibold">
+          Тренировки ({c.completionsTotal})
+          {c.completionsTotal > c.completions.length && (
+            <span className="font-normal text-ink-soft"> · последните {c.completions.length}</span>
+          )}
+        </h2>
         <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">
           {c.completions.map((x) => {
             const w = (Array.isArray(x.workouts) ? x.workouts[0] : x.workouts) as {

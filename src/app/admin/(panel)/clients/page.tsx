@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { LevelBadge } from "@/components/admin/level-badge";
@@ -29,13 +30,21 @@ async function Clients({ searchParams }: { searchParams: Search }) {
   const q = (one(sp.q) ?? "").slice(0, 60);
   const page = Math.min(MAX_PAGE, Math.max(1, Math.floor(Number(one(sp.page))) || 1));
   const { supabase } = await requireAdmin();
-  const { rows, total } = await listClients(supabase, {
+  const link = (p: number) => `?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
+  const result = await listClients(supabase, {
     search: q,
     limit: PAGE,
     offset: (page - 1) * PAGE,
   });
+  if (page > 1 && result.rows.length === 0) {
+    // Past the end (a stale link, or rows were removed): the RPC reports no total for an empty page,
+    // so ask for the first row to learn the real count, then send her to the last page that exists.
+    const { total: all } = await listClients(supabase, { search: q, limit: 1 });
+    const last = Math.max(1, Math.ceil(all / PAGE));
+    if (last < page) redirect(link(last));
+  }
+  const { rows, total } = result;
   const pages = Math.max(1, Math.ceil(total / PAGE));
-  const link = (p: number) => `?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
 
   return (
     <div className="space-y-6">

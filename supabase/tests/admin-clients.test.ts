@@ -10,6 +10,7 @@ import {
   adminClient,
   createAdminUser,
   createUser,
+  freeWorkoutId,
   signedInClient,
   type TestUser,
   type TypedClient,
@@ -37,6 +38,23 @@ describe("clients service", () => {
     const { rows, total } = await listClients(boss, { search: user.email });
     expect(total).toBe(1);
     expect(rows[0]).toMatchObject({ userId: user.id, name: "Яна", hasAccess: false, totalDone: 0 });
+  });
+
+  it("reports the real workout total while listing only the latest 60", async () => {
+    const user = await createUser(admin, "cl-many");
+    const workout = await freeWorkoutId(admin);
+    const rows = Array.from({ length: 61 }, (_, i) => ({
+      user_id: user.id,
+      workout_id: workout,
+      completed_at: new Date(Date.now() - (i + 1) * 86_400_000).toISOString(),
+    }));
+    const { error } = await admin.from("workout_completions").insert(rows);
+    expect(error).toBeNull();
+    const detail = await getClientDetail(boss, user.id);
+    expect(detail?.completionsTotal).toBe(61);
+    expect(detail?.completions).toHaveLength(60);
+    const fresh = await createUser(admin, "cl-none");
+    expect((await getClientDetail(boss, fresh.id))?.completionsTotal).toBe(0);
   });
 
   it("never lists admins, and their detail is not found", async () => {

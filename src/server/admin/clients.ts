@@ -73,48 +73,59 @@ export async function listClients(
   return { rows: data.map(toClientRow), total: Number(data[0]?.total_count ?? 0) };
 }
 
+const COMPLETIONS_SHOWN = 60;
+
 export async function getClientDetail(db: TypedClient, userId: string) {
-  const [profile, subscription, completions, checkIns, notes] = await Promise.all([
-    db
-      .from("profiles")
-      .select(
-        "id, name, email, phone, phone_call_consent, marketing_consent, health_data_consent_at, level, goal, problems, height_cm, weight_kg, target_weight_kg, time_per_session, joined_at, last_seen_at, timezone, starter_week_done_at, role",
-      )
-      .eq("id", userId)
-      .maybeSingle(),
-    db
-      .from("subscriptions")
-      .select("status, provider, current_period_end, grace_until, canceled_at")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    db
-      .from("workout_completions")
-      .select("id, completed_at, local_date, feeling, workouts(title, kind, level, duration_min)")
-      .eq("user_id", userId)
-      .order("completed_at", { ascending: false })
-      .limit(60),
-    db
-      .from("check_ins")
-      .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(30),
-    db
-      .from("client_notes")
-      .select(
-        "id, kind, body, snooze_until, created_at, author:profiles!client_notes_author_id_fkey(name)",
-      )
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(100),
-  ]);
-  const failed = [profile, subscription, completions, checkIns, notes].find((r) => r.error);
+  const [profile, subscription, completions, completionsCount, checkIns, notes] = await Promise.all(
+    [
+      db
+        .from("profiles")
+        .select(
+          "id, name, email, phone, phone_call_consent, marketing_consent, health_data_consent_at, level, goal, problems, height_cm, weight_kg, target_weight_kg, time_per_session, joined_at, last_seen_at, timezone, starter_week_done_at, role",
+        )
+        .eq("id", userId)
+        .maybeSingle(),
+      db
+        .from("subscriptions")
+        .select("status, provider, current_period_end, grace_until, canceled_at")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      db
+        .from("workout_completions")
+        .select("id, completed_at, local_date, feeling, workouts(title, kind, level, duration_min)")
+        .eq("user_id", userId)
+        .order("completed_at", { ascending: false })
+        .limit(COMPLETIONS_SHOWN),
+      db
+        .from("workout_completions")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId),
+      db
+        .from("check_ins")
+        .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(30),
+      db
+        .from("client_notes")
+        .select(
+          "id, kind, body, snooze_until, created_at, author:profiles!client_notes_author_id_fkey(name)",
+        )
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ],
+  );
+  const failed = [profile, subscription, completions, completionsCount, checkIns, notes].find(
+    (r) => r.error,
+  );
   if (failed?.error) throw new Error(`load client failed: ${failed.error.message}`);
   if (!profile.data || profile.data.role !== "client") return null;
   return {
     profile: profile.data,
     subscription: subscription.data,
     completions: completions.data ?? [],
+    completionsTotal: completionsCount.count ?? 0,
     checkIns: [...(checkIns.data ?? [])].reverse(),
     notes: (notes.data ?? []).map((n) => {
       const author = n.author as { name: string } | { name: string }[] | null;
