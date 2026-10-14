@@ -23,6 +23,37 @@ export type Database = {
   };
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string;
+          actor_id: string | null;
+          created_at: string;
+          diff: Json | null;
+          id: number;
+          target_id: string | null;
+          target_type: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          action: string;
+          actor_id?: string | null;
+          created_at?: string;
+          diff?: Json | null;
+          id?: never;
+          target_id?: string | null;
+          target_type: string;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string | null;
+          created_at?: string;
+          diff?: Json | null;
+          id?: never;
+          target_id?: string | null;
+          target_type?: string;
+        };
+        Relationships: [];
+      };
       check_ins: {
         Row: {
           created_at: string;
@@ -61,6 +92,52 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "check_ins_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      client_notes: {
+        Row: {
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["note_kind"];
+          snooze_until: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["note_kind"];
+          snooze_until?: string | null;
+          user_id: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["note_kind"];
+          snooze_until?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_notes_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -181,6 +258,25 @@ export type Database = {
           timezone?: string;
           updated_at?: string;
           weight_kg?: number | null;
+        };
+        Relationships: [];
+      };
+      settings: {
+        Row: {
+          key: string;
+          updated_at: string;
+          value: NonNullable<Json>;
+        };
+        ComputedFields: never;
+        Insert: {
+          key: string;
+          updated_at?: string;
+          value: NonNullable<Json>;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          value?: NonNullable<Json>;
         };
         Relationships: [];
       };
@@ -422,6 +518,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -433,6 +530,7 @@ export type Database = {
     };
     Enums: {
       feeling: "easy" | "right" | "hard";
+      note_kind: "call" | "message" | "note" | "snooze";
       payment_provider: "stripe" | "revolut" | "manual";
       plan_interval: "month" | "year";
       subscription_status: "active" | "trialing" | "past_due" | "canceled" | "none";
@@ -555,6 +653,7 @@ export const Constants = {
   public: {
     Enums: {
       feeling: ["easy", "right", "hard"],
+      note_kind: ["call", "message", "note", "snooze"],
       payment_provider: ["stripe", "revolut", "manual"],
       plan_interval: ["month", "year"],
       subscription_status: ["active", "trialing", "past_due", "canceled", "none"],

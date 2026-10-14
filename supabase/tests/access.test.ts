@@ -225,19 +225,49 @@ describe("content access", () => {
       .insert({ title: "x", kind: "regular", level: "pro", duration_min: 5 });
     expect(insert.error?.code).toBe("42501");
 
-    const update = await db.from("workouts").update({ title: "hacked" }).eq("id", paidId);
-    expect(update.error?.code).toBe("42501");
-    const del = await db.from("workouts").delete().eq("id", paidId);
-    expect(del.error?.code).toBe("42501");
+    // Clients hold the table privileges now (admins need them), so RLS answers with "no row visible
+    // to write" rather than an error: assert nothing was affected, then that nothing changed.
+    const update = await db
+      .from("workouts")
+      .update({ title: "hacked" })
+      .eq("id", paidId)
+      .select("id");
+    expect(update.error).toBeNull();
+    expect(update.data).toEqual([]);
+    const del = await db.from("workouts").delete().eq("id", paidId).select("id");
+    expect(del.error).toBeNull();
+    expect(del.data).toEqual([]);
     const media = await db
       .from("workout_media")
       .update({ video_url: "https://example.test/hacked" })
+      .eq("workout_id", paidId)
+      .select("workout_id");
+    expect(media.error).toBeNull();
+    expect(media.data).toEqual([]);
+    const sub = await db
+      .from("subscriptions")
+      .update({ status: "canceled" })
+      .eq("user_id", user.id)
+      .select("user_id");
+    expect(sub.error).toBeNull();
+    expect(sub.data).toEqual([]);
+    const plan = await db.from("plans").update({ price_cents: 1 }).neq("name", "").select("id");
+    expect(plan.error).toBeNull();
+    expect(plan.data).toEqual([]);
+
+    const { data: mediaAfter } = await admin
+      .from("workout_media")
+      .select("video_url")
       .eq("workout_id", paidId);
-    expect(media.error?.code).toBe("42501");
-    const sub = await db.from("subscriptions").update({ status: "active" }).eq("user_id", user.id);
-    expect(sub.error?.code).toBe("42501");
-    const plan = await db.from("plans").update({ price_cents: 1 }).neq("name", "");
-    expect(plan.error?.code).toBe("42501");
+    expect(mediaAfter?.every((m) => !m.video_url.includes("hacked"))).toBe(true);
+    const { data: subAfter } = await admin
+      .from("subscriptions")
+      .select("status")
+      .eq("user_id", user.id)
+      .single();
+    expect(subAfter?.status).toBe("active");
+    const { data: plansAfter } = await admin.from("plans").select("price_cents");
+    expect(plansAfter?.some((pl) => pl.price_cents === 1)).toBe(false);
 
     const { data } = await admin.from("workouts").select("title").eq("id", paidId).single();
     expect(data?.title).toBe("Платена");
