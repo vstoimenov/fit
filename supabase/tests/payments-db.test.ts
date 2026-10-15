@@ -72,6 +72,22 @@ describe("active_payment_provider", () => {
     expect((await client.rpc("active_payment_provider")).data).toBe("revolut");
     await boss.from("settings").delete().eq("key", "payment_provider");
   });
+
+  it("falls back to stripe when the stored value is not a known provider", async () => {
+    const client = await signedInClient(await createUser(admin, "pay-prov-bad"));
+    try {
+      for (const bad of ["paypal", "", "STRIPE"]) {
+        await boss.from("settings").upsert({ key: "payment_provider", value: { provider: bad } });
+        expect((await client.rpc("active_payment_provider")).data).toBe("stripe");
+      }
+      await boss
+        .from("settings")
+        .upsert({ key: "payment_provider", value: { provider: "revolut" } });
+      expect((await client.rpc("active_payment_provider")).data).toBe("revolut");
+    } finally {
+      await boss.from("settings").delete().eq("key", "payment_provider");
+    }
+  });
 });
 
 describe("admin_grant_manual", () => {
@@ -120,6 +136,33 @@ describe("admin_grant_manual", () => {
     const half = await createAal1Admin(admin, "grant-half");
     const denied = await half.db.rpc("admin_grant_manual", { p_user_id: user.id, p_days: 7 });
     expect(denied.error?.code).toBe("42501");
+  });
+
+  it("never overwrites a paid subscription that is inserted at the same moment", async () => {
+    // Users without any row: the grant's existence check sees nothing, so only the guard on the
+    // insert-or-update itself can protect a paid row that lands in between. Whatever the
+    // interleaving, the paid row must win.
+    const users = await Promise.all(
+      Array.from({ length: 12 }, (_, i) => createUser(admin, `grant-race-${i}`)),
+    );
+    const results = await Promise.all(
+      users.flatMap((u) => [
+        boss.rpc("admin_grant_manual", { p_user_id: u.id, p_days: 7 }),
+        admin.from("subscriptions").upsert(
+          {
+            user_id: u.id,
+            provider: "stripe",
+            status: "active",
+            current_period_end: iso(10 * day),
+          },
+          { onConflict: "user_id" },
+        ),
+      ]),
+    );
+    for (const r of results) {
+      if (r.error) expect(r.error.code).toBe("23P01");
+    }
+    for (const u of users) expect((await sub(u.id)).provider).toBe("stripe");
   });
 
   it("rejects absurd day counts", async () => {
