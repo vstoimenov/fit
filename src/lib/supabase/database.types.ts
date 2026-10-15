@@ -145,6 +145,43 @@ export type Database = {
           },
         ];
       };
+      payment_events: {
+        Row: {
+          error: string | null;
+          event_id: string;
+          id: string;
+          payload: NonNullable<Json>;
+          processed_at: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          received_at: string;
+          type: string;
+          user_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          error?: string | null;
+          event_id: string;
+          id?: string;
+          payload: NonNullable<Json>;
+          processed_at?: string | null;
+          provider: Database["public"]["Enums"]["payment_provider"];
+          received_at?: string;
+          type: string;
+          user_id?: string | null;
+        };
+        Update: {
+          error?: string | null;
+          event_id?: string;
+          id?: string;
+          payload?: NonNullable<Json>;
+          processed_at?: string | null;
+          provider?: Database["public"]["Enums"]["payment_provider"];
+          received_at?: string;
+          type?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
       plans: {
         Row: {
           active: boolean;
@@ -282,13 +319,17 @@ export type Database = {
       };
       subscriptions: {
         Row: {
+          billing_interval: Database["public"]["Enums"]["plan_interval"] | null;
+          cancel_at_period_end: boolean;
           canceled_at: string | null;
           created_at: string;
           current_period_end: string | null;
           grace_until: string | null;
           plan_id: string | null;
+          price_cents: number | null;
           provider: Database["public"]["Enums"]["payment_provider"];
           provider_customer_id: string | null;
+          provider_event_at: string | null;
           provider_sub_id: string | null;
           status: Database["public"]["Enums"]["subscription_status"];
           updated_at: string;
@@ -296,26 +337,34 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          billing_interval?: Database["public"]["Enums"]["plan_interval"] | null;
+          cancel_at_period_end?: boolean;
           canceled_at?: string | null;
           created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;
+          price_cents?: number | null;
           provider: Database["public"]["Enums"]["payment_provider"];
           provider_customer_id?: string | null;
+          provider_event_at?: string | null;
           provider_sub_id?: string | null;
           status?: Database["public"]["Enums"]["subscription_status"];
           updated_at?: string;
           user_id: string;
         };
         Update: {
+          billing_interval?: Database["public"]["Enums"]["plan_interval"] | null;
+          cancel_at_period_end?: boolean;
           canceled_at?: string | null;
           created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;
+          price_cents?: number | null;
           provider?: Database["public"]["Enums"]["payment_provider"];
           provider_customer_id?: string | null;
+          provider_event_at?: string | null;
           provider_sub_id?: string | null;
           status?: Database["public"]["Enums"]["subscription_status"];
           updated_at?: string;
@@ -518,6 +567,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      active_payment_provider: { Args: Record<PropertyKey, never>; Returns: string };
       admin_client_stats: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string };
         Returns: {
@@ -548,6 +598,7 @@ export type Database = {
         }[];
       };
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
+      admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
