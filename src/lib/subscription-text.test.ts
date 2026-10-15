@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { endNotice, subscriptionText } from "./subscription-text";
+import { endNotice, paidAccessLive, subscriptionText } from "./subscription-text";
 
 describe("subscriptionText", () => {
   it("says there is no subscription when access is off and no row exists", () => {
@@ -75,5 +75,44 @@ describe("endNotice", () => {
     expect(endNotice(sub({ cancel_at_period_end: false }), now)).toBeNull();
     expect(endNotice(sub({ current_period_end: null }), now)).toBeNull();
     expect(endNotice(null, now)).toBeNull();
+  });
+});
+
+describe("paidAccessLive", () => {
+  const now = new Date("2026-11-20T12:00:00Z");
+  const row = (over: Partial<Parameters<typeof paidAccessLive>[0] & object> = {}) => ({
+    status: "active" as const,
+    provider: "stripe",
+    current_period_end: "2026-12-20T10:00:00Z",
+    grace_until: null,
+    ...over,
+  });
+
+  it("is live for active and trialing paid rows", () => {
+    expect(paidAccessLive(row(), now)).toBe(true);
+    expect(paidAccessLive(row({ status: "trialing" }), now)).toBe(true);
+  });
+
+  it("is live for past_due only inside the grace window", () => {
+    expect(
+      paidAccessLive(row({ status: "past_due", grace_until: "2026-11-25T00:00:00Z" }), now),
+    ).toBe(true);
+    expect(
+      paidAccessLive(row({ status: "past_due", grace_until: "2026-11-19T00:00:00Z" }), now),
+    ).toBe(false);
+    expect(paidAccessLive(row({ status: "past_due" }), now)).toBe(false);
+  });
+
+  it("is live for canceled only until the paid period ends", () => {
+    expect(paidAccessLive(row({ status: "canceled" }), now)).toBe(true);
+    expect(
+      paidAccessLive(row({ status: "canceled", current_period_end: "2026-11-01T00:00:00Z" }), now),
+    ).toBe(false);
+    expect(paidAccessLive(row({ status: "canceled", current_period_end: null }), now)).toBe(false);
+  });
+
+  it("is never live for a manual grant or no row", () => {
+    expect(paidAccessLive(row({ provider: "manual" }), now)).toBe(false);
+    expect(paidAccessLive(null, now)).toBe(false);
   });
 });

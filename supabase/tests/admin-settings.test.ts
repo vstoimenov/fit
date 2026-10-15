@@ -35,6 +35,7 @@ async function newPlan(name: string, input: Record<string, unknown> = {}) {
     priceCents: 2490,
     active: false,
     sort: 9,
+    stripePriceId: "",
     ...input,
   });
   const plan = (await listPlans(boss)).find((p) => p.name === name)!;
@@ -89,6 +90,7 @@ describe("plans", () => {
       priceCents: 2990,
       active: false,
       sort: 9,
+      stripePriceId: "",
     });
     expect((await listPlans(boss)).find((p) => p.id === created.id)?.price_cents).toBe(2990);
   });
@@ -108,6 +110,7 @@ describe("plans", () => {
         priceCents: 1000,
         active: false,
         sort: 1,
+        stripePriceId: "",
         ...bad,
       }),
     ).rejects.toThrow();
@@ -123,8 +126,79 @@ describe("plans", () => {
         priceCents: 100,
         active: false,
         sort: 0,
+        stripePriceId: "",
       }),
     ).rejects.toMatchObject({ code: "NOT_FOUND", userMessage: "Планът не е намерен." });
+  });
+
+  it("locks price and interval once a Stripe price id is set", async () => {
+    const name = `Stripe план ${rand()}`;
+    const priceId = `price_T6${Date.now()}`;
+    const base = { name, interval: "month", priceCents: 1990, active: false, sort: 50 };
+    const plan = await newPlan(name, { priceCents: 1990, sort: 50, stripePriceId: "" });
+    await savePlan(boss, plan.id, { ...base, stripePriceId: priceId });
+    await expect(
+      savePlan(boss, plan.id, { ...base, priceCents: 2490, stripePriceId: priceId }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    await expect(
+      savePlan(boss, plan.id, { ...base, interval: "year", stripePriceId: priceId }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    await savePlan(boss, plan.id, {
+      ...base,
+      name: `${name} (нов надпис)`,
+      stripePriceId: priceId,
+    });
+    const { data } = await admin
+      .from("plans")
+      .select("name, price_cents, provider_price_ids")
+      .eq("id", plan.id)
+      .single();
+    expect(data).toMatchObject({
+      name: `${name} (нов надпис)`,
+      price_cents: 1990,
+      provider_price_ids: { stripe: priceId },
+    });
+  });
+
+  it("clears the Stripe price id only while no subscription uses the plan", async () => {
+    const name = `Stripe чист ${rand()}`;
+    const priceId = `price_T6${Date.now()}`;
+    const base = { name, interval: "month", priceCents: 1990, active: false, sort: 50 };
+    const plan = await newPlan(name, { priceCents: 1990, sort: 50, stripePriceId: priceId });
+    const subscriber = await createUser(admin, "plan-sub");
+    await admin
+      .from("subscriptions")
+      .insert({ user_id: subscriber.id, plan_id: plan.id, provider: "stripe", status: "active" });
+    await expect(savePlan(boss, plan.id, { ...base, stripePriceId: "" })).rejects.toMatchObject({
+      code: "CONFLICT",
+    });
+    await expect(
+      savePlan(boss, plan.id, { ...base, stripePriceId: `price_T6other${Date.now()}` }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+    await admin.from("subscriptions").delete().eq("user_id", subscriber.id);
+    await savePlan(boss, plan.id, { ...base, stripePriceId: "" });
+    const { data } = await admin
+      .from("plans")
+      .select("provider_price_ids")
+      .eq("id", plan.id)
+      .single();
+    expect(data?.provider_price_ids).toEqual({});
+  });
+
+  it("rejects a malformed Stripe price id and saves nothing", async () => {
+    const name = `Лош Stripe ${rand()}`;
+    await expect(
+      savePlan(boss, null, {
+        name,
+        interval: "month",
+        priceCents: 100,
+        active: false,
+        sort: 1,
+        stripePriceId: "prod_123",
+      }),
+    ).rejects.toThrow();
+    const { data } = await admin.from("plans").select("id").eq("name", name);
+    expect(data).toEqual([]);
   });
 
   it("lists inactive plans for the admin", async () => {
@@ -136,7 +210,14 @@ describe("plans", () => {
     const db = await signedInClient(await createUser(admin, "plan-sneaky"));
     const name = `Чужд ${rand()}`;
     await expect(
-      savePlan(db, null, { name, interval: "month", priceCents: 100, active: true, sort: 0 }),
+      savePlan(db, null, {
+        name,
+        interval: "month",
+        priceCents: 100,
+        active: true,
+        sort: 0,
+        stripePriceId: "",
+      }),
     ).rejects.toThrow();
     const { data } = await admin.from("plans").select("id").eq("name", name);
     expect(data).toEqual([]);
@@ -153,6 +234,7 @@ describe("audit trail", () => {
       priceCents: 3190,
       active: false,
       sort: 9,
+      stripePriceId: "",
     });
     const mine = (await listAudit(boss, { limit: 200 })).filter(
       (e) => e.targetType === "plans" && e.targetId === plan.id,

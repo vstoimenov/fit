@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AppError } from "@/lib/app-error";
+import { paidAccessLive } from "@/lib/subscription-text";
 import type { Level } from "@/lib/program/types";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
@@ -112,7 +113,9 @@ export async function getClientDetail(db: TypedClient, userId: string) {
         .maybeSingle(),
       db
         .from("subscriptions")
-        .select("status, provider, current_period_end, grace_until, canceled_at")
+        .select(
+          "status, provider, current_period_end, grace_until, canceled_at, cancel_at_period_end",
+        )
         .eq("user_id", userId)
         .maybeSingle(),
       db
@@ -149,6 +152,7 @@ export async function getClientDetail(db: TypedClient, userId: string) {
   return {
     profile: profile.data,
     subscription: subscription.data,
+    paidLive: paidAccessLive(subscription.data),
     completions: completions.data ?? [],
     completionsTotal: completionsCount.count ?? 0,
     checkIns: [...(checkIns.data ?? [])].reverse(),
@@ -162,39 +166,22 @@ export type ClientDetail = NonNullable<Awaited<ReturnType<typeof getClientDetail
 
 const daysSchema = z.number().int().min(1, "Поне 1 ден").max(365, "До 365 дни");
 
+/** Gives (or extends) manual access through the database function; returns the new end as ISO. */
 export async function grantManualAccess(
   db: TypedClient,
   userId: string,
   days: number,
-): Promise<void> {
+): Promise<string> {
   const d = daysSchema.parse(days);
-  const { data: existing, error: loadError } = await db
-    .from("subscriptions")
-    .select("provider, status, current_period_end")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (loadError) throw new Error(`load subscription failed: ${loadError.message}`);
-  if (existing && existing.provider !== "manual")
-    throw new AppError("CONFLICT", "Клиентката има платен абонамент.");
-  // Adding days to a grant that still runs extends it; a canceled or lapsed one restarts from now.
-  const now = Date.now();
-  const runsUntil =
-    existing?.status === "active" && existing.current_period_end
-      ? Date.parse(existing.current_period_end)
-      : 0;
-  const start = Number.isFinite(runsUntil) ? Math.max(now, runsUntil) : now;
-  const { error } = await db.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      provider: "manual",
-      status: "active",
-      current_period_end: new Date(start + d * 86_400_000).toISOString(),
-      grace_until: null,
-      canceled_at: null,
-    },
-    { onConflict: "user_id" },
-  );
+  const { data, error } = await db.rpc("admin_grant_manual", { p_user_id: userId, p_days: d });
+  if (error?.code === "42501") throw new AppError("FORBIDDEN", "Нямаш право на това действие.");
+  if (error?.code === "23P01") {
+    throw new AppError("CONFLICT", "Клиентката има активен платен абонамент.");
+  }
+  if (error?.code === "22023") throw new AppError("INVALID", "Дните трябва да са между 1 и 365.");
+  if (error?.code === "P0002") throw new AppError("NOT_FOUND", "Клиентката не е намерена.");
   if (error) throw new Error(`grant access failed: ${error.message}`);
+  return data;
 }
 
 export async function revokeManualAccess(db: TypedClient, userId: string): Promise<void> {

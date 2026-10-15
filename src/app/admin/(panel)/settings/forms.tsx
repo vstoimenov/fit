@@ -18,36 +18,77 @@ type Plan = {
   price_cents: number;
   active: boolean;
   sort: number;
+  provider_price_ids?: unknown;
 };
 
+function stripeIdOf(plan?: Plan): string {
+  const ids = plan?.provider_price_ids;
+  const id = ids && typeof ids === "object" ? (ids as Record<string, unknown>).stripe : undefined;
+  return typeof id === "string" ? id : "";
+}
+
 function PlanForm({ plan }: { plan?: Plan }) {
+  const stripeId = stripeIdOf(plan);
+  const locked = stripeId !== "";
   return (
     <ActionForm
       action={savePlanAction.bind(null, plan?.id ?? null)}
       submitLabel={plan ? "Запази" : "Добави план"}
       resetOnSuccess={!plan}
-      className="grid items-end gap-2 rounded-xl bg-paper p-3 sm:grid-cols-[minmax(0,2fr)_7.5rem_minmax(0,1fr)_5rem_auto_7rem]"
+      className="grid items-end gap-2 rounded-xl bg-paper p-3 sm:grid-cols-4 2xl:grid-cols-[minmax(0,2fr)_7.5rem_minmax(0,1fr)_minmax(0,2fr)_5rem_auto_7rem]"
     >
       <Field label="Име">
         <input name="name" defaultValue={plan?.name} required className={inputClass + " h-11"} />
       </Field>
       <Field label="Период">
-        <select
-          name="interval"
-          defaultValue={plan?.interval ?? "month"}
-          className={inputClass + " h-11"}
-        >
-          <option value="month">Месец</option>
-          <option value="year">Година</option>
-        </select>
+        {locked ? (
+          <>
+            {/* A disabled select is not submitted, so the value travels in a hidden input. */}
+            <select
+              defaultValue={plan?.interval}
+              disabled
+              title="Цената идва от Stripe"
+              className={inputClass + " h-11"}
+            >
+              <option value="month">Месец</option>
+              <option value="year">Година</option>
+            </select>
+            <input type="hidden" name="interval" value={plan?.interval} />
+          </>
+        ) : (
+          <select
+            name="interval"
+            defaultValue={plan?.interval ?? "month"}
+            className={inputClass + " h-11"}
+          >
+            <option value="month">Месец</option>
+            <option value="year">Година</option>
+          </select>
+        )}
       </Field>
-      <Field label="Цена €">
+      <Field label="Цена €" hint={locked ? "Цената идва от Stripe" : undefined}>
         <input
           name="price"
-          title="Промяната на цена/период важи и за текущите абонати в MRR."
+          title={
+            locked
+              ? "Цената идва от Stripe"
+              : "Промяната на цена/период важи и за текущите абонати в MRR."
+          }
           inputMode="decimal"
           defaultValue={plan ? (plan.price_cents / 100).toFixed(2) : ""}
           required
+          readOnly={locked}
+          className={inputClass + " h-11" + (locked ? " bg-line/40 text-ink-soft" : "")}
+        />
+      </Field>
+      <Field label="Stripe Price ID">
+        <input
+          name="stripePriceId"
+          defaultValue={stripeId}
+          placeholder="price_…"
+          autoComplete="off"
+          spellCheck={false}
+          pattern="(price_[A-Za-z0-9]+)?"
           className={inputClass + " h-11"}
         />
       </Field>
@@ -74,8 +115,9 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
       <section className="space-y-3">
         <h2 className="font-semibold">Планове и цени</h2>
         <p className="text-sm text-ink-soft">
-          Плановете не се трият — изключи „Активен“, за да спре да се предлага. Свързването със
-          Stripe/Revolut идва в 1C. Промяната на цена/период важи и за текущите абонати в MRR.
+          Плановете не се трият — изключи „Активен“, за да спре да се предлага. Stripe Price ID
+          свързва плана със Stripe: след това цената и периодът се заключват, а за нова цена се
+          създава нов план. Промяната на цена/период важи и за текущите абонати в MRR.
         </p>
         {plans.map((p) => (
           <PlanForm key={p.id} plan={p} />
@@ -97,7 +139,9 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
             className={inputClass + " h-11 max-w-xs"}
           >
             <option value="stripe">Stripe</option>
-            <option value="revolut">Revolut</option>
+            <option value="revolut" disabled>
+              Revolut (скоро)
+            </option>
           </select>
         </ActionForm>
       </section>

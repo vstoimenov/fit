@@ -16,6 +16,7 @@ import {
   type Problem,
   type Time,
 } from "@/lib/labels";
+import { endNotice } from "@/lib/subscription-text";
 import { getClientDetail } from "@/server/admin/clients";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { addNoteAction, grantAccessAction, revokeAccessAction } from "./actions";
@@ -23,6 +24,14 @@ import { addNoteAction, grantAccessAction, revokeAccessAction } from "./actions"
 export const metadata = { title: "Клиентка" };
 const when = (iso: string | null | undefined) =>
   iso ? `${utcToZoned(iso).date} ${utcToZoned(iso).time}` : "—";
+const PROVIDER_LABEL = { stripe: "Stripe", revolut: "Revolut", manual: "Ръчен достъп" } as const;
+const STATUS_LABEL = {
+  active: "Активен",
+  trialing: "Пробен период",
+  past_due: "Просрочено плащане",
+  canceled: "Отказан",
+  none: "Няма",
+} as const;
 const NOTE_LABEL = {
   call: "Обаждане",
   message: "Съобщение",
@@ -48,7 +57,9 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
   const p = c.profile;
   const weights = c.checkIns.map((x) => x.weight_kg).filter((w): w is number => w !== null);
   const manual = c.subscription?.provider === "manual";
-  const paid = c.subscription !== null && !manual;
+  const sub = c.subscription;
+  const paidLive = c.paidLive;
+  const notice = endNotice(sub);
 
   return (
     <div className="space-y-6">
@@ -90,14 +101,37 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
 
         <section className="space-y-3 rounded-2xl bg-white p-4 text-sm ring-1 ring-line">
           <h2 className="font-semibold">Абонамент</h2>
-          <p>
-            {c.subscription ? `${c.subscription.provider} · ${c.subscription.status}` : "Няма"}
-            {c.subscription?.current_period_end
-              ? ` · до ${when(c.subscription.current_period_end)}`
-              : ""}
-          </p>
-          {paid ? (
-            <p className="text-ink-soft">Платен абонамент — ръчен достъп не може да се дава.</p>
+          {sub ? (
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+              <dt className="text-ink-soft">Доставчик</dt>
+              <dd>{PROVIDER_LABEL[sub.provider]}</dd>
+              <dt className="text-ink-soft">Статус</dt>
+              <dd>{STATUS_LABEL[sub.status]}</dd>
+              {sub.current_period_end && (
+                <>
+                  <dt className="text-ink-soft">Период до</dt>
+                  <dd>{when(sub.current_period_end)}</dd>
+                </>
+              )}
+              {sub.grace_until && (
+                <>
+                  <dt className="text-ink-soft">Гратис до</dt>
+                  <dd>{when(sub.grace_until)}</dd>
+                </>
+              )}
+              {sub.canceled_at && (
+                <>
+                  <dt className="text-ink-soft">Отказан на</dt>
+                  <dd>{when(sub.canceled_at)}</dd>
+                </>
+              )}
+            </dl>
+          ) : (
+            <p>Няма абонамент</p>
+          )}
+          {notice && <p className="font-semibold text-brick">{notice}</p>}
+          {paidLive ? (
+            <p className="text-ink-soft">Има активен платен абонамент — ръчен достъп не е нужен.</p>
           ) : (
             <ActionForm
               action={grantAccessAction.bind(null, p.id)}

@@ -65,3 +65,31 @@ export function endNotice(
     .map((part) => part.value);
   return `Абонаментът ще приключи на ${day}.${month}.${year}`;
 }
+
+/**
+ * Does this row give a paying (non-manual) customer access right now? Mirrors has_active_access()
+ * for paid rows, so a canceled or lapsed paid subscription does not block a manual grant.
+ */
+export function paidAccessLive(
+  sub: {
+    status: Status;
+    provider: string;
+    current_period_end: string | null;
+    grace_until: string | null;
+  } | null,
+  now: Date = new Date(),
+): boolean {
+  if (!sub || sub.provider === "manual") return false;
+  const after = (iso: string | null) => iso !== null && Date.parse(iso) > now.getTime();
+  switch (sub.status) {
+    case "active":
+    case "trialing":
+      return true;
+    case "past_due":
+      return after(sub.grace_until);
+    case "canceled":
+      return after(sub.current_period_end);
+    default:
+      return false;
+  }
+}

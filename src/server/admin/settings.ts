@@ -37,34 +37,82 @@ export const planInputSchema = z.object({
     .int("Невалиден ред")
     .min(0, "От 0 до 100")
     .max(100, "От 0 до 100"),
+  stripePriceId: z.union(
+    [
+      z.literal(""),
+      z.string().regex(/^price_[A-Za-z0-9]+$/, "Stripe Price ID изглежда като price_…"),
+    ],
+    "Невалиден Stripe Price ID",
+  ),
 });
 
 /** All plans, including inactive ones (plans are never deleted: subscriptions may point at them). */
 export async function listPlans(db: TypedClient) {
   const { data, error } = await db
     .from("plans")
-    .select("id, name, interval, price_cents, currency, active, sort")
+    .select("id, name, interval, price_cents, currency, active, sort, provider_price_ids")
     .order("sort")
     .order("name");
   if (error) throw new Error(`load plans failed: ${error.message}`);
   return data;
 }
 
+/**
+ * Once a plan has a Stripe price id its amount and interval are frozen (Stripe prices are immutable;
+ * a different price needs a new plan), and the id itself can change only while nobody subscribes to it.
+ */
 export async function savePlan(db: TypedClient, id: string | null, raw: unknown): Promise<void> {
   const p = planInputSchema.parse(raw);
-  const row = {
+  if (id) {
+    const { data: current, error: loadError } = await db
+      .from("plans")
+      .select("price_cents, interval, provider_price_ids")
+      .eq("id", id)
+      .maybeSingle();
+    if (loadError) throw new Error(`load plan failed: ${loadError.message}`);
+    if (!current) throw new AppError("NOT_FOUND", "Планът не е намерен.");
+    const ids = { ...(current.provider_price_ids as Record<string, string>) };
+    if (ids.stripe && (current.price_cents !== p.priceCents || current.interval !== p.interval)) {
+      throw new AppError(
+        "CONFLICT",
+        "Цената е свързана със Stripe — за нова цена създай нов план.",
+      );
+    }
+    if (ids.stripe && p.stripePriceId !== ids.stripe) {
+      const { count, error: countError } = await db
+        .from("subscriptions")
+        .select("user_id", { count: "exact", head: true })
+        .eq("plan_id", id);
+      if (countError) throw new Error(`count subscribers failed: ${countError.message}`);
+      if ((count ?? 0) > 0) {
+        throw new AppError("CONFLICT", "Планът има абонати — Stripe цената не може да се смени.");
+      }
+    }
+    if (p.stripePriceId) ids.stripe = p.stripePriceId;
+    else delete ids.stripe;
+    const { data, error } = await db
+      .from("plans")
+      .update({
+        name: p.name,
+        interval: p.interval,
+        price_cents: p.priceCents,
+        active: p.active,
+        sort: p.sort,
+        provider_price_ids: ids,
+      })
+      .eq("id", id)
+      .select("id");
+    if (error) throw new Error(`save plan failed: ${error.message}`);
+    if (data.length === 0) throw new AppError("NOT_FOUND", "Планът не е намерен.");
+    return;
+  }
+  const { error } = await db.from("plans").insert({
     name: p.name,
     interval: p.interval,
     price_cents: p.priceCents,
     active: p.active,
     sort: p.sort,
-  };
-  if (id) {
-    const { data, error } = await db.from("plans").update(row).eq("id", id).select("id");
-    if (error) throw new Error(`save plan failed: ${error.message}`);
-    if (data.length === 0) throw new AppError("NOT_FOUND", "Планът не е намерен.");
-    return;
-  }
-  const { error } = await db.from("plans").insert(row);
+    provider_price_ids: p.stripePriceId ? { stripe: p.stripePriceId } : {},
+  });
   if (error) throw new Error(`save plan failed: ${error.message}`);
 }

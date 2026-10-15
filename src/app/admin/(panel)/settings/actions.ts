@@ -66,6 +66,7 @@ export async function savePlanAction(id: string | null, _prev: unknown, form: Fo
       priceCents: /^\d+(\.\d{1,2})?$/.test(euros) ? Math.round(Number(euros) * 100) : Number.NaN,
       active: formBool(form, "active"),
       sort: formInt(form, "sort"),
+      stripePriceId: formString(form, "stripePriceId"),
     }),
   );
 }

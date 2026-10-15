@@ -202,6 +202,51 @@ describe("clients service", () => {
     expect(await access(user.id)).toBe(true);
   });
 
+  it("lets a former customer (canceled, period over) be granted access", async () => {
+    const user = await createUser(admin, "cl-former");
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "canceled",
+      current_period_end: new Date(Date.now() - 3 * 86_400_000).toISOString(),
+      canceled_at: new Date(Date.now() - 10 * 86_400_000).toISOString(),
+    });
+    expect(await access(user.id)).toBe(false);
+    await grantManualAccess(boss, user.id, 20);
+    expect(await access(user.id)).toBe(true);
+    const { data } = await admin
+      .from("subscriptions")
+      .select("provider, status")
+      .eq("user_id", user.id)
+      .single();
+    expect(data).toEqual({ provider: "manual", status: "active" });
+  });
+
+  it("returns the new end of access", async () => {
+    const user = await createUser(admin, "cl-end");
+    const end = await grantManualAccess(boss, user.id, 10);
+    const { data } = await admin
+      .from("subscriptions")
+      .select("current_period_end")
+      .eq("user_id", user.id)
+      .single();
+    expect(Date.parse(end)).toBe(Date.parse(data!.current_period_end!));
+    expect(Date.parse(end) - Date.now()).toBeGreaterThan(9 * 86_400_000);
+    const extended = await grantManualAccess(boss, user.id, 5);
+    expect(Date.parse(extended) - Date.parse(end)).toBe(5 * 86_400_000);
+  });
+
+  it("maps the database errors: unknown client, non-admin, bad days", async () => {
+    await expect(grantManualAccess(boss, crypto.randomUUID(), 5)).rejects.toMatchObject({
+      code: "NOT_FOUND",
+    });
+    const sneaky = await signedInClient(await createUser(admin, "cl-sneak2"));
+    const victim = await createUser(admin, "cl-victim2");
+    await expect(grantManualAccess(sneaky, victim.id, 5)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+  });
+
   it("rejects absurd day counts and writes nothing", async () => {
     const user = await createUser(admin, "cl-days");
     for (const days of [0, -3, 9999, 1.5, Number.NaN]) {
