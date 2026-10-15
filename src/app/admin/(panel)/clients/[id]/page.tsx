@@ -58,7 +58,6 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
   const weights = c.checkIns.map((x) => x.weight_kg).filter((w): w is number => w !== null);
   const manual = c.subscription?.provider === "manual";
   const sub = c.subscription;
-  const paidLive = c.paidLive;
   const notice = endNotice(sub);
 
   return (
@@ -130,7 +129,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
             <p>Няма абонамент</p>
           )}
           {notice && <p className="font-semibold text-brick">{notice}</p>}
-          {paidLive ? (
+          {c.paidLive ? (
             <p className="text-ink-soft">Има активен платен абонамент — ръчен достъп не е нужен.</p>
           ) : (
             <ActionForm

@@ -69,6 +69,8 @@ export function endNotice(
 /**
  * Does this row give a paying (non-manual) customer access right now? Mirrors has_active_access()
  * for paid rows, so a canceled or lapsed paid subscription does not block a manual grant.
+ * For the UI only: the database decides. supabase/tests/paid-access-parity.test.ts pins this to
+ * the SQL function, so change both together.
  */
 export function paidAccessLive(
   sub: {

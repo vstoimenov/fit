@@ -57,12 +57,25 @@ export async function listPlans(db: TypedClient) {
   return data;
 }
 
+/** A Stripe price belongs to one plan: a second plan on the same price would make webhooks ambiguous. */
+async function assertStripeIdFree(db: TypedClient, stripePriceId: string, exceptId: string | null) {
+  if (!stripePriceId) return;
+  let query = db.from("plans").select("id").eq("provider_price_ids->>stripe", stripePriceId);
+  if (exceptId) query = query.neq("id", exceptId);
+  const { data, error } = await query.limit(1);
+  if (error) throw new Error(`check stripe price failed: ${error.message}`);
+  if (data.length > 0) {
+    throw new AppError("CONFLICT", "Тази Stripe цена вече е свързана с друг план.");
+  }
+}
+
 /**
  * Once a plan has a Stripe price id its amount and interval are frozen (Stripe prices are immutable;
  * a different price needs a new plan), and the id itself can change only while nobody subscribes to it.
  */
 export async function savePlan(db: TypedClient, id: string | null, raw: unknown): Promise<void> {
   const p = planInputSchema.parse(raw);
+  await assertStripeIdFree(db, p.stripePriceId, id);
   if (id) {
     const { data: current, error: loadError } = await db
       .from("plans")

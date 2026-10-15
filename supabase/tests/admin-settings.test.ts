@@ -185,6 +185,48 @@ describe("plans", () => {
     expect(data?.provider_price_ids).toEqual({});
   });
 
+  it("refuses a Stripe price id that another plan already uses, on insert and on update", async () => {
+    const priceId = `price_T6dup${Date.now()}`;
+    const owner = await newPlan(`Собственик ${rand()}`, { stripePriceId: priceId });
+    const name = `Дубликат ${rand()}`;
+    await expect(
+      savePlan(boss, null, {
+        name,
+        interval: "month",
+        priceCents: 100,
+        active: false,
+        sort: 1,
+        stripePriceId: priceId,
+      }),
+    ).rejects.toMatchObject({
+      code: "CONFLICT",
+      userMessage: "Тази Stripe цена вече е свързана с друг план.",
+    });
+    expect((await admin.from("plans").select("id").eq("name", name)).data).toEqual([]);
+
+    const other = await newPlan(`Друг ${rand()}`);
+    await expect(
+      savePlan(boss, other.id, {
+        name: other.name,
+        interval: "month",
+        priceCents: 2490,
+        active: false,
+        sort: 9,
+        stripePriceId: priceId,
+      }),
+    ).rejects.toMatchObject({ code: "CONFLICT" });
+
+    // The owner can still save itself with its own id.
+    await savePlan(boss, owner.id, {
+      name: owner.name,
+      interval: "month",
+      priceCents: 2490,
+      active: false,
+      sort: 9,
+      stripePriceId: priceId,
+    });
+  });
+
   it("rejects a malformed Stripe price id and saves nothing", async () => {
     const name = `Лош Stripe ${rand()}`;
     await expect(
