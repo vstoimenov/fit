@@ -70,10 +70,22 @@ describe("saveSetting", () => {
     expect(data).toEqual([]);
   });
 
+  it("accepts only an enabled payment provider (Stripe for now)", async () => {
+    await admin.from("settings").delete().eq("key", "payment_provider");
+    await expect(
+      saveSetting(boss, "payment_provider", { provider: "revolut" }),
+    ).rejects.toMatchObject({ code: "INVALID" });
+    const { data } = await admin.from("settings").select("key").eq("key", "payment_provider");
+    expect(data).toEqual([]);
+    await saveSetting(boss, "payment_provider", { provider: "stripe" });
+    expect((await getSettings(boss)).payment_provider).toEqual({ provider: "stripe" });
+    await admin.from("settings").delete().eq("key", "payment_provider");
+  });
+
   it("refuses non-admins", async () => {
     const db = await signedInClient(await createUser(admin, "set-sneaky"));
     await admin.from("settings").delete().eq("key", "payment_provider");
-    await expect(saveSetting(db, "payment_provider", { provider: "revolut" })).rejects.toThrow();
+    await expect(saveSetting(db, "payment_provider", { provider: "stripe" })).rejects.toThrow();
     const { data } = await admin.from("settings").select("key").eq("key", "payment_provider");
     expect(data).toEqual([]);
   });

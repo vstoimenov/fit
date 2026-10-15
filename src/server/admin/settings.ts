@@ -12,6 +12,9 @@ export async function getSettings(db: TypedClient): Promise<Settings> {
   return Object.fromEntries(keys.map((k) => [k, parseSetting(k, stored.get(k))])) as Settings;
 }
 
+/** Payment providers that can actually take payments; the rest are shown as disabled options. */
+const ENABLED_PROVIDERS: ReadonlySet<string> = new Set(["stripe"]);
+
 /** Validates against the setting's schema before writing; a bad value throws and stores nothing. */
 export async function saveSetting<K extends SettingKey>(
   db: TypedClient,
@@ -19,6 +22,12 @@ export async function saveSetting<K extends SettingKey>(
   raw: unknown,
 ): Promise<void> {
   const value = SETTINGS[key].parse(raw);
+  if (key === "payment_provider") {
+    const { provider } = value as Settings["payment_provider"];
+    if (!ENABLED_PROVIDERS.has(provider)) {
+      throw new AppError("INVALID", "Този доставчик на плащания още не е наличен.");
+    }
+  }
   const { error } = await db.from("settings").upsert({ key, value });
   if (error) throw new Error(`save setting failed: ${error.message}`);
 }

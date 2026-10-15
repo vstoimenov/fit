@@ -52,7 +52,8 @@ export function normalizeStripeEvent(event: Stripe.Event): NormalizedSubscriptio
     subscriptionId: sub.id,
     status,
     currentPeriodEnd: toIso(item?.current_period_end ?? sub.current_period_end),
-    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
+    // The portal's "cancel at a date" sets cancel_at without cancel_at_period_end: it will not renew either.
+    cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end || sub.cancel_at != null),
     canceledAt: status === "canceled" ? toIso(sub.ended_at) : null,
     priceId: price?.id ?? null,
     priceCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,

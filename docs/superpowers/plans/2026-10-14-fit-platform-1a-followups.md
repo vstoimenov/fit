@@ -59,7 +59,7 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 
 ## 1C deferred (from task reviews)
 - Test gaps: `past_due` in grace / `canceled` in period grant refusal, `P0002` (client not found), customer id survives a grant, yearly snapshot MRR.
-- Stripe: only `items[0]` is read (single-plan product); date-based `cancel_at` cancels are not mapped.
+- Stripe: only `items[0]` is read (single-plan product). (Date-based `cancel_at` cancels are now mapped to `cancel_at_period_end`.)
 - Single-row design: if one user ends up with duplicate live subscriptions, the displaced one is cancelled best effort; concurrent events for two subscriptions can miss that cancel.
 - `provider_customer_id` is not unique (lookup uses limit 1); the cancel tests have a 1 s clock-skew margin.
 - Webhook: the subscription is re-fetched before dedupe (one extra API call per duplicate delivery); `resource_missing` on a non-delete event answers 500 for the whole retry window; the `past_due` grace is anchored to the event's created time.
@@ -67,3 +67,6 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 - `savePlan` read-then-write race on the subscriber count; no test that other providers' price ids survive an edit.
 - `supabase/tests/access.test.ts` leaves "Скрит" plans behind (no cleanup).
 - Real Stripe end-to-end (Checkout, Portal, `expires_at` acceptance, `cancelNow` on a live subscription) is still unverified: needs test keys and a public webhook URL after the Vercel deploy.
+- Verify a pasted Stripe Price ID against Stripe (amount, interval, currency, active) in `savePlanAction`; today only the `price_…` format is checked.
+- MRR uses the undiscounted `unit_amount`: promotion codes / coupons are not reflected.
+- The displaced-subscription cancel is lost if the function dies after the apply and before the cancel (the event is already applied, a retry does not repeat it). Robust fix: on each live event list the customer's other non-canceled subscriptions at Stripe and cancel them.

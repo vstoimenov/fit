@@ -11,6 +11,7 @@ export function stripeSubscriptionEvent(
     customer?: string | { id: string };
     periodEnd?: number;
     cancelAtPeriodEnd?: boolean;
+    cancelAt?: number | null;
     canceledAt?: number | null;
     endedAt?: number | null;
     priceId?: string;
@@ -26,6 +27,7 @@ export function stripeSubscriptionEvent(
     customer: over.customer ?? "cus_123",
     status: over.status ?? "active",
     cancel_at_period_end: over.cancelAtPeriodEnd ?? false,
+    cancel_at: over.cancelAt ?? null,
     canceled_at: over.canceledAt ?? null,
     ended_at: over.endedAt ?? null,
     metadata:

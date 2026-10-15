@@ -77,6 +77,16 @@ describe("normalizeStripeEvent", () => {
     expect(e).toMatchObject({ status: "active", cancelAtPeriodEnd: true, canceledAt: null });
   });
 
+  it("treats a scheduled cancel_at (portal 'cancel at a date') as not renewing", () => {
+    const e = normalizeStripeEvent(
+      stripeSubscriptionEvent({ cancelAtPeriodEnd: false, cancelAt: 1_799_000_000 }),
+    );
+    expect(e).toMatchObject({
+      status: "active",
+      cancelAtPeriodEnd: true,
+    });
+  });
+
   it("uses the real end time for an updated event that is already canceled", () => {
     const e = normalizeStripeEvent(
       stripeSubscriptionEvent({
