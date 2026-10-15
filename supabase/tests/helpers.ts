@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { TOTP } from "otpauth";
 import type { Database } from "@/lib/supabase/database.types";
 
 export type TypedClient = SupabaseClient<Database>;
@@ -140,4 +141,32 @@ export async function createWorkout(admin: TypedClient, fields: WorkoutInsert): 
   });
   if (media.error) throw media.error;
   return data.id;
+}
+
+/** A user with role admin who has NOT passed the second factor (session at aal1). */
+export async function createAal1Admin(
+  admin: TypedClient,
+  label: string,
+): Promise<{ user: TestUser; db: TypedClient }> {
+  const user = await createUser(admin, label);
+  const { error } = await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
+  if (error) throw error;
+  return { user, db: await signedInClient(user) };
+}
+
+/** A real admin: role admin + enrolled and verified TOTP, so the session is aal2. */
+export async function createAdminUser(
+  admin: TypedClient,
+  label: string,
+): Promise<{ user: TestUser; db: TypedClient }> {
+  const { user, db } = await createAal1Admin(admin, label);
+  const { data: factor, error: enrollError } = await db.auth.mfa.enroll({ factorType: "totp" });
+  if (enrollError || !factor) throw enrollError ?? new Error("mfa enroll returned nothing");
+  const code = new TOTP({ secret: factor.totp.secret }).generate();
+  const { error: verifyError } = await db.auth.mfa.challengeAndVerify({
+    factorId: factor.id,
+    code,
+  });
+  if (verifyError) throw verifyError;
+  return { user, db };
 }

@@ -49,14 +49,15 @@ export async function addCheckIn(db: TypedClient, input: CheckInInput): Promise<
 
 /**
  * Everything stored about the signed-in user (GDPR access right). Own rows are read through the
- * user's RLS-scoped client; `visits` is admin-only under RLS, so that one query uses `admin`.
+ * user's RLS-scoped client; `visits` and `client_notes` are admin-only under RLS, so those use `admin`.
+ * Notes are exported without the author's id, only what was recorded and when.
  */
 export async function exportMyData(
   db: TypedClient,
   userId: string,
   admin: TypedClient,
 ): Promise<Record<string, unknown>> {
-  const [profile, completions, checkIns, subscription, visits] = await Promise.all([
+  const [profile, completions, checkIns, subscription, visits, notes] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).single(),
     db
       .from("workout_completions")
@@ -76,9 +77,14 @@ export async function exportMyData(
       .select("path, referrer, utm, device, created_at")
       .eq("user_id", userId)
       .order("created_at"),
+    admin
+      .from("client_notes")
+      .select("kind, body, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
   ]);
   // A silently partial export would misstate what is stored about the user.
-  const failed = [profile, completions, checkIns, subscription, visits].find((r) => r.error);
+  const failed = [profile, completions, checkIns, subscription, visits, notes].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
     exported_at: new Date().toISOString(),
@@ -87,6 +93,7 @@ export async function exportMyData(
     check_ins: checkIns.data ?? [],
     subscription: subscription.data,
     visits: visits.data ?? [],
+    client_notes: notes.data ?? [],
   };
 }
 

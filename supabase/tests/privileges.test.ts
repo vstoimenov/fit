@@ -13,6 +13,9 @@ const TABLES = [
   "workout_completions",
   "check_ins",
   "visits",
+  "audit_log",
+  "client_notes",
+  "settings",
 ];
 const ROLES = ["anon", "authenticated"];
 // MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).

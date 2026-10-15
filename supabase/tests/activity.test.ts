@@ -3,6 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import {
   adminClient,
   anonClient,
+  createAdminUser,
   createUser,
   freeWorkoutId,
   grantAccess,
@@ -175,8 +176,7 @@ describe("workout_completions", () => {
   it("shows completions to their owner and an admin, hides them from others", async () => {
     const a = await createUser(admin, "see-a");
     const b = await createUser(admin, "see-b");
-    const boss = await createUser(admin, "see-admin");
-    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const { db: bossDb } = await createAdminUser(admin, "see-admin");
     const made = await (
       await signedInClient(a)
     )
@@ -202,12 +202,7 @@ describe("workout_completions", () => {
     expect(other.error).toBeNull();
     expect(other.data).toEqual([]);
 
-    const seenByAdmin = await (
-      await signedInClient(boss)
-    )
-      .from("workout_completions")
-      .select("id")
-      .eq("user_id", a.id);
+    const seenByAdmin = await bossDb.from("workout_completions").select("id").eq("user_id", a.id);
     expect(seenByAdmin.error).toBeNull();
     expect(seenByAdmin.data).toHaveLength(1);
   });
@@ -447,17 +442,11 @@ describe("check_ins", () => {
 
   it("shows every check-in to an admin", async () => {
     const a = await createUser(admin, "ci-adm-a");
-    const boss = await createUser(admin, "ci-adm");
-    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const { db: bossDb } = await createAdminUser(admin, "ci-adm");
     expect(
       (await (await signedInClient(a)).from("check_ins").insert({ energy: 4 })).error,
     ).toBeNull();
-    const seen = await (
-      await signedInClient(boss)
-    )
-      .from("check_ins")
-      .select("id")
-      .eq("user_id", a.id);
+    const seen = await bossDb.from("check_ins").select("id").eq("user_id", a.id);
     expect(seen.error).toBeNull();
     expect(seen.data).toHaveLength(1);
   });
@@ -488,19 +477,13 @@ describe("visits", () => {
   });
 
   it("is readable by an admin", async () => {
-    const boss = await createUser(admin, "visit-admin");
-    await admin.from("profiles").update({ role: "admin" }).eq("id", boss.id);
+    const { db: bossDb } = await createAdminUser(admin, "visit-admin");
     const path = `/visit-test-${Date.now()}`;
     expect(
       (await admin.from("visits").insert({ anon_id: crypto.randomUUID(), path, device: "desktop" }))
         .error,
     ).toBeNull();
-    const { data, error } = await (
-      await signedInClient(boss)
-    )
-      .from("visits")
-      .select("id")
-      .eq("path", path);
+    const { data, error } = await bossDb.from("visits").select("id").eq("path", path);
     expect(error).toBeNull();
     expect(data).toHaveLength(1);
   });

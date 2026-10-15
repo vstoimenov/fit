@@ -23,6 +23,37 @@ export type Database = {
   };
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string;
+          actor_id: string | null;
+          created_at: string;
+          diff: Json | null;
+          id: number;
+          target_id: string | null;
+          target_type: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          action: string;
+          actor_id?: string | null;
+          created_at?: string;
+          diff?: Json | null;
+          id?: never;
+          target_id?: string | null;
+          target_type: string;
+        };
+        Update: {
+          action?: string;
+          actor_id?: string | null;
+          created_at?: string;
+          diff?: Json | null;
+          id?: never;
+          target_id?: string | null;
+          target_type?: string;
+        };
+        Relationships: [];
+      };
       check_ins: {
         Row: {
           created_at: string;
@@ -61,6 +92,52 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "check_ins_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      client_notes: {
+        Row: {
+          author_id: string | null;
+          body: string;
+          created_at: string;
+          id: string;
+          kind: Database["public"]["Enums"]["note_kind"];
+          snooze_until: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind: Database["public"]["Enums"]["note_kind"];
+          snooze_until?: string | null;
+          user_id: string;
+        };
+        Update: {
+          author_id?: string | null;
+          body?: string;
+          created_at?: string;
+          id?: string;
+          kind?: Database["public"]["Enums"]["note_kind"];
+          snooze_until?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "client_notes_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "client_notes_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";
@@ -184,8 +261,29 @@ export type Database = {
         };
         Relationships: [];
       };
+      settings: {
+        Row: {
+          key: string;
+          updated_at: string;
+          value: NonNullable<Json>;
+        };
+        ComputedFields: never;
+        Insert: {
+          key: string;
+          updated_at?: string;
+          value: NonNullable<Json>;
+        };
+        Update: {
+          key?: string;
+          updated_at?: string;
+          value?: NonNullable<Json>;
+        };
+        Relationships: [];
+      };
       subscriptions: {
         Row: {
+          canceled_at: string | null;
+          created_at: string;
           current_period_end: string | null;
           grace_until: string | null;
           plan_id: string | null;
@@ -198,6 +296,8 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          canceled_at?: string | null;
+          created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;
@@ -209,6 +309,8 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          canceled_at?: string | null;
+          created_at?: string;
           current_period_end?: string | null;
           grace_until?: string | null;
           plan_id?: string | null;
@@ -416,6 +518,37 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_client_stats: {
+        Args: { p_limit?: number; p_offset?: number; p_search?: string };
+        Returns: {
+          current_period_end: string;
+          done_30: number;
+          done_7: number;
+          done_regular_14: number;
+          email: string;
+          has_access: boolean;
+          joined_at: string;
+          last_done_at: string;
+          last_seen_at: string;
+          level: Database["public"]["Enums"]["workout_level"];
+          minutes_30: number;
+          minutes_7: number;
+          name: string;
+          onboarding_done: boolean;
+          paid_without_workout: boolean;
+          phone: string;
+          phone_call_consent: boolean;
+          published_14: number;
+          snoozed_until: string;
+          sub_provider: Database["public"]["Enums"]["payment_provider"];
+          sub_status: Database["public"]["Enums"]["subscription_status"];
+          total_count: number;
+          total_done: number;
+          user_id: string;
+        }[];
+      };
+      admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
+      admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -427,6 +560,7 @@ export type Database = {
     };
     Enums: {
       feeling: "easy" | "right" | "hard";
+      note_kind: "call" | "message" | "note" | "snooze";
       payment_provider: "stripe" | "revolut" | "manual";
       plan_interval: "month" | "year";
       subscription_status: "active" | "trialing" | "past_due" | "canceled" | "none";
@@ -549,6 +683,7 @@ export const Constants = {
   public: {
     Enums: {
       feeling: ["easy", "right", "hard"],
+      note_kind: ["call", "message", "note", "snooze"],
       payment_provider: ["stripe", "revolut", "manual"],
       plan_interval: ["month", "year"],
       subscription_status: ["active", "trialing", "past_due", "canceled", "none"],

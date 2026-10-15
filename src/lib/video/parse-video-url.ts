@@ -25,11 +25,19 @@ function youtube(id: string): VideoRef | null {
   };
 }
 
+const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+
+/** Adds https:// to links pasted without a scheme ("youtu.be/ID", "www.youtube.com/watch?v=…"). */
+export function normalizeVideoInput(raw: string): string {
+  const trimmed = raw.trim();
+  return SCHEME.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
 /** Turns any common YouTube / Vimeo / Bunny link into an embeddable reference, or null. */
 export function parseVideoUrl(raw: string): VideoRef | null {
   let url: URL;
   try {
-    url = new URL(raw.trim());
+    url = new URL(normalizeVideoInput(raw));
   } catch {
     return null;
   }

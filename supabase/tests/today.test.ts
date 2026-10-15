@@ -1,8 +1,10 @@
+import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getTodayView } from "@/server/content/today";
 import { listPublishedWorkouts } from "@/server/content/workouts";
 import {
   adminClient,
+  createAdminUser,
   createUser,
   createWorkout,
   freeWorkoutId,
@@ -51,15 +53,11 @@ describe("admins see drafts through RLS but the services only treat published wo
   const day = 86_400_000;
 
   async function adminUser() {
-    const user = await createUser(admin, "today-admin");
-    const { error } = await admin.from("profiles").update({ role: "admin" }).eq("id", user.id);
-    expect(error).toBeNull();
-    return user;
+    return createAdminUser(admin, "today-admin");
   }
 
   it("lists no unpublished or future workout in the library", async () => {
-    const user = await adminUser();
-    const db = await signedInClient(user);
+    const { db } = await adminUser();
     const draftId = await createWorkout(admin, {
       title: "Чернова",
       kind: "regular",
@@ -85,8 +83,7 @@ describe("admins see drafts through RLS but the services only treat published wo
   });
 
   it("does not let unpublished workouts into the week strip or the streak", async () => {
-    const adminDb = await signedInClient(await adminUser());
-    const adminUserRow = (await adminDb.auth.getUser()).data.user!;
+    const { user: adminUserRow, db: adminDb } = await adminUser();
     const client = await createUser(admin, "today-client");
     await createWorkout(admin, {
       title: "Скрита чернова",
@@ -106,5 +103,33 @@ describe("admins see drafts through RLS but the services only treat published wo
     const asClient = await getTodayView(await signedInClient(client), client.id);
     expect(asAdmin.week.map((d) => d.slot)).toEqual(asClient.week.map((d) => d.slot));
     expect(asAdmin.streak).toBe(asClient.streak);
+  });
+});
+
+describe("getTodayView profile errors", () => {
+  it("reports a missing profile as NOT_FOUND", async () => {
+    const user = await createUser(admin, "today-missing");
+    const db = await signedInClient(user);
+    await expect(getTodayView(db, randomUUID())).rejects.toMatchObject({ code: "NOT_FOUND" });
+  });
+
+  it("does not disguise a failing profile query as NOT_FOUND", async () => {
+    const failing = {
+      from: (table: string) => {
+        const result =
+          table === "profiles"
+            ? { data: null, error: { code: "57P01", message: "connection lost" } }
+            : { data: [], error: null };
+        const chain: Record<string, unknown> = {
+          then: (resolve: (v: unknown) => unknown) => resolve(result),
+        };
+        for (const m of ["select", "eq", "not", "lte", "single"]) chain[m] = () => chain;
+        return chain;
+      },
+      rpc: () => Promise.resolve({ data: [], error: null }),
+    } as unknown as TypedClient;
+    await expect(getTodayView(failing, randomUUID())).rejects.toThrow(
+      "load profile failed: connection lost",
+    );
   });
 });

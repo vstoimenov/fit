@@ -1,4 +1,5 @@
-export type AppErrorCode = "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "INVALID" | "CONFLICT";
+export type AppErrorCode =
+  "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "INVALID" | "CONFLICT" | "MFA_REQUIRED";
 
 /** An error whose message is safe to show to the user. */
 export class AppError extends Error {

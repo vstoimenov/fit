@@ -7,8 +7,10 @@ import {
   updateProfileAnswers,
   updateProfileBasics,
 } from "@/server/profile/profile";
+import { addNote } from "@/server/admin/notes";
 import {
   adminClient,
+  createAdminUser,
   createUser,
   freeWorkoutId,
   signedInClient,
@@ -140,6 +142,23 @@ describe("profile services", () => {
     ]);
   });
 
+  it("exports the notes written about her (kind, text, time) but nobody else's and no author ids", async () => {
+    const { db: boss } = await createAdminUser(admin, "export-boss");
+    const user = await createUser(admin, "export-notes");
+    const other = await createUser(admin, "export-notes-other");
+    await addNote(boss, user.id, { kind: "note", body: "Болки в коляното." });
+    await addNote(boss, user.id, { kind: "call", body: "Обадих се, не вдигна." });
+    await addNote(boss, other.id, { kind: "note", body: "Чужда бележка." });
+    const data = await exportMyData(await signedInClient(user), user.id, admin);
+    const notes = data.client_notes as Record<string, unknown>[];
+    expect(notes).toHaveLength(2);
+    expect(notes.map((n) => n.body).sort()).toEqual(["Болки в коляното.", "Обадих се, не вдигна."]);
+    expect(notes.map((n) => n.kind).sort()).toEqual(["call", "note"]);
+    for (const n of notes) {
+      expect(Object.keys(n).sort()).toEqual(["body", "created_at", "kind"]);
+    }
+  });
+
   it("deletes the account and every row that belongs to it", async () => {
     const user = await createUser(admin, "delete");
     await addCheckIn(await signedInClient(user), { energy: 3 });
@@ -151,7 +170,11 @@ describe("profile services", () => {
       { anon_id: strangerAnonId, path: "/unrelated", device: "desktop" },
     ]);
     expect(seedError).toBeNull();
+    const { db: boss } = await createAdminUser(admin, "delete-boss");
+    await addNote(boss, user.id, { kind: "note", body: "Ще бъде изтрита." });
     await deleteAccount(admin, user.id);
+    const { data: notes } = await admin.from("client_notes").select("id").eq("user_id", user.id);
+    expect(notes).toEqual([]);
     const { data: profile } = await admin.from("profiles").select("id").eq("id", user.id);
     const { data: checkIns } = await admin.from("check_ins").select("id").eq("user_id", user.id);
     expect(profile).toEqual([]);

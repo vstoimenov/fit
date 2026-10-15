@@ -57,6 +57,25 @@ pnpm build
 
 Never edit an applied migration; add a new one in `supabase/migrations/`.
 
+## Admin
+
+- Promote an account (local): `node --env-file=.env.local scripts/make-admin.mjs you@example.com`.
+  Hosted: `update public.profiles set role = 'admin' where email = 'you@example.com';` in the SQL editor.
+- **Promote an admin and enrol TOTP immediately.** Until a TOTP factor is verified the account is protected only
+  by its password. Once one factor is verified, Supabase refuses to enrol another at aal1, so a stranger who
+  knows the password cannot add their own authenticator, but only if you enrol first.
+- First visit to `/admin` asks for TOTP enrolment (Google Authenticator / 1Password). Every new session needs the 6-digit code.
+  Without it the account is treated as a normal client everywhere (the database enforces this via `is_admin()` = role admin + aal2).
+- Hosted Supabase: enable **Authentication -> Multi-factor -> TOTP** (enroll + verify), or `supabase config push`.
+- **Lost authenticator (admin locked out):** in the Supabase SQL editor run
+  `delete from auth.mfa_factors where user_id = (select id from auth.users where email = '…');`,
+  then sign in and enrol again at `/admin/mfa`. Only the project owner (SQL editor access) can do this.
+- Optional email for "Изпрати съобщение": `BREVO_API_KEY`, `EMAIL_FROM_ADDRESS`, `EMAIL_FROM_NAME`.
+  **The sender address must be verified in Brevo**, otherwise Brevo rejects the send. Without Brevo (or with a
+  rejected send) the message is recorded on the client as **NOT sent**; nothing is delivered.
+- Workouts that clients completed cannot be deleted (RLS plus a restricting foreign key). "Скрий" turns them back into drafts.
+- "Preview as client" needs the admin's own profile to be onboarded.
+
 ## Hosted go-live checklist
 
 1. **Schema:** `supabase link --project-ref <ref>` then `supabase db push`.
@@ -70,8 +89,8 @@ Never edit an applied migration; add a new one in `supabase/migrations/`.
      because there is no session yet.
 3. **Seed content:** `supabase/seed.sql` does **not** run on `db push`. The hosted database needs the plans, one
    free workout (`kind = 'free'`), the starter week (`kind = 'starter'`, `starter_order` 1-5) and regular
-   workouts, each with a `workout_media` row. Until the 1B admin panel exists, run the relevant parts of the seed
-   SQL manually (SQL editor or `psql`) with real video links. The seed's regular workouts and placeholder
+   workouts, each with a `workout_media` row. Create the workouts in the admin panel (`/admin/workouts`) with real video
+   links, or run the relevant parts of the seed SQL manually (SQL editor or `psql`). The seed's regular workouts and placeholder
    videos are demo data.
 4. **Environment variables** (hosting provider): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `NEXT_PUBLIC_GOOGLE_AUTH`.

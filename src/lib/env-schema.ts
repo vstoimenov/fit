@@ -1,9 +1,17 @@
 import { z } from "zod";
 
+/** Empty values in .env files (`KEY=`) count as unset. */
+const optionalFromEnv = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
+
 export const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   APP_URL: z.url(),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // Optional: without them „Изпрати съобщение" records the note but sends nothing.
+  BREVO_API_KEY: optionalFromEnv(z.string().min(1)),
+  EMAIL_FROM_ADDRESS: optionalFromEnv(z.email()),
+  EMAIL_FROM_NAME: optionalFromEnv(z.string().min(1).max(60)),
 });
 
 export const clientEnvSchema = z.object({

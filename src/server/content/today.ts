@@ -83,8 +83,10 @@ export async function getTodayView(
     db.from("workout_completions").select("workout_id, local_date").eq("user_id", userId),
     db.rpc("my_access"),
   ]);
-  if (profileRes.error || !profileRes.data)
-    throw new AppError("NOT_FOUND", "Профилът не е намерен.");
+  if (profileRes.error && profileRes.error.code !== "PGRST116") {
+    throw new Error(`load profile failed: ${profileRes.error.message}`);
+  }
+  if (!profileRes.data) throw new AppError("NOT_FOUND", "Профилът не е намерен.");
   if (workoutsRes.error || completionsRes.error || accessRes.error) {
     throw new Error(
       `today view query failed: ${workoutsRes.error?.message ?? completionsRes.error?.message ?? accessRes.error?.message}`,
