@@ -77,6 +77,50 @@ describe("normalizeStripeEvent", () => {
     expect(e).toMatchObject({ status: "active", cancelAtPeriodEnd: true, canceledAt: null });
   });
 
+  it("uses the real end time for an updated event that is already canceled", () => {
+    const e = normalizeStripeEvent(
+      stripeSubscriptionEvent({
+        type: "customer.subscription.updated",
+        status: "canceled",
+        endedAt: 1_761_000_000,
+        canceledAt: 1_760_500_000,
+      }),
+    );
+    expect(e).toMatchObject({
+      status: "canceled",
+      canceledAt: new Date(1_761_000_000_000).toISOString(),
+    });
+  });
+
+  it("does not take the cancellation request time as the end when ended_at is missing", () => {
+    const e = normalizeStripeEvent(
+      stripeSubscriptionEvent({
+        type: "customer.subscription.deleted",
+        status: "canceled",
+        endedAt: null,
+        canceledAt: 1_760_500_000,
+      }),
+    );
+    expect(e?.canceledAt).toBeNull();
+  });
+
+  it("reads the customer id from an expanded customer object", () => {
+    const e = normalizeStripeEvent(stripeSubscriptionEvent({ customer: { id: "cus_x" } }));
+    expect(e?.customerId).toBe("cus_x");
+  });
+
+  it("accepts only a UUID as the user id", () => {
+    expect(
+      normalizeStripeEvent(stripeSubscriptionEvent({ userId: "not-a-uuid" }))?.userId,
+    ).toBeNull();
+    expect(normalizeStripeEvent(stripeSubscriptionEvent({ userId: "12345" }))?.userId).toBeNull();
+    expect(
+      normalizeStripeEvent(
+        stripeSubscriptionEvent({ userId: "AAAAAAAA-0000-4000-8000-000000000001" }),
+      )?.userId,
+    ).toBe("AAAAAAAA-0000-4000-8000-000000000001");
+  });
+
   it("returns null for events it does not handle and for a missing user id", () => {
     expect(normalizeStripeEvent(stripeSubscriptionEvent({ type: "invoice.paid" }))).toBeNull();
     expect(normalizeStripeEvent(stripeSubscriptionEvent({ userId: null }))?.userId).toBeNull();

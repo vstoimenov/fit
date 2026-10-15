@@ -8,6 +8,7 @@ export function stripeSubscriptionEvent(
     created?: number;
     status?: string;
     userId?: string | null;
+    customer?: string | { id: string };
     periodEnd?: number;
     cancelAtPeriodEnd?: boolean;
     canceledAt?: number | null;
@@ -22,7 +23,7 @@ export function stripeSubscriptionEvent(
   const subscription = {
     id: "sub_123",
     object: "subscription",
-    customer: "cus_123",
+    customer: over.customer ?? "cus_123",
     status: over.status ?? "active",
     cancel_at_period_end: over.cancelAtPeriodEnd ?? false,
     canceled_at: over.canceledAt ?? null,

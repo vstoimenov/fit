@@ -23,6 +23,8 @@ export function mapStripeStatus(status: string): SubscriptionStatus {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 const toIso = (seconds: number | null | undefined) =>
   typeof seconds === "number" && seconds > 0 ? new Date(seconds * 1000).toISOString() : null;
 
@@ -37,8 +39,8 @@ export function normalizeStripeEvent(event: Stripe.Event): NormalizedSubscriptio
   const price = item?.price;
   const status =
     event.type === "customer.subscription.deleted" ? "canceled" : mapStripeStatus(sub.status);
-  const userId =
-    typeof sub.metadata?.user_id === "string" && sub.metadata.user_id ? sub.metadata.user_id : null;
+  const rawUserId = sub.metadata?.user_id;
+  const userId = typeof rawUserId === "string" && UUID.test(rawUserId) ? rawUserId : null;
   const interval = price?.recurring?.interval;
   return {
     provider: "stripe",
@@ -51,7 +53,7 @@ export function normalizeStripeEvent(event: Stripe.Event): NormalizedSubscriptio
     status,
     currentPeriodEnd: toIso(item?.current_period_end ?? sub.current_period_end),
     cancelAtPeriodEnd: Boolean(sub.cancel_at_period_end),
-    canceledAt: status === "canceled" ? toIso(sub.ended_at ?? sub.canceled_at) : null,
+    canceledAt: status === "canceled" ? toIso(sub.ended_at) : null,
     priceId: price?.id ?? null,
     priceCents: typeof price?.unit_amount === "number" ? price.unit_amount : null,
     interval: interval === "month" ? "month" : interval === "year" ? "year" : null,
