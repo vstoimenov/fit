@@ -189,6 +189,53 @@ describe("StripeProvider", () => {
     expect(client.subscriptions.cancel).toHaveBeenCalledWith("sub_1");
   });
 
+  describe("cancelNow is idempotent", () => {
+    const provider = (client: ReturnType<typeof fakeClient>) =>
+      createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+
+    it("resolves when the subscription no longer exists at Stripe", async () => {
+      const client = fakeClient();
+      client.subscriptions.cancel.mockRejectedValueOnce(
+        new Stripe.errors.StripeInvalidRequestError({
+          type: "invalid_request_error",
+          code: "resource_missing",
+          message: "No such subscription: 'sub_gone'",
+        }),
+      );
+      await expect(provider(client).cancelNow("sub_gone")).resolves.toBeUndefined();
+      expect(client.subscriptions.retrieve).not.toHaveBeenCalled();
+    });
+
+    it("resolves when the subscription is already canceled", async () => {
+      const client = fakeClient(async () => ({ id: "sub_1", status: "canceled" }));
+      client.subscriptions.cancel.mockRejectedValueOnce(new Error("already canceled"));
+      await expect(provider(client).cancelNow("sub_1")).resolves.toBeUndefined();
+      expect(client.subscriptions.retrieve).toHaveBeenCalledWith("sub_1");
+    });
+
+    it("resolves when the subscription is incomplete_expired", async () => {
+      const client = fakeClient(async () => ({ id: "sub_1", status: "incomplete_expired" }));
+      client.subscriptions.cancel.mockRejectedValueOnce(new Error("expired"));
+      await expect(provider(client).cancelNow("sub_1")).resolves.toBeUndefined();
+    });
+
+    it("rethrows the original error when the subscription is still active", async () => {
+      const client = fakeClient(async () => ({ id: "sub_1", status: "active" }));
+      const original = new Error("stripe down");
+      client.subscriptions.cancel.mockRejectedValueOnce(original);
+      await expect(provider(client).cancelNow("sub_1")).rejects.toBe(original);
+    });
+
+    it("rethrows the original error when the status check fails too", async () => {
+      const client = fakeClient(async () => {
+        throw new Error("retrieve failed");
+      });
+      const original = new Error("stripe down");
+      client.subscriptions.cancel.mockRejectedValueOnce(original);
+      await expect(provider(client).cancelNow("sub_1")).rejects.toBe(original);
+    });
+  });
+
   describe("re-fetching the current subscription", () => {
     it("normalises the current state, not the stale event payload", async () => {
       const client = fakeClient(

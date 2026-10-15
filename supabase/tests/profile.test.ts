@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import {
   addCheckIn,
   deleteAccount,
@@ -13,6 +13,7 @@ import {
   createAdminUser,
   createUser,
   freeWorkoutId,
+  grantAccess,
   signedInClient,
   type TypedClient,
 } from "./helpers";
@@ -184,5 +185,67 @@ describe("profile services", () => {
       .select("anon_id")
       .in("anon_id", [anonId, strangerAnonId]);
     expect(visits).toEqual([{ anon_id: strangerAnonId }]);
+  });
+
+  describe("deleting an account with a paid subscription", () => {
+    const profileRows = async (id: string) =>
+      (await admin.from("profiles").select("id").eq("id", id)).data;
+
+    it("cancels a live paid subscription before deleting the account", async () => {
+      const user = await createUser(admin, "del-paid");
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "stripe",
+        status: "active",
+        provider_sub_id: "sub_del",
+      });
+      const cancel = vi.fn(async () => {});
+      await deleteAccount(admin, user.id, cancel);
+      expect(cancel).toHaveBeenCalledWith({ provider: "stripe", subscriptionId: "sub_del" });
+      expect(await profileRows(user.id)).toEqual([]);
+    });
+
+    it("keeps the account when cancelling the paid subscription fails", async () => {
+      const user = await createUser(admin, "del-fail");
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "stripe",
+        status: "active",
+        provider_sub_id: "sub_fail",
+      });
+      await expect(
+        deleteAccount(admin, user.id, async () => {
+          throw new Error("stripe down");
+        }),
+      ).rejects.toMatchObject({ code: "CONFLICT" });
+      expect(await profileRows(user.id)).toHaveLength(1);
+      // Nothing was deleted, so remove the test user ourselves.
+      await deleteAccount(admin, user.id);
+      expect(await profileRows(user.id)).toEqual([]);
+    });
+
+    it("does not call the provider for manual subscriptions", async () => {
+      const user = await createUser(admin, "del-manual");
+      await grantAccess(admin, user.id);
+      const cancel = vi.fn(async () => {});
+      await deleteAccount(admin, user.id, cancel);
+      expect(cancel).not.toHaveBeenCalled();
+      expect(await profileRows(user.id)).toEqual([]);
+    });
+
+    it("does not call the provider for an ended paid subscription", async () => {
+      const user = await createUser(admin, "del-ended");
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "stripe",
+        status: "canceled",
+        provider_sub_id: "sub_ended",
+        current_period_end: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      });
+      const cancel = vi.fn(async () => {});
+      await deleteAccount(admin, user.id, cancel);
+      expect(cancel).not.toHaveBeenCalled();
+      expect(await profileRows(user.id)).toEqual([]);
+    });
   });
 });

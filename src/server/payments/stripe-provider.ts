@@ -111,8 +111,26 @@ export function createStripeProvider(
       });
       return { url: session.url };
     },
+    /**
+     * Idempotent: a subscription that is already gone or already ended counts as cancelled, so a
+     * member whose card was dropped at Stripe can still delete her account and a replayed webhook
+     * does not log noise. Anything else (Stripe down, still active) propagates.
+     */
     async cancelNow(subscriptionId) {
-      await need().subscriptions.cancel(subscriptionId);
+      const client = need();
+      try {
+        await client.subscriptions.cancel(subscriptionId);
+      } catch (error) {
+        if (isResourceMissing(error)) return;
+        let current: { status?: string } | null = null;
+        try {
+          current = (await client.subscriptions.retrieve(subscriptionId)) as { status?: string };
+        } catch {
+          // Cannot tell the state: surface the cancel failure, not this one.
+        }
+        if (current?.status === "canceled" || current?.status === "incomplete_expired") return;
+        throw error;
+      }
     },
     async parseWebhook(rawBody, headers) {
       const signature = headers.get("stripe-signature");

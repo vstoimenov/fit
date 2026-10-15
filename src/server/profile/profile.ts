@@ -1,3 +1,4 @@
+import { AppError } from "@/lib/app-error";
 import { profileAnswersSchema } from "@/lib/onboarding/schema";
 import type { CheckInInput } from "@/lib/progress/check-in-schema";
 import type { Level } from "@/lib/program/types";
@@ -120,8 +121,39 @@ async function anonIdsOf(admin: TypedClient, userId: string): Promise<string[]> 
  * Removes the auth user; profile and all owned rows cascade. Needs the service-role client.
  * visits.user_id is `on delete set null` and rows keep a persistent anon_id, so the visits that
  * identify the user (by user_id or by a shared anon_id) are deleted first.
+ * A live paid subscription is cancelled first via `cancelPaid`; if that fails nothing is deleted.
  */
-export async function deleteAccount(admin: TypedClient, userId: string): Promise<void> {
+export async function deleteAccount(
+  admin: TypedClient,
+  userId: string,
+  cancelPaid: (sub: { provider: string; subscriptionId: string }) => Promise<void> = async () => {},
+): Promise<void> {
+  // A live card subscription must be stopped before the row that links it to her disappears,
+  // otherwise she keeps being charged for an account that no longer exists.
+  const { data: sub, error: subError } = await admin
+    .from("subscriptions")
+    .select("provider, provider_sub_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (subError) throw new Error(`load subscription failed: ${subError.message}`);
+  const { data: live, error: liveError } = await admin.rpc("has_active_access", { uid: userId });
+  if (liveError) throw new Error(`load access failed: ${liveError.message}`);
+  if (sub && sub.provider !== "manual" && sub.provider_sub_id && live) {
+    try {
+      await cancelPaid({ provider: sub.provider, subscriptionId: sub.provider_sub_id });
+    } catch (error) {
+      console.error(
+        "cancel before delete failed",
+        userId,
+        error instanceof Error ? error.message : "unknown",
+      );
+      throw new AppError(
+        "CONFLICT",
+        "Не успяхме да спрем абонамента. Профилът не е изтрит — опитай пак или ни пиши.",
+      );
+    }
+  }
+
   const anonIds = await anonIdsOf(admin, userId);
   for (let i = 0; i < anonIds.length; i += IN_CHUNK) {
     const { error } = await admin

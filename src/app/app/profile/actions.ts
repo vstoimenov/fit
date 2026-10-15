@@ -56,7 +56,19 @@ export async function deleteMyAccount(_prev: unknown, form: FormData): Promise<A
       throw new AppError("INVALID", "Напиши ИЗТРИЙ, за да потвърдиш.");
     }
     const { user, supabase } = await requireUser();
-    await deleteAccount(createAdminSupabaseClient(), user.id);
+    await deleteAccount(
+      createAdminSupabaseClient(),
+      user.id,
+      async ({ provider, subscriptionId }) => {
+        if (provider !== "stripe") throw new Error("unsupported provider");
+        // Without Stripe keys this throws ProviderUnavailableError, which refuses the deletion:
+        // we must not leave a paying card behind.
+        await createStripeProvider({
+          secretKey: serverEnv.STRIPE_SECRET_KEY,
+          webhookSecret: serverEnv.STRIPE_WEBHOOK_SECRET,
+        }).cancelNow(subscriptionId);
+      },
+    );
     // The account is gone: whatever happens to the sign-out, the user must leave this page.
     try {
       await supabase.auth.signOut();
