@@ -31,6 +31,8 @@ Create `.env.local` from `.env.example`, filling the keys from `pnpm exec supaba
 | `SUPABASE_SERVICE_ROLE_KEY`     | `SERVICE_ROLE_KEY` (server only, never `NEXT_PUBLIC_`)            |
 | `APP_URL`                       | public URL of the app (local: `http://localhost:3120`)            |
 | `NEXT_PUBLIC_GOOGLE_AUTH`       | `1` shows the Google button (needs the Google provider), else `0` |
+| `STRIPE_SECRET_KEY`             | optional, payments: see "Payments (Stripe)"                       |
+| `STRIPE_WEBHOOK_SECRET`         | optional, payments: see "Payments (Stripe)"                       |
 
 ```bash
 pnpm dev             # http://localhost:3120
@@ -76,6 +78,21 @@ Never edit an applied migration; add a new one in `supabase/migrations/`.
 - Workouts that clients completed cannot be deleted (RLS plus a restricting foreign key). "Скрий" turns them back into drafts.
 - "Preview as client" needs the admin's own profile to be onboarded.
 
+## Payments (Stripe)
+
+1. Stripe dashboard (test mode first): create a Product „Абонамент" with two recurring Prices (monthly, yearly) in EUR.
+2. Settings → Payment methods: enable Cards, Apple Pay, Google Pay (Apple Pay needs the domain verified in Stripe once the site has its own domain).
+3. Settings → Customer portal: allow cancel (at period end), update payment method, view invoices; set the return URL to `<APP_URL>/app/profile`.
+4. Developers → Webhooks: endpoint `<APP_URL>/api/pay/stripe/webhook`, events
+   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+   Copy the signing secret.
+5. Env: `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…` (Vercel → Project → Environment Variables; never commit them).
+6. Admin → Настройки → Планове: paste each Stripe Price ID (`price_…`) into its plan. After that the plan's price is locked; a new price = a new plan.
+7. Test card: 4242 4242 4242 4242, any future date, any CVC. Failed renewal test: 4000 0000 0000 0341.
+8. Switching to live: repeat 1–6 with live keys and live prices.
+
+Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) but is not implemented — it needs a Revolut Business merchant sandbox to verify the Merchant API subscription flow first.
+
 ## Hosted go-live checklist
 
 1. **Schema:** `supabase link --project-ref <ref>` then `supabase db push`.
@@ -93,7 +110,8 @@ Never edit an applied migration; add a new one in `supabase/migrations/`.
    links, or run the relevant parts of the seed SQL manually (SQL editor or `psql`). The seed's regular workouts and placeholder
    videos are demo data.
 4. **Environment variables** (hosting provider): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
-   `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `NEXT_PUBLIC_GOOGLE_AUTH`.
+   `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `NEXT_PUBLIC_GOOGLE_AUTH`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+   (see "Payments (Stripe)"; without the Stripe keys the plan picker is disabled and the webhook answers 503).
 5. **Admin user:** after signing up, promote the owner account with the service role
    (`update public.profiles set role = 'admin' where email = '...'`).
 6. **Legal, before any traffic:** a privacy-policy page linked from the health-data consent checkbox in the
