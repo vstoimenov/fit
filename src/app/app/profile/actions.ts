@@ -3,12 +3,16 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { serverEnv } from "@/env";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
 import { profileFormToAnswers } from "@/lib/onboarding/profile-form";
 import { requireUser } from "@/server/auth/require-user";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
+import { openPortal } from "@/server/payments/checkout";
+import { ProviderUnavailableError } from "@/server/payments/provider";
+import { createStripeProvider } from "@/server/payments/stripe-provider";
 import { deleteAccount, updateProfileAnswers, updateProfileBasics } from "@/server/profile/profile";
 
 const basicsSchema = z.object({
@@ -66,4 +70,26 @@ export async function deleteMyAccount(_prev: unknown, form: FormData): Promise<A
     return actionFail(error);
   }
   redirect("/?deleted=1");
+}
+
+/**
+ * Stripe's customer portal. Always the Stripe provider, not the active one: existing Stripe
+ * subscribers keep managing their subscription after the owner switches providers.
+ */
+export async function openPortalAction(): Promise<ActionResult<{ url: string }>> {
+  try {
+    const { user, supabase } = await requireUser();
+    const provider = createStripeProvider({
+      secretKey: serverEnv.STRIPE_SECRET_KEY,
+      webhookSecret: serverEnv.STRIPE_WEBHOOK_SECRET,
+    });
+    return actionOk(
+      await openPortal(supabase, provider, { userId: user.id, appUrl: serverEnv.APP_URL }),
+    );
+  } catch (error) {
+    if (error instanceof ProviderUnavailableError) {
+      return { ok: false, message: "Плащането още не е настроено. Опитай по-късно." };
+    }
+    return actionFail(error);
+  }
 }

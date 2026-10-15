@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { subscriptionText } from "./subscription-text";
+import { endNotice, subscriptionText } from "./subscription-text";
 
 describe("subscriptionText", () => {
   it("says there is no subscription when access is off and no row exists", () => {
@@ -36,5 +36,27 @@ describe("subscriptionText", () => {
     expect(subscriptionText(false, { status: "none", current_period_end: null })).toBe(
       "Нямаш активен абонамент",
     );
+  });
+});
+
+describe("endNotice", () => {
+  it("announces the end date of a subscription that will not renew", () => {
+    expect(
+      endNotice({ cancel_at_period_end: true, current_period_end: "2026-12-20T10:00:00Z" }),
+    ).toBe("Абонаментът ще приключи на 20.12.2026");
+  });
+
+  it("uses the Sofia calendar day", () => {
+    expect(
+      endNotice({ cancel_at_period_end: true, current_period_end: "2026-12-20T23:30:00Z" }),
+    ).toBe("Абонаментът ще приключи на 21.12.2026");
+  });
+
+  it("says nothing for a renewing subscription, a missing date or no row", () => {
+    expect(
+      endNotice({ cancel_at_period_end: false, current_period_end: "2026-12-20T10:00:00Z" }),
+    ).toBeNull();
+    expect(endNotice({ cancel_at_period_end: true, current_period_end: null })).toBeNull();
+    expect(endNotice(null)).toBeNull();
   });
 });

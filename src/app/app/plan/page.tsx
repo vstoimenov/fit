@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { Button } from "@/components/ui/button";
-import { formatPrice } from "@/lib/format";
+import { serverEnv } from "@/env";
 import { LEVEL_LABEL, type Goal, type Time } from "@/lib/labels";
 import { buildPlanSummary } from "@/lib/onboarding/plan-summary";
 import { requireUser } from "@/server/auth/require-user";
+import { getActiveProvider } from "@/server/payments/registry";
+import { PlanPicker } from "./plan-picker";
 
 export const metadata = { title: "Твоят план" };
 
@@ -55,7 +56,7 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
     time: profile.time_per_session as Time | null,
     level: profile.level,
   });
-  const monthly = plans?.find((p) => p.interval === "month");
+  const paymentsReady = (await getActiveProvider(supabase, serverEnv)).ready;
 
   return (
     <main className="space-y-8 px-5 pt-8">
@@ -108,33 +109,7 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
         <li>✓ Проследяване на тегло, мерки и серии</li>
       </ul>
 
-      <section className="space-y-3">
-        {(plans ?? []).map((plan) => (
-          <div
-            key={plan.id}
-            className="flex items-center justify-between rounded-3xl border-2 border-ink bg-white p-5"
-          >
-            <div>
-              <p className="font-display text-lg font-bold">{plan.name}</p>
-              {plan.interval === "year" && monthly && (
-                <p className="text-sm text-moss">
-                  {formatPrice(Math.round(plan.price_cents / 12), plan.currency)} на месец
-                </p>
-              )}
-            </div>
-            <p className="font-display text-xl font-bold">
-              {formatPrice(plan.price_cents, plan.currency)}
-              <span className="text-sm font-medium text-ink-soft">
-                /{plan.interval === "month" ? "мес" : "год"}
-              </span>
-            </p>
-          </div>
-        ))}
-        {/* Wired to checkout in plan 1C. */}
-        <Button disabled className="w-full">
-          Плащането се включва скоро
-        </Button>
-      </section>
+      <PlanPicker plans={plans ?? []} ready={paymentsReady} />
     </main>
   );
 }

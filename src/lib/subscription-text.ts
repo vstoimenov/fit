@@ -34,3 +34,22 @@ export function subscriptionText(
       return "Достъп до всички тренировки";
   }
 }
+
+const SHORT_DATE = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+  timeZone: "Europe/Sofia",
+});
+
+/** „Абонаментът ще приключи на dd.mm.yyyy" for a subscription that will not renew, else null. */
+export function endNotice(
+  sub: { cancel_at_period_end: boolean; current_period_end: string | null } | null,
+): string | null {
+  if (!sub?.cancel_at_period_end || !sub.current_period_end) return null;
+  const date = SHORT_DATE.formatToParts(new Date(sub.current_period_end))
+    .filter((part) => part.type !== "literal")
+    .map((part) => part.value);
+  const [day, month, year] = date;
+  return `Абонаментът ще приключи на ${day}.${month}.${year}`;
+}

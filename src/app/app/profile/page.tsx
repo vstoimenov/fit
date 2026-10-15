@@ -4,8 +4,9 @@ import { Suspense } from "react";
 import { Sparkline } from "@/components/progress/sparkline";
 import { buttonClass } from "@/components/ui/button";
 import { GOALS, LEVEL_LABEL, PROBLEMS } from "@/lib/labels";
-import { subscriptionText } from "@/lib/subscription-text";
+import { endNotice, subscriptionText } from "@/lib/subscription-text";
 import { requireUser } from "@/server/auth/require-user";
+import { ManageSubscriptionButton } from "./manage-subscription-button";
 import { ProfileForms } from "./profile-forms";
 import { SignOutButton } from "./sign-out-button";
 
@@ -47,7 +48,7 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
       .limit(30),
     supabase
       .from("subscriptions")
-      .select("status, current_period_end")
+      .select("status, current_period_end, cancel_at_period_end, provider, provider_customer_id")
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.rpc("my_access"),
@@ -99,6 +100,8 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
       <section className="space-y-2 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
         <h2 className="font-semibold">Абонамент</h2>
         <p className="text-ink-soft">{subscriptionText(access, sub)}</p>
+        {endNotice(sub) && <p className="text-ink-soft">{endNotice(sub)}</p>}
+        {sub?.provider === "stripe" && sub.provider_customer_id && <ManageSubscriptionButton />}
         {!access && (
           <Link href="/app/plan" className="font-semibold underline underline-offset-4">
             Виж плановете
