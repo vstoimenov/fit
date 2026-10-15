@@ -4,6 +4,13 @@ import { z } from "zod";
 const optionalFromEnv = <T extends z.ZodType>(schema: T) =>
   z.preprocess((v) => (v === "" ? undefined : v), schema.optional());
 
+/** Pasted secrets often carry a trailing newline or spaces; trim, then treat blank as unset. */
+const trimmedOptional = <T extends z.ZodType>(schema: T) =>
+  z.preprocess((v) => {
+    const trimmed = typeof v === "string" ? v.trim() : v;
+    return trimmed === "" ? undefined : trimmed;
+  }, schema.optional());
+
 export const serverEnvSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   APP_URL: z.url(),
@@ -13,10 +20,10 @@ export const serverEnvSchema = z.object({
   EMAIL_FROM_ADDRESS: optionalFromEnv(z.email()),
   EMAIL_FROM_NAME: optionalFromEnv(z.string().min(1).max(60)),
   // Optional: without them checkout shows "not configured" and the webhook answers 503.
-  STRIPE_SECRET_KEY: optionalFromEnv(
+  STRIPE_SECRET_KEY: trimmedOptional(
     z.string().regex(/^(sk|rk)_(test|live)_/, "Stripe secret key"),
   ),
-  STRIPE_WEBHOOK_SECRET: optionalFromEnv(z.string().startsWith("whsec_")),
+  STRIPE_WEBHOOK_SECRET: trimmedOptional(z.string().startsWith("whsec_")),
 });
 
 export const clientEnvSchema = z.object({

@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import Stripe from "stripe";
 import { normalizeStripeEvent } from "@/lib/payments/stripe-normalize";
 import { ProviderUnavailableError, WebhookSignatureError, type PaymentProvider } from "./provider";
@@ -40,7 +39,13 @@ export function createStripeProvider(
 ): PaymentProvider {
   const ready = Boolean(config.secretKey && config.webhookSecret);
   const stripe: StripeLike | null =
-    client ?? (config.secretKey ? (new Stripe(config.secretKey) as unknown as StripeLike) : null);
+    client ??
+    (config.secretKey
+      ? (new Stripe(config.secretKey, {
+          timeout: 10_000,
+          maxNetworkRetries: 2,
+        }) as unknown as StripeLike)
+      : null);
   const need = () => {
     if (!ready || !stripe) throw new ProviderUnavailableError("stripe");
     return stripe;
@@ -82,7 +87,10 @@ export function createStripeProvider(
           allow_promotion_codes: true,
           locale: "bg",
         },
-        { idempotencyKey: `checkout-${i.userId}-${i.priceId}-${randomUUID()}` },
+        {
+          // Same user + price within a minute (a double click) returns the same session.
+          idempotencyKey: `checkout-${i.userId}-${i.priceId}-${Math.floor(Date.now() / 60_000)}`,
+        },
       );
       if (!session.url) throw new Error("stripe returned no checkout url");
       return { url: session.url };

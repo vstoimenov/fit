@@ -54,7 +54,9 @@ describe("StripeProvider", () => {
         allow_promotion_codes: true,
         locale: "bg",
       }),
-      expect.objectContaining({ idempotencyKey: expect.any(String) }),
+      {
+        idempotencyKey: `checkout-u1-price_1-${Math.floor(Date.now() / 60_000)}`,
+      },
     );
   });
 

@@ -58,4 +58,17 @@ describe("parseEnv", () => {
     );
     expect(ok.STRIPE_SECRET_KEY).toBe("sk_test_abc");
   });
+
+  it("trims whitespace around Stripe values pasted into the env", () => {
+    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, STRIPE_SECRET_KEY: " sk_test_abc\n", STRIPE_WEBHOOK_SECRET: "  whsec_abc " },
+      "server",
+    );
+    expect(env.STRIPE_SECRET_KEY).toBe("sk_test_abc");
+    expect(env.STRIPE_WEBHOOK_SECRET).toBe("whsec_abc");
+    const blank = parseEnv(serverEnvSchema, { ...base, STRIPE_SECRET_KEY: "  " }, "server");
+    expect(blank.STRIPE_SECRET_KEY).toBeUndefined();
+  });
 });
