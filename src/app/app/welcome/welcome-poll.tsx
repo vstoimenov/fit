@@ -19,9 +19,10 @@ export function WelcomePoll() {
     const started = Date.now();
     async function tick() {
       if (cancelled) return;
-      const result = await checkAccessAction();
+      // A rejected call (network blip, redeploy) counts as "not yet": keep polling until the deadline.
+      const result = await checkAccessAction().catch(() => null);
       if (cancelled) return;
-      if (result.ok && result.data) {
+      if (result?.ok && result.data) {
         setState("active");
         timer = setTimeout(() => router.replace("/app"), 1200);
         return;

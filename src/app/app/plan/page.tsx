@@ -5,6 +5,7 @@ import { serverEnv } from "@/env";
 import { LEVEL_LABEL, type Goal, type Time } from "@/lib/labels";
 import { buildPlanSummary } from "@/lib/onboarding/plan-summary";
 import { requireUser } from "@/server/auth/require-user";
+import { priceIdFor } from "@/server/payments/checkout";
 import { getActiveProvider } from "@/server/payments/registry";
 import { PlanPicker } from "./plan-picker";
 
@@ -37,7 +38,7 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
       .single(),
     supabase
       .from("plans")
-      .select("id, name, interval, price_cents, currency")
+      .select("id, name, interval, price_cents, currency, provider_price_ids")
       .eq("active", true)
       .order("sort"),
     supabase.rpc("my_access"),
@@ -56,7 +57,11 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
     time: profile.time_per_session as Time | null,
     level: profile.level,
   });
-  const paymentsReady = (await getActiveProvider(supabase, serverEnv)).ready;
+  const provider = await getActiveProvider(supabase, serverEnv);
+  const pickerPlans = (plans ?? []).map(({ provider_price_ids, ...plan }) => ({
+    ...plan,
+    payable: priceIdFor({ provider_price_ids }, provider.name) !== null,
+  }));
 
   return (
     <main className="space-y-8 px-5 pt-8">
@@ -109,7 +114,7 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
         <li>✓ Проследяване на тегло, мерки и серии</li>
       </ul>
 
-      <PlanPicker plans={plans ?? []} ready={paymentsReady} />
+      <PlanPicker plans={pickerPlans} ready={provider.ready} />
     </main>
   );
 }

@@ -42,14 +42,26 @@ const SHORT_DATE = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Europe/Sofia",
 });
 
-/** „Абонаментът ще приключи на dd.mm.yyyy" for a subscription that will not renew, else null. */
+const WILL_END_STATUSES: ReadonlySet<Status> = new Set(["active", "trialing", "past_due"]);
+
+/**
+ * „Абонаментът ще приключи на dd.mm.yyyy" for a live subscription that will not renew, else null.
+ * A canceled one already shows its date in subscriptionText, and a past date means it has ended.
+ */
 export function endNotice(
-  sub: { cancel_at_period_end: boolean; current_period_end: string | null } | null,
+  sub: {
+    status: Status;
+    cancel_at_period_end: boolean;
+    current_period_end: string | null;
+  } | null,
+  now: Date = new Date(),
 ): string | null {
   if (!sub?.cancel_at_period_end || !sub.current_period_end) return null;
-  const date = SHORT_DATE.formatToParts(new Date(sub.current_period_end))
+  if (!WILL_END_STATUSES.has(sub.status)) return null;
+  const end = new Date(sub.current_period_end);
+  if (end.getTime() <= now.getTime()) return null;
+  const [day, month, year] = SHORT_DATE.formatToParts(end)
     .filter((part) => part.type !== "literal")
     .map((part) => part.value);
-  const [day, month, year] = date;
   return `Абонаментът ще приключи на ${day}.${month}.${year}`;
 }

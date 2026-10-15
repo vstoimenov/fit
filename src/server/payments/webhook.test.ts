@@ -7,6 +7,7 @@ vi.mock("./apply-event", () => ({
   recordPaymentEvent: vi.fn(),
   markPaymentEvent: vi.fn(),
   applySubscriptionEvent: vi.fn(),
+  previousSubscription: vi.fn(),
 }));
 const applyMod = await import("./apply-event");
 const { handleWebhook } = await import("./webhook");
@@ -129,5 +130,108 @@ describe("handleWebhook", () => {
     );
     expect(res.status).toBe(500);
     expect(applyMod.markPaymentEvent).not.toHaveBeenCalled();
+  });
+
+  describe("replacing a live subscription with a new one", () => {
+    const incoming = {
+      eventId: "evt_new",
+      userId: "u1",
+      status: "active",
+      subscriptionId: "sub_new",
+    } as NormalizedSubscriptionEvent;
+    const live = { provider: "stripe", subscriptionId: "sub_old", live: true } as const;
+
+    async function run(opts: {
+      previous: Awaited<ReturnType<typeof applyMod.previousSubscription>>;
+      result: "applied" | "stale" | "ignored" | "no_user";
+      event?: Partial<NormalizedSubscriptionEvent>;
+      cancelNow?: () => Promise<void>;
+    }) {
+      const cancelNow = vi.fn(opts.cancelNow ?? (async () => {}));
+      vi.mocked(applyMod.recordPaymentEvent).mockResolvedValueOnce("new");
+      vi.mocked(applyMod.previousSubscription).mockResolvedValueOnce(opts.previous);
+      vi.mocked(applyMod.applySubscriptionEvent).mockResolvedValueOnce(opts.result);
+      const res = await handleWebhook(
+        {
+          name: "stripe",
+          ready: true,
+          cancelNow,
+          parseWebhook: async () => ({
+            event: { ...incoming, ...opts.event },
+            eventId: "evt_new",
+            type: "t",
+            payload: {},
+          }),
+        } as unknown as PaymentProvider,
+        "{}",
+        new Headers(),
+        db,
+      );
+      return { res, cancelNow };
+    }
+
+    it("cancels the previous live subscription at the provider, once", async () => {
+      const { res, cancelNow } = await run({ previous: live, result: "applied" });
+      expect(res).toEqual({ status: 200, body: "applied" });
+      expect(cancelNow).toHaveBeenCalledTimes(1);
+      expect(cancelNow).toHaveBeenCalledWith("sub_old");
+    });
+
+    it("also cancels when the new subscription is trialing", async () => {
+      const { cancelNow } = await run({
+        previous: live,
+        result: "applied",
+        event: { status: "trialing" },
+      });
+      expect(cancelNow).toHaveBeenCalledWith("sub_old");
+    });
+
+    it("does not cancel the same subscription", async () => {
+      const { cancelNow } = await run({
+        previous: { ...live, subscriptionId: "sub_new" },
+        result: "applied",
+      });
+      expect(cancelNow).not.toHaveBeenCalled();
+    });
+
+    it("does not cancel another provider's subscription or a dead or missing one", async () => {
+      for (const previous of [
+        { ...live, provider: "manual" },
+        { ...live, live: false },
+        { ...live, subscriptionId: null },
+        null,
+      ]) {
+        const { cancelNow } = await run({ previous, result: "applied" });
+        expect(cancelNow).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does not cancel unless the event was applied", async () => {
+      for (const result of ["stale", "ignored", "no_user"] as const) {
+        const { cancelNow } = await run({ previous: live, result });
+        expect(cancelNow).not.toHaveBeenCalled();
+      }
+    });
+
+    it("does not cancel for a non-live incoming status", async () => {
+      const { cancelNow } = await run({
+        previous: live,
+        result: "applied",
+        event: { status: "past_due" },
+      });
+      expect(cancelNow).not.toHaveBeenCalled();
+    });
+
+    it("keeps answering 200 when the provider cancel fails", async () => {
+      const { res, cancelNow } = await run({
+        previous: live,
+        result: "applied",
+        cancelNow: async () => {
+          throw new Error("stripe down");
+        },
+      });
+      expect(cancelNow).toHaveBeenCalledTimes(1);
+      expect(res).toEqual({ status: 200, body: "applied" });
+    });
   });
 });

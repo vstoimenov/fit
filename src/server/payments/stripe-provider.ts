@@ -81,11 +81,17 @@ export function createStripeProvider(
           success_url: i.successUrl,
           cancel_url: i.cancelUrl,
           client_reference_id: i.userId,
-          ...(i.customerId ? { customer: i.customerId } : { customer_email: i.email }),
+          ...(i.customerId
+            ? { customer: i.customerId }
+            : i.email
+              ? { customer_email: i.email }
+              : {}),
           subscription_data: { metadata: { user_id: i.userId } },
           metadata: { user_id: i.userId },
           allow_promotion_codes: true,
           locale: "bg",
+          // Stripe's minimum: an old tab cannot be paid much later.
+          expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
         },
         {
           // Same user + price within a minute (a double click) returns the same session.

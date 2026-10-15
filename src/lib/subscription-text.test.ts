@@ -40,23 +40,40 @@ describe("subscriptionText", () => {
 });
 
 describe("endNotice", () => {
-  it("announces the end date of a subscription that will not renew", () => {
-    expect(
-      endNotice({ cancel_at_period_end: true, current_period_end: "2026-12-20T10:00:00Z" }),
-    ).toBe("Абонаментът ще приключи на 20.12.2026");
+  const now = new Date("2026-12-01T10:00:00Z");
+  const sub = (over: Partial<Parameters<typeof endNotice>[0] & object> = {}) => ({
+    status: "active" as const,
+    cancel_at_period_end: true,
+    current_period_end: "2026-12-20T10:00:00Z",
+    ...over,
+  });
+
+  it("announces the end date of a live subscription that will not renew", () => {
+    for (const status of ["active", "trialing", "past_due"] as const) {
+      expect(endNotice(sub({ status }), now)).toBe("Абонаментът ще приключи на 20.12.2026");
+    }
   });
 
   it("uses the Sofia calendar day", () => {
+    expect(endNotice(sub({ current_period_end: "2026-12-20T23:30:00Z" }), now)).toBe(
+      "Абонаментът ще приключи на 21.12.2026",
+    );
+  });
+
+  it("says nothing once the period has ended", () => {
+    expect(endNotice(sub({ current_period_end: "2026-11-20T10:00:00Z" }), now)).toBeNull();
+  });
+
+  it("says nothing for a canceled subscription: subscriptionText already shows the date", () => {
+    expect(endNotice(sub({ status: "canceled" }), now)).toBeNull();
     expect(
-      endNotice({ cancel_at_period_end: true, current_period_end: "2026-12-20T23:30:00Z" }),
-    ).toBe("Абонаментът ще приключи на 21.12.2026");
+      endNotice(sub({ status: "canceled", current_period_end: "2026-11-20T10:00:00Z" }), now),
+    ).toBeNull();
   });
 
   it("says nothing for a renewing subscription, a missing date or no row", () => {
-    expect(
-      endNotice({ cancel_at_period_end: false, current_period_end: "2026-12-20T10:00:00Z" }),
-    ).toBeNull();
-    expect(endNotice({ cancel_at_period_end: true, current_period_end: null })).toBeNull();
-    expect(endNotice(null)).toBeNull();
+    expect(endNotice(sub({ cancel_at_period_end: false }), now)).toBeNull();
+    expect(endNotice(sub({ current_period_end: null }), now)).toBeNull();
+    expect(endNotice(null, now)).toBeNull();
   });
 });

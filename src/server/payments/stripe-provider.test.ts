@@ -32,6 +32,8 @@ function signed(event: Stripe.Event) {
 
 describe("StripeProvider", () => {
   it("creates a subscription checkout tied to the user", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-15T10:00:30Z"));
     const client = fakeClient();
     const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
     const { url } = await p.createCheckout({
@@ -55,9 +57,77 @@ describe("StripeProvider", () => {
         locale: "bg",
       }),
       {
-        idempotencyKey: `checkout-u1-price_1-${Math.floor(Date.now() / 60_000)}`,
+        idempotencyKey: `checkout-u1-price_1-${Math.floor(Date.parse("2026-10-15T10:00:30Z") / 60_000)}`,
       },
     );
+    vi.useRealTimers();
+  });
+
+  it("makes the same key within a minute and a new one in the next minute", async () => {
+    vi.useFakeTimers();
+    const client = fakeClient();
+    const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+    const input = {
+      userId: "u1",
+      email: "a@example.test",
+      customerId: null,
+      priceId: "price_1",
+      successUrl: "s",
+      cancelUrl: "c",
+    };
+    const keys: string[] = [];
+    for (const at of ["2026-10-15T10:00:05Z", "2026-10-15T10:00:55Z", "2026-10-15T10:01:05Z"]) {
+      vi.setSystemTime(new Date(at));
+      await p.createCheckout(input);
+      const call = (
+        client.checkout.sessions.create.mock.calls as unknown as [
+          unknown,
+          { idempotencyKey: string },
+        ][]
+      ).at(-1)!;
+      keys.push(call[1].idempotencyKey);
+    }
+    vi.useRealTimers();
+    expect(keys[0]).toBe(keys[1]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("expires the session in 30 minutes so an old tab cannot be paid much later", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-15T10:00:00Z"));
+    const client = fakeClient();
+    const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+    await p.createCheckout({
+      userId: "u1",
+      email: "a@example.test",
+      customerId: null,
+      priceId: "price_1",
+      successUrl: "s",
+      cancelUrl: "c",
+    });
+    vi.useRealTimers();
+    const args = (
+      client.checkout.sessions.create.mock.calls as unknown as [Record<string, unknown>][]
+    )[0]![0];
+    expect(args.expires_at).toBe(Date.parse("2026-10-15T10:00:00Z") / 1000 + 30 * 60);
+  });
+
+  it("sends no customer_email when the email is empty", async () => {
+    const client = fakeClient();
+    const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+    await p.createCheckout({
+      userId: "u1",
+      email: "",
+      customerId: null,
+      priceId: "price_1",
+      successUrl: "s",
+      cancelUrl: "c",
+    });
+    const args = (
+      client.checkout.sessions.create.mock.calls as unknown as [Record<string, unknown>][]
+    )[0]![0];
+    expect(args).not.toHaveProperty("customer_email");
+    expect(args).not.toHaveProperty("customer");
   });
 
   it("reuses an existing customer instead of the email", async () => {

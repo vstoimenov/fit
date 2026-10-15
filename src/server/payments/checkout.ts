@@ -2,6 +2,15 @@ import { AppError } from "@/lib/app-error";
 import type { TypedClient } from "@/server/db/types";
 import type { PaymentProvider } from "./provider";
 
+/** The provider's price id stored on a plan, or null when the plan cannot be paid through it. */
+export function priceIdFor(
+  plan: { provider_price_ids: unknown },
+  provider: PaymentProvider["name"],
+): string | null {
+  const id = (plan.provider_price_ids as Record<string, unknown> | null)?.[provider];
+  return typeof id === "string" && id ? id : null;
+}
+
 export async function startCheckout(
   db: TypedClient,
   provider: PaymentProvider,
@@ -24,8 +33,8 @@ export async function startCheckout(
   if (failed) throw new Error(`load checkout data failed: ${failed.message}`);
   if (access) throw new AppError("CONFLICT", "Вече имаш активен абонамент.");
   if (!plan || !plan.active) throw new AppError("NOT_FOUND", "Планът не е намерен.");
-  const priceId = (plan.provider_price_ids as Record<string, unknown> | null)?.[provider.name];
-  if (typeof priceId !== "string" || !priceId) {
+  const priceId = priceIdFor(plan, provider.name);
+  if (!priceId) {
     throw new AppError("INVALID", "Този план още не може да се плати онлайн.");
   }
   return provider.createCheckout({

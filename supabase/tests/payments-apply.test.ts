@@ -3,6 +3,7 @@ import type { NormalizedSubscriptionEvent } from "@/lib/payments/types";
 import {
   applySubscriptionEvent,
   markPaymentEvent,
+  previousSubscription,
   recordPaymentEvent,
 } from "@/server/payments/apply-event";
 import {
@@ -464,5 +465,50 @@ describe("applySubscriptionEvent", () => {
     });
     expect(result).toBe("applied");
     expect((await row(user.id)).provider).toBe("stripe");
+  });
+});
+
+describe("previousSubscription", () => {
+  it("returns null for a user without a subscription and for an unknown user", async () => {
+    const user = await createUser(admin, "prev-none");
+    expect(await previousSubscription(admin, event(user.id))).toBeNull();
+    expect(
+      await previousSubscription(admin, event(crypto.randomUUID(), { customerId: null })),
+    ).toBeNull();
+  });
+
+  it("reports the stored provider, subscription id and whether it still gives access", async () => {
+    const user = await createUser(admin, "prev-live");
+    await applySubscriptionEvent(admin, event(user.id, { subscriptionId: "sub_prev_a" }));
+    expect(
+      await previousSubscription(admin, event(user.id, { subscriptionId: "sub_prev_b" })),
+    ).toEqual({
+      provider: "stripe",
+      subscriptionId: "sub_prev_a",
+      live: true,
+    });
+    await applySubscriptionEvent(
+      admin,
+      event(user.id, {
+        subscriptionId: "sub_prev_a",
+        status: "canceled",
+        canceledAt: new Date().toISOString(),
+        currentPeriodEnd: new Date(Date.now() - day).toISOString(),
+        occurredAt: new Date(Date.now() + 1000).toISOString(),
+      }),
+    );
+    expect(await previousSubscription(admin, event(user.id))).toMatchObject({
+      subscriptionId: "sub_prev_a",
+      live: false,
+    });
+  });
+
+  it("reports a manual grant with its own provider so it is never cancelled at Stripe", async () => {
+    const user = await createUser(admin, "prev-manual");
+    await grantAccess(admin, user.id);
+    expect(await previousSubscription(admin, event(user.id))).toMatchObject({
+      provider: "manual",
+      live: true,
+    });
   });
 });

@@ -82,6 +82,31 @@ async function findUserId(
   return null;
 }
 
+/** The user's stored subscription before an event is applied, with whether it still gives access. */
+export interface PreviousSubscription {
+  provider: string;
+  subscriptionId: string | null;
+  live: boolean;
+}
+
+export async function previousSubscription(
+  admin: TypedClient,
+  e: NormalizedSubscriptionEvent,
+): Promise<PreviousSubscription | null> {
+  const userId = await findUserId(admin, e);
+  if (!userId) return null;
+  const { data: row, error } = await admin
+    .from("subscriptions")
+    .select("provider, provider_sub_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw new Error(`load previous subscription failed: ${error.message}`);
+  if (!row) return null;
+  const { data: live, error: liveError } = await admin.rpc("has_active_access", { uid: userId });
+  if (liveError) throw new Error(`check previous access failed: ${liveError.message}`);
+  return { provider: row.provider, subscriptionId: row.provider_sub_id, live: live === true };
+}
+
 type ApplyArgs = Database["public"]["Functions"]["apply_subscription_event"]["Args"];
 
 /**
