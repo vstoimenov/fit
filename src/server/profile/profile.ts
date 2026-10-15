@@ -126,19 +126,19 @@ async function anonIdsOf(admin: TypedClient, userId: string): Promise<string[]> 
 export async function deleteAccount(
   admin: TypedClient,
   userId: string,
-  cancelPaid: (sub: { provider: string; subscriptionId: string }) => Promise<void> = async () => {},
+  cancelPaid: (sub: { provider: string; subscriptionId: string }) => Promise<void>,
 ): Promise<void> {
-  // A live card subscription must be stopped before the row that links it to her disappears,
-  // otherwise she keeps being charged for an account that no longer exists.
+  // Any card subscription not already ended must be stopped before the row that links it to her
+  // disappears, otherwise she keeps being charged for an account that no longer exists. Gated on
+  // the stored status, not on access: a past_due sub beyond our grace is still on Stripe's retry
+  // schedule. cancelNow is idempotent, so a subscription already dead at the provider is fine.
   const { data: sub, error: subError } = await admin
     .from("subscriptions")
-    .select("provider, provider_sub_id")
+    .select("provider, provider_sub_id, status")
     .eq("user_id", userId)
     .maybeSingle();
   if (subError) throw new Error(`load subscription failed: ${subError.message}`);
-  const { data: live, error: liveError } = await admin.rpc("has_active_access", { uid: userId });
-  if (liveError) throw new Error(`load access failed: ${liveError.message}`);
-  if (sub && sub.provider !== "manual" && sub.provider_sub_id && live) {
+  if (sub && sub.provider !== "manual" && sub.provider_sub_id && sub.status !== "canceled") {
     try {
       await cancelPaid({ provider: sub.provider, subscriptionId: sub.provider_sub_id });
     } catch (error) {

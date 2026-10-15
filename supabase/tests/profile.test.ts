@@ -173,7 +173,7 @@ describe("profile services", () => {
     expect(seedError).toBeNull();
     const { db: boss } = await createAdminUser(admin, "delete-boss");
     await addNote(boss, user.id, { kind: "note", body: "Ще бъде изтрита." });
-    await deleteAccount(admin, user.id);
+    await deleteAccount(admin, user.id, async () => {});
     const { data: notes } = await admin.from("client_notes").select("id").eq("user_id", user.id);
     expect(notes).toEqual([]);
     const { data: profile } = await admin.from("profiles").select("id").eq("id", user.id);
@@ -220,7 +220,7 @@ describe("profile services", () => {
       ).rejects.toMatchObject({ code: "CONFLICT" });
       expect(await profileRows(user.id)).toHaveLength(1);
       // Nothing was deleted, so remove the test user ourselves.
-      await deleteAccount(admin, user.id);
+      await deleteAccount(admin, user.id, async () => {});
       expect(await profileRows(user.id)).toEqual([]);
     });
 
@@ -230,6 +230,21 @@ describe("profile services", () => {
       const cancel = vi.fn(async () => {});
       await deleteAccount(admin, user.id, cancel);
       expect(cancel).not.toHaveBeenCalled();
+      expect(await profileRows(user.id)).toEqual([]);
+    });
+
+    it("cancels a past_due subscription even after the grace period has ended", async () => {
+      const user = await createUser(admin, "del-pastdue");
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "stripe",
+        status: "past_due",
+        provider_sub_id: "sub_pastdue",
+        grace_until: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      });
+      const cancel = vi.fn(async () => {});
+      await deleteAccount(admin, user.id, cancel);
+      expect(cancel).toHaveBeenCalledWith({ provider: "stripe", subscriptionId: "sub_pastdue" });
       expect(await profileRows(user.id)).toEqual([]);
     });
 
