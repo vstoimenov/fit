@@ -62,15 +62,17 @@ async function findUserId(
     if (error) throw new Error(`find profile failed: ${error.message}`);
     if (data) return data.id;
   }
-  for (const [column, value] of [
-    ["provider_sub_id", e.subscriptionId],
-    ["provider_customer_id", e.customerId],
-  ] as const) {
+  // A customer id outlives the paid subscription: admin_grant_manual keeps it on the row it turns manual.
+  const lookups = [
+    ["provider_sub_id", e.subscriptionId, [e.provider]],
+    ["provider_customer_id", e.customerId, [e.provider, "manual"]],
+  ] as const;
+  for (const [column, value, providers] of lookups) {
     if (!value) continue;
     const { data, error } = await admin
       .from("subscriptions")
       .select("user_id")
-      .eq("provider", e.provider)
+      .in("provider", [...providers])
       .eq(column, value)
       .limit(1)
       .maybeSingle();

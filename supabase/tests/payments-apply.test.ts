@@ -186,7 +186,8 @@ describe("applySubscriptionEvent", () => {
       canceled_at: null,
     });
     expect(await access(user.id)).toBe(true);
-    const endedAt = new Date().toISOString();
+    // A second in the past: the access check must not depend on host/container clock skew.
+    const endedAt = new Date(Date.now() - 1000).toISOString();
     await applySubscriptionEvent(
       admin,
       event(user.id, {
@@ -233,7 +234,7 @@ describe("applySubscriptionEvent", () => {
       event(user.id, { occurredAt: new Date(Date.now() - 2000).toISOString() }),
     );
     expect(await access(user.id)).toBe(true);
-    const now = new Date().toISOString();
+    const now = new Date(Date.now() - 1000).toISOString(); // see the clock-skew note above
     await applySubscriptionEvent(
       admin,
       event(user.id, {
@@ -379,5 +380,89 @@ describe("applySubscriptionEvent", () => {
     expect(
       (await admin.from("subscriptions").select("user_id").eq("user_id", user.id)).data,
     ).toEqual([]);
+  });
+  it("does not let a failing duplicate subscription replace a paid one", async () => {
+    const user = await createUser(admin, "pay-dup-failing");
+    const subA = `sub_A_${crypto.randomUUID()}`;
+    const subB = `sub_B_${crypto.randomUUID()}`;
+    await applySubscriptionEvent(
+      admin,
+      event(user.id, {
+        subscriptionId: subA,
+        occurredAt: new Date(Date.now() - 3000).toISOString(),
+      }),
+    );
+    expect(
+      await applySubscriptionEvent(
+        admin,
+        event(user.id, {
+          subscriptionId: subB,
+          status: "past_due",
+          occurredAt: new Date(Date.now() - 2000).toISOString(),
+        }),
+      ),
+    ).toBe("ignored");
+    expect(await row(user.id)).toMatchObject({
+      provider_sub_id: subA,
+      status: "active",
+      grace_until: null,
+    });
+  });
+
+  async function dunnedStripeRow(userId: string, subId: string, graceUntil: string) {
+    const { error } = await admin.from("subscriptions").insert({
+      user_id: userId,
+      provider: "stripe",
+      status: "past_due",
+      provider_sub_id: subId,
+      provider_customer_id: `cus_${userId.slice(0, 8)}`,
+      current_period_end: new Date(Date.now() - 5 * day).toISOString(),
+      grace_until: graceUntil,
+      provider_event_at: new Date(Date.now() - 10 * day).toISOString(),
+    });
+    expect(error).toBeNull();
+  }
+
+  it("gives a new subscription its own grace instead of the old subscription's", async () => {
+    const user = await createUser(admin, "pay-grace-newsub");
+    const oldGrace = new Date(Date.now() - day).toISOString();
+    await dunnedStripeRow(user.id, `sub_A_${crypto.randomUUID()}`, oldGrace);
+    expect(
+      await applySubscriptionEvent(
+        admin,
+        event(user.id, {
+          subscriptionId: `sub_B_${crypto.randomUUID()}`,
+          status: "past_due",
+        }),
+      ),
+    ).toBe("applied");
+    const r = await row(user.id);
+    expect(r.grace_until).not.toBe(oldGrace);
+    expect(Date.parse(r.grace_until!) - Date.now()).toBeGreaterThan(2.9 * day);
+  });
+
+  it("finds a user by customer id after the paid row was turned into a manual grant", async () => {
+    const user = await createUser(admin, "pay-manual-customer");
+    await dunnedStripeRow(
+      user.id,
+      `sub_A_${crypto.randomUUID()}`,
+      new Date(Date.now() - day).toISOString(),
+    );
+    expect(
+      (await boss.rpc("admin_grant_manual", { p_user_id: user.id, p_days: 30 })).error,
+    ).toBeNull();
+    const customerId = `cus_${user.id.slice(0, 8)}`;
+    expect(await row(user.id)).toMatchObject({
+      provider: "manual",
+      provider_customer_id: customerId,
+    });
+    const result = await applySubscriptionEvent(admin, {
+      ...event(user.id),
+      userId: null,
+      customerId,
+      subscriptionId: `sub_new_${crypto.randomUUID()}`,
+    });
+    expect(result).toBe("applied");
+    expect((await row(user.id)).provider).toBe("stripe");
   });
 });
