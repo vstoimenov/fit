@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { AppError } from "@/lib/app-error";
-import { paidAccessLive } from "@/lib/subscription-text";
+import { paidAccessLive, paidSubOpen } from "@/lib/subscription-text";
 import type { Level } from "@/lib/program/types";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
@@ -114,7 +114,7 @@ export async function getClientDetail(db: TypedClient, userId: string) {
       db
         .from("subscriptions")
         .select(
-          "status, provider, current_period_end, grace_until, canceled_at, cancel_at_period_end",
+          "status, provider, provider_sub_id, current_period_end, grace_until, canceled_at, cancel_at_period_end",
         )
         .eq("user_id", userId)
         .maybeSingle(),
@@ -153,6 +153,8 @@ export async function getClientDetail(db: TypedClient, userId: string) {
     profile: profile.data,
     subscription: subscription.data,
     paidLive: paidAccessLive(subscription.data),
+    // Can still be charged even without access (past_due beyond grace): blocks a manual grant.
+    paidOpen: paidSubOpen(subscription.data),
     completions: completions.data ?? [],
     completionsTotal: completionsCount.count ?? 0,
     checkIns: [...(checkIns.data ?? [])].reverse(),
@@ -177,6 +179,12 @@ export async function grantManualAccess(
   if (error?.code === "42501") throw new AppError("FORBIDDEN", "Нямаш право на това действие.");
   if (error?.code === "23P01") {
     throw new AppError("CONFLICT", "Клиентката има активен платен абонамент.");
+  }
+  if (error?.code === "P0003") {
+    throw new AppError(
+      "CONFLICT",
+      "Клиентката има неприключен абонамент в Stripe (неуспешно плащане). Първо го спри от Stripe или я помоли да обнови картата.",
+    );
   }
   if (error?.code === "22023") throw new AppError("INVALID", "Дните трябва да са между 1 и 365.");
   if (error?.code === "P0002") throw new AppError("NOT_FOUND", "Клиентката не е намерена.");

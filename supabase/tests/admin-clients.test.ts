@@ -202,6 +202,33 @@ describe("clients service", () => {
     expect(await access(user.id)).toBe(true);
   });
 
+  it("refuses manual access while a failed Stripe subscription is still open, and says why", async () => {
+    const user = await createUser(admin, "cl-dunned");
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "past_due",
+      provider_sub_id: `sub_${crypto.randomUUID()}`,
+      provider_customer_id: "cus_dunned",
+      current_period_end: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+      grace_until: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+    expect(await access(user.id)).toBe(false);
+    const detail = await getClientDetail(boss, user.id);
+    expect(detail).toMatchObject({ paidLive: false, paidOpen: true });
+    await expect(grantManualAccess(boss, user.id, 7)).rejects.toMatchObject({
+      code: "CONFLICT",
+      userMessage:
+        "Клиентката има неприключен абонамент в Stripe (неуспешно плащане). Първо го спри от Stripe или я помоли да обнови картата.",
+    });
+    const { data } = await admin
+      .from("subscriptions")
+      .select("provider, status")
+      .eq("user_id", user.id)
+      .single();
+    expect(data).toEqual({ provider: "stripe", status: "past_due" });
+  });
+
   it("lets a former customer (canceled, period over) be granted access", async () => {
     const user = await createUser(admin, "cl-former");
     await admin.from("subscriptions").insert({
@@ -210,8 +237,13 @@ describe("clients service", () => {
       status: "canceled",
       current_period_end: new Date(Date.now() - 3 * 86_400_000).toISOString(),
       canceled_at: new Date(Date.now() - 10 * 86_400_000).toISOString(),
+      provider_sub_id: `sub_${crypto.randomUUID()}`,
     });
     expect(await access(user.id)).toBe(false);
+    expect(await getClientDetail(boss, user.id)).toMatchObject({
+      paidLive: false,
+      paidOpen: false,
+    });
     await grantManualAccess(boss, user.id, 20);
     expect(await access(user.id)).toBe(true);
     const { data } = await admin

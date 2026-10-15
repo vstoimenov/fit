@@ -2,6 +2,7 @@ import { AppError } from "@/lib/app-error";
 import { profileAnswersSchema } from "@/lib/onboarding/schema";
 import type { CheckInInput } from "@/lib/progress/check-in-schema";
 import type { Level } from "@/lib/program/types";
+import { paidSubOpen } from "@/lib/subscription-text";
 import type { TypedClient } from "@/server/db/types";
 
 export async function updateProfileBasics(
@@ -138,7 +139,7 @@ export async function deleteAccount(
     .eq("user_id", userId)
     .maybeSingle();
   if (subError) throw new Error(`load subscription failed: ${subError.message}`);
-  if (sub && sub.provider !== "manual" && sub.provider_sub_id && sub.status !== "canceled") {
+  if (sub && paidSubOpen(sub) && sub.provider_sub_id) {
     try {
       await cancelPaid({ provider: sub.provider, subscriptionId: sub.provider_sub_id });
     } catch (error) {

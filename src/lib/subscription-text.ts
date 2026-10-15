@@ -95,3 +95,19 @@ export function paidAccessLive(
       return false;
   }
 }
+
+/**
+ * A provider subscription that the provider may still charge: paid provider, has a sub id, not
+ * canceled. Not the same as access: a past_due subscription beyond our grace gives no access but
+ * is still on Stripe's retry schedule, so it must not be left behind or doubled.
+ */
+export function paidSubOpen(
+  sub: { provider: string; provider_sub_id: string | null; status: string } | null,
+): boolean {
+  return (
+    sub !== null &&
+    sub.provider !== "manual" &&
+    sub.provider_sub_id !== null &&
+    sub.status !== "canceled"
+  );
+}

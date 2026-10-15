@@ -74,9 +74,15 @@ describe("startCheckout", () => {
     });
   });
 
-  it("refuses a user who already has access", async () => {
+  it("refuses a user who already has paid access", async () => {
     const user = await createUser(admin, "co-has");
-    await grantAccess(admin, user.id);
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "active",
+      provider_sub_id: `sub_${crypto.randomUUID()}`,
+      provider_customer_id: "cus_has",
+    });
     const p = fakeProvider();
     await expect(
       startCheckout(await signedInClient(user), p, {
@@ -87,6 +93,48 @@ describe("startCheckout", () => {
       }),
     ).rejects.toMatchObject({ code: "CONFLICT" });
     expect(p.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it("lets a comped member (manual access) convert to a paid plan", async () => {
+    const user = await createUser(admin, "co-comped");
+    await grantAccess(admin, user.id);
+    const p = fakeProvider();
+    const { url } = await startCheckout(await signedInClient(user), p, {
+      userId: user.id,
+      email: user.email,
+      planId: priced.id,
+      appUrl: "x",
+    });
+    expect(url).toBe("https://pay.example/1");
+    expect(p.createCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a new checkout while her failed subscription is still open and asks for a new card", async () => {
+    for (const grace of [-86_400_000, 86_400_000]) {
+      const user = await createUser(admin, "co-dunned");
+      await admin.from("subscriptions").insert({
+        user_id: user.id,
+        provider: "stripe",
+        status: "past_due",
+        provider_sub_id: `sub_${crypto.randomUUID()}`,
+        provider_customer_id: "cus_dunned",
+        current_period_end: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+        grace_until: new Date(Date.now() + grace).toISOString(),
+      });
+      const p = fakeProvider();
+      await expect(
+        startCheckout(await signedInClient(user), p, {
+          userId: user.id,
+          email: user.email,
+          planId: priced.id,
+          appUrl: "x",
+        }),
+      ).rejects.toMatchObject({
+        code: "CONFLICT",
+        userMessage: "Плащането за абонамента ти не е минало — обнови картата си.",
+      });
+      expect(p.createCheckout).not.toHaveBeenCalled();
+    }
   });
 
   it("refuses an inactive plan, an unknown plan and a plan without a price id", async () => {
@@ -121,6 +169,25 @@ describe("startCheckout", () => {
       appUrl: "x",
     });
     expect(p.createCheckout.mock.calls[0]![0]).toMatchObject({ customerId: "cus_old" });
+  });
+
+  it("reuses a Stripe customer kept on a manual row (former subscriber who was comped)", async () => {
+    const user = await createUser(admin, "co-comped-former");
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "manual",
+      status: "canceled",
+      provider_customer_id: "cus_kept",
+      current_period_end: new Date(Date.now() - 1000).toISOString(),
+    });
+    const p = fakeProvider();
+    await startCheckout(await signedInClient(user), p, {
+      userId: user.id,
+      email: user.email,
+      planId: priced.id,
+      appUrl: "x",
+    });
+    expect(p.createCheckout.mock.calls[0]![0]).toMatchObject({ customerId: "cus_kept" });
   });
 
   it("ignores a customer id that belongs to another provider", async () => {

@@ -5,8 +5,9 @@ import { serverEnv } from "@/env";
 import { LEVEL_LABEL, type Goal, type Time } from "@/lib/labels";
 import { buildPlanSummary } from "@/lib/onboarding/plan-summary";
 import { requireUser } from "@/server/auth/require-user";
-import { priceIdFor } from "@/server/payments/checkout";
+import { needsCardUpdate, priceIdFor } from "@/server/payments/checkout";
 import { getActiveProvider } from "@/server/payments/registry";
+import { ManageSubscriptionButton } from "../profile/manage-subscription-button";
 import { PlanPicker } from "./plan-picker";
 
 export const metadata = { title: "Твоят план" };
@@ -30,6 +31,7 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
     { data: profile, error: profileError },
     { data: plans, error: plansError },
     { data: hasAccess, error: accessError },
+    { data: sub, error: subError },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -42,14 +44,17 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
       .eq("active", true)
       .order("sort"),
     supabase.rpc("my_access"),
+    supabase
+      .from("subscriptions")
+      .select("provider, provider_sub_id, status")
+      .eq("user_id", user.id)
+      .maybeSingle(),
   ]);
-  if (profileError || plansError || accessError) {
-    throw new Error(
-      `load plan failed: ${(profileError ?? plansError ?? accessError)?.message ?? "unknown"}`,
-    );
-  }
+  const loadError = profileError ?? plansError ?? accessError ?? subError;
+  if (loadError) throw new Error(`load plan failed: ${loadError.message}`);
   if (!profile) redirect("/start");
-  if (hasAccess) redirect("/app");
+  // A comped member (manual grant) stays here so she can convert to a paid plan.
+  if (hasAccess && sub?.provider !== "manual") redirect("/app");
 
   const summary = buildPlanSummary({
     goal: profile.goal as Goal | null,
@@ -58,6 +63,9 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
     level: profile.level,
   });
   const provider = await getActiveProvider(supabase, serverEnv);
+  // Her failed subscription is still being retried: she updates the card instead of buying again.
+  // The portal is always Stripe's (see openPortalAction).
+  const cardUpdate = needsCardUpdate(sub, provider.name) && sub?.provider === "stripe";
   const pickerPlans = (plans ?? []).map(({ provider_price_ids, ...plan }) => ({
     ...plan,
     payable: priceIdFor({ provider_price_ids }, provider.name) !== null,
@@ -114,7 +122,16 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
         <li>✓ Проследяване на тегло, мерки и серии</li>
       </ul>
 
-      <PlanPicker plans={pickerPlans} ready={provider.ready} />
+      {cardUpdate ? (
+        <section className="space-y-3 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
+          <p role="status" className="font-semibold text-brick">
+            Плащането не мина. Обнови картата, за да продължиш.
+          </p>
+          <ManageSubscriptionButton label="Обнови картата" />
+        </section>
+      ) : (
+        <PlanPicker plans={pickerPlans} ready={provider.ready} />
+      )}
     </main>
   );
 }

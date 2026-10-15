@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { openPortalAction } from "./actions";
 
-export function ManageSubscriptionButton() {
+export function ManageSubscriptionButton({ label = "Управлявай абонамента" }: { label?: string }) {
   const [error, setError] = useState("");
   // Stays true after the redirect starts: the page is still visible while the browser navigates.
   const [redirecting, setRedirecting] = useState(false);
@@ -24,7 +24,7 @@ export function ManageSubscriptionButton() {
   return (
     <div className="space-y-2 pt-1">
       <Button variant="ghost" size="md" className="w-full" disabled={busy} onClick={open}>
-        {busy ? "Пренасочване…" : "Управлявай абонамента"}
+        {busy ? "Пренасочване…" : label}
       </Button>
       {error && (
         <p role="alert" className="text-sm text-brick">

@@ -131,6 +131,11 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
           {notice && <p className="font-semibold text-brick">{notice}</p>}
           {c.paidLive ? (
             <p className="text-ink-soft">Има активен платен абонамент — ръчен достъп не е нужен.</p>
+          ) : c.paidOpen ? (
+            <p className="text-brick">
+              Абонаментът в Stripe е отворен (неуспешно плащане) — ръчен достъп не може да се даде,
+              докато не бъде спрян.
+            </p>
           ) : (
             <ActionForm
               action={grantAccessAction.bind(null, p.id)}

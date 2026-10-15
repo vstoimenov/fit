@@ -1,3 +1,4 @@
+import { paidSubOpen } from "@/lib/subscription-text";
 import type { TypedClient } from "@/server/db/types";
 import {
   applySubscriptionEvent,
@@ -40,7 +41,7 @@ export async function handleWebhook(
       await markPaymentEvent(admin, provider.name, parsed.eventId, null);
       return { status: 200, body: "ignored" };
     }
-    // A new live subscription replaces the stored live one (e.g. a second Checkout from an old tab):
+    // A new live subscription replaces the stored one (e.g. a second Checkout from an old tab):
     // remember the old one so it can be cancelled at the provider and she is not billed twice.
     const isLive = parsed.event.status === "active" || parsed.event.status === "trialing";
     const previous = isLive ? await previousSubscription(admin, parsed.event) : null;
@@ -71,8 +72,15 @@ async function cancelReplaced(
   previous: PreviousSubscription,
   newSubscriptionId: string,
 ): Promise<void> {
+  // Gated on "may still be charged", not on access: a past_due one beyond our grace is still on
+  // the provider's retry schedule.
+  const open = paidSubOpen({
+    provider: previous.provider,
+    provider_sub_id: previous.subscriptionId,
+    status: previous.status,
+  });
   if (
-    !previous.live ||
+    !open ||
     previous.provider !== provider.name ||
     !previous.subscriptionId ||
     previous.subscriptionId === newSubscriptionId

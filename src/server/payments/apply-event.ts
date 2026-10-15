@@ -82,11 +82,14 @@ async function findUserId(
   return null;
 }
 
-/** The user's stored subscription before an event is applied, with whether it still gives access. */
+/**
+ * The user's stored subscription before an event is applied. The status, not access, decides
+ * whether it can still be charged (a past_due one beyond our grace still is).
+ */
 export interface PreviousSubscription {
   provider: string;
   subscriptionId: string | null;
-  live: boolean;
+  status: Database["public"]["Enums"]["subscription_status"];
 }
 
 export async function previousSubscription(
@@ -97,14 +100,12 @@ export async function previousSubscription(
   if (!userId) return null;
   const { data: row, error } = await admin
     .from("subscriptions")
-    .select("provider, provider_sub_id")
+    .select("provider, provider_sub_id, status")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw new Error(`load previous subscription failed: ${error.message}`);
   if (!row) return null;
-  const { data: live, error: liveError } = await admin.rpc("has_active_access", { uid: userId });
-  if (liveError) throw new Error(`check previous access failed: ${liveError.message}`);
-  return { provider: row.provider, subscriptionId: row.provider_sub_id, live: live === true };
+  return { provider: row.provider, subscriptionId: row.provider_sub_id, status: row.status };
 }
 
 type ApplyArgs = Database["public"]["Functions"]["apply_subscription_event"]["Args"];

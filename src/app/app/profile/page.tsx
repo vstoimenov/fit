@@ -102,7 +102,7 @@ async function Profile({ searchParams }: { searchParams: SearchParams }) {
         <p className="text-ink-soft">{subscriptionText(access, sub)}</p>
         {endNotice(sub) && <p className="text-ink-soft">{endNotice(sub)}</p>}
         {sub?.provider === "stripe" && sub.provider_customer_id && <ManageSubscriptionButton />}
-        {!access && (
+        {(!access || sub?.provider === "manual") && (
           <Link href="/app/plan" className="font-semibold underline underline-offset-4">
             Виж плановете
           </Link>

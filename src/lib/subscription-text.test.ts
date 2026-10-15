@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { endNotice, paidAccessLive, subscriptionText } from "./subscription-text";
+import {
+  endNotice,
+  paidAccessLive,
+  paidSubOpen,
+  subscriptionText,
+} from "./subscription-text";
 
 describe("subscriptionText", () => {
   it("says there is no subscription when access is off and no row exists", () => {
@@ -114,5 +119,27 @@ describe("paidAccessLive", () => {
   it("is never live for a manual grant or no row", () => {
     expect(paidAccessLive(row({ provider: "manual" }), now)).toBe(false);
     expect(paidAccessLive(null, now)).toBe(false);
+  });
+});
+
+describe("paidSubOpen", () => {
+  const row = (over: Partial<Parameters<typeof paidSubOpen>[0] & object> = {}) => ({
+    provider: "stripe",
+    provider_sub_id: "sub_1",
+    status: "active",
+    ...over,
+  });
+
+  it("is open for a paid subscription the provider may still charge", () => {
+    for (const status of ["active", "trialing", "past_due", "none"]) {
+      expect(paidSubOpen(row({ status }))).toBe(true);
+    }
+  });
+
+  it("is closed once canceled, for a manual grant, without a subscription id or without a row", () => {
+    expect(paidSubOpen(row({ status: "canceled" }))).toBe(false);
+    expect(paidSubOpen(row({ provider: "manual" }))).toBe(false);
+    expect(paidSubOpen(row({ provider_sub_id: null }))).toBe(false);
+    expect(paidSubOpen(null)).toBe(false);
   });
 });

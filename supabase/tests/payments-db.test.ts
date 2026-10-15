@@ -138,6 +138,35 @@ describe("admin_grant_manual", () => {
     expect(denied.error?.code).toBe("42501");
   });
 
+  it("refuses (P0003) while a past_due subscription beyond grace is still open at the provider", async () => {
+    const user = await createUser(admin, "grant-dunned");
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "past_due",
+      provider_sub_id: `sub_${crypto.randomUUID()}`,
+      current_period_end: iso(-5 * day),
+      grace_until: iso(-day),
+    });
+    const refused = await boss.rpc("admin_grant_manual", { p_user_id: user.id, p_days: 7 });
+    expect(refused.error?.code).toBe("P0003");
+    expect(await sub(user.id)).toMatchObject({ provider: "stripe", status: "past_due" });
+  });
+
+  it("allows a grant over a canceled paid subscription that still carries its id", async () => {
+    const user = await createUser(admin, "grant-canceled-id");
+    await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "canceled",
+      provider_sub_id: `sub_${crypto.randomUUID()}`,
+      current_period_end: iso(-day),
+    });
+    const { error } = await boss.rpc("admin_grant_manual", { p_user_id: user.id, p_days: 7 });
+    expect(error).toBeNull();
+    expect(await sub(user.id)).toMatchObject({ provider: "manual", status: "active" });
+  });
+
   it("never overwrites a paid subscription that is inserted at the same moment", async () => {
     // Users without any row: the grant's existence check sees nothing, so only the guard on the
     // insert-or-update itself can protect a paid row that lands in between. Whatever the

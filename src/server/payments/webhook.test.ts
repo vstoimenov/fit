@@ -139,7 +139,7 @@ describe("handleWebhook", () => {
       status: "active",
       subscriptionId: "sub_new",
     } as NormalizedSubscriptionEvent;
-    const live = { provider: "stripe", subscriptionId: "sub_old", live: true } as const;
+    const live = { provider: "stripe", subscriptionId: "sub_old", status: "active" } as const;
 
     async function run(opts: {
       previous: Awaited<ReturnType<typeof applyMod.previousSubscription>>;
@@ -194,16 +194,24 @@ describe("handleWebhook", () => {
       expect(cancelNow).not.toHaveBeenCalled();
     });
 
-    it("does not cancel another provider's subscription or a dead or missing one", async () => {
+    it("does not cancel another provider's subscription or a canceled or missing one", async () => {
       for (const previous of [
         { ...live, provider: "manual" },
-        { ...live, live: false },
+        { ...live, status: "canceled" as const },
         { ...live, subscriptionId: null },
         null,
       ]) {
         const { cancelNow } = await run({ previous, result: "applied" });
         expect(cancelNow).not.toHaveBeenCalled();
       }
+    });
+
+    it("cancels a past_due one even after our grace: Stripe may still retry the charge", async () => {
+      const { cancelNow } = await run({
+        previous: { ...live, status: "past_due" },
+        result: "applied",
+      });
+      expect(cancelNow).toHaveBeenCalledWith("sub_old");
     });
 
     it("does not cancel unless the event was applied", async () => {
