@@ -5,9 +5,18 @@ import {
   markPaymentEvent,
   recordPaymentEvent,
 } from "@/server/payments/apply-event";
-import { adminClient, createUser, grantAccess, type TypedClient } from "./helpers";
+import {
+  adminClient,
+  anonClient,
+  createAdminUser,
+  createUser,
+  grantAccess,
+  signedInClient,
+  type TypedClient,
+} from "./helpers";
 
 let admin: TypedClient;
+let boss: TypedClient;
 let planId: string;
 let priceId: string;
 const day = 86_400_000;
@@ -15,6 +24,7 @@ const day = 86_400_000;
 // Own plan with a unique price id: the database also holds monthly plans left by other tests.
 beforeAll(async () => {
   admin = adminClient();
+  boss = (await createAdminUser(admin, "apply-admin")).db;
   priceId = `price_test_${crypto.randomUUID()}`;
   const { data, error } = await admin
     .from("plans")
@@ -183,7 +193,7 @@ describe("applySubscriptionEvent", () => {
         type: "customer.subscription.deleted",
         status: "canceled",
         canceledAt: endedAt,
-        currentPeriodEnd: endedAt,
+        currentPeriodEnd: new Date(Date.now() + 20 * day).toISOString(),
       }),
     );
     const r = await row(user.id);
@@ -215,5 +225,159 @@ describe("applySubscriptionEvent", () => {
         subscriptionId: "sub_nobody",
       }),
     ).toBe("no_user");
+  });
+  it("ends access at once on an immediate cancel even if the paid period had days left", async () => {
+    const user = await createUser(admin, "pay-immediate");
+    await applySubscriptionEvent(
+      admin,
+      event(user.id, { occurredAt: new Date(Date.now() - 2000).toISOString() }),
+    );
+    expect(await access(user.id)).toBe(true);
+    const now = new Date().toISOString();
+    await applySubscriptionEvent(
+      admin,
+      event(user.id, {
+        type: "customer.subscription.deleted",
+        status: "canceled",
+        canceledAt: now,
+        currentPeriodEnd: new Date(Date.now() + 20 * day).toISOString(),
+      }),
+    );
+    expect(await access(user.id)).toBe(false);
+    expect(Date.parse((await row(user.id)).current_period_end!)).toBe(Date.parse(now));
+  });
+
+  it("lets the newer of two concurrent events win, whatever order they arrive in", async () => {
+    for (let round = 0; round < 12; round++) {
+      const user = await createUser(admin, `pay-race-${round}`);
+      // Odd rounds start from an existing row (update path), even rounds from none (insert path).
+      if (round % 2 === 1) {
+        await applySubscriptionEvent(
+          admin,
+          event(user.id, { occurredAt: new Date(Date.now() - 120_000).toISOString() }),
+        );
+      }
+      const older = event(user.id, {
+        status: "active",
+        occurredAt: new Date(Date.now() - 60_000).toISOString(),
+      });
+      const newerAt = new Date(Date.now() - 30_000).toISOString();
+      const newer = event(user.id, { status: "past_due", occurredAt: newerAt });
+      const pair = round % 4 < 2 ? [older, newer] : [newer, older];
+      const results = await Promise.all(pair.map((ev) => applySubscriptionEvent(admin, ev)));
+      expect(results).toContain("applied");
+      const r = await row(user.id);
+      expect(r.status).toBe("past_due");
+      expect(Date.parse(r.provider_event_at!)).toBe(Date.parse(newerAt));
+    }
+  });
+
+  it("applies events with the same timestamp in arrival order (ties apply)", async () => {
+    // Task 4 re-fetches the subscription from the provider before trusting a same-second event.
+    const user = await createUser(admin, "pay-tie");
+    const at = new Date(Date.now() - 5000).toISOString();
+    expect(
+      await applySubscriptionEvent(admin, event(user.id, { status: "past_due", occurredAt: at })),
+    ).toBe("applied");
+    expect(
+      await applySubscriptionEvent(admin, event(user.id, { status: "active", occurredAt: at })),
+    ).toBe("applied");
+    expect((await row(user.id)).status).toBe("active");
+  });
+
+  it("ignores the end of a second subscription but lets a live one replace the first", async () => {
+    const user = await createUser(admin, "pay-double");
+    const subA = `sub_A_${crypto.randomUUID()}`;
+    const subB = `sub_B_${crypto.randomUUID()}`;
+    await applySubscriptionEvent(
+      admin,
+      event(user.id, {
+        subscriptionId: subA,
+        occurredAt: new Date(Date.now() - 3000).toISOString(),
+      }),
+    );
+    expect(
+      await applySubscriptionEvent(
+        admin,
+        event(user.id, {
+          subscriptionId: subB,
+          type: "customer.subscription.deleted",
+          status: "canceled",
+          canceledAt: new Date().toISOString(),
+          occurredAt: new Date(Date.now() - 2000).toISOString(),
+        }),
+      ),
+    ).toBe("ignored");
+    expect(await row(user.id)).toMatchObject({ provider_sub_id: subA, status: "active" });
+    expect(await access(user.id)).toBe(true);
+    expect(
+      await applySubscriptionEvent(
+        admin,
+        event(user.id, {
+          subscriptionId: subB,
+          occurredAt: new Date(Date.now() - 1000).toISOString(),
+        }),
+      ),
+    ).toBe("applied");
+    expect(await row(user.id)).toMatchObject({ provider_sub_id: subB, status: "active" });
+  });
+
+  it("does not let the old subscription's end wipe a manual grant made after dunning", async () => {
+    const user = await createUser(admin, "pay-dunned");
+    const oldSub = `sub_old_${crypto.randomUUID()}`;
+    const { error } = await admin.from("subscriptions").insert({
+      user_id: user.id,
+      provider: "stripe",
+      status: "past_due",
+      provider_sub_id: oldSub,
+      provider_customer_id: `cus_${user.id.slice(0, 8)}`,
+      current_period_end: new Date(Date.now() - 5 * day).toISOString(),
+      grace_until: new Date(Date.now() - day).toISOString(),
+      provider_event_at: new Date(Date.now() - 10 * day).toISOString(),
+    });
+    expect(error).toBeNull();
+    expect(await access(user.id)).toBe(false);
+    expect(
+      (await boss.rpc("admin_grant_manual", { p_user_id: user.id, p_days: 30 })).error,
+    ).toBeNull();
+    expect(await access(user.id)).toBe(true);
+    expect(
+      await applySubscriptionEvent(
+        admin,
+        event(user.id, {
+          subscriptionId: oldSub,
+          type: "customer.subscription.deleted",
+          status: "canceled",
+          canceledAt: new Date().toISOString(),
+        }),
+      ),
+    ).toBe("ignored");
+    expect(await row(user.id)).toMatchObject({ provider: "manual", status: "active" });
+    expect(await access(user.id)).toBe(true);
+  });
+
+  it("cannot be executed by clients or anonymous callers", async () => {
+    const user = await createUser(admin, "pay-exec");
+    const now = new Date().toISOString();
+    const args = {
+      p_user_id: user.id,
+      p_provider: "stripe" as const,
+      p_customer_id: "cus_x",
+      p_sub_id: "sub_x",
+      p_status: "active" as const,
+      p_period_end: now,
+      p_cancel_at_period_end: false,
+      p_canceled_at: now,
+      p_plan_id: planId,
+      p_price_cents: 1990,
+      p_interval: "month" as const,
+      p_event_at: now,
+    };
+    const asUser = await signedInClient(user);
+    expect((await asUser.rpc("apply_subscription_event", args)).error?.code).toBe("42501");
+    expect((await anonClient().rpc("apply_subscription_event", args)).error?.code).toBe("42501");
+    expect(
+      (await admin.from("subscriptions").select("user_id").eq("user_id", user.id)).data,
+    ).toEqual([]);
   });
 });

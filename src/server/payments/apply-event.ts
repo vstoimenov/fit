@@ -1,6 +1,8 @@
 import type { NormalizedSubscriptionEvent, PaidProvider } from "@/lib/payments/types";
+import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
 
+/** Days of access kept after a failed renewal. The same value lives in public.apply_subscription_event. */
 export const GRACE_DAYS = 3;
 
 /** Stores the raw webhook once. "seen" = already processed; "retry" = stored but not processed yet. */
@@ -52,7 +54,12 @@ async function findUserId(
   e: NormalizedSubscriptionEvent,
 ): Promise<string | null> {
   if (e.userId) {
-    const { data } = await admin.from("profiles").select("id").eq("id", e.userId).maybeSingle();
+    const { data, error } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("id", e.userId)
+      .maybeSingle();
+    if (error) throw new Error(`find profile failed: ${error.message}`);
     if (data) return data.id;
   }
   for (const [column, value] of [
@@ -63,6 +70,7 @@ async function findUserId(
     const { data, error } = await admin
       .from("subscriptions")
       .select("user_id")
+      .eq("provider", e.provider)
       .eq(column, value)
       .limit(1)
       .maybeSingle();
@@ -72,66 +80,52 @@ async function findUserId(
   return null;
 }
 
-/** Applies one provider event to the user's single subscription row. */
+type ApplyArgs = Database["public"]["Functions"]["apply_subscription_event"]["Args"];
+
+/**
+ * Applies one provider event to the user's single subscription row. The ordering, grace-period and
+ * different-subscription rules run inside public.apply_subscription_event, in one statement, so
+ * concurrent webhooks cannot interleave. Events with the same timestamp apply in arrival order;
+ * callers that need the exact current state must re-fetch it from the provider.
+ */
 export async function applySubscriptionEvent(
   admin: TypedClient,
   e: NormalizedSubscriptionEvent,
-): Promise<"applied" | "stale" | "no_user"> {
+): Promise<"applied" | "stale" | "ignored" | "no_user"> {
   const userId = await findUserId(admin, e);
   if (!userId) return "no_user";
 
-  const { data: current, error: loadError } = await admin
-    .from("subscriptions")
-    .select("provider, status, grace_until, provider_event_at")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (loadError) throw new Error(`load subscription failed: ${loadError.message}`);
-  if (
-    current?.provider === e.provider &&
-    current.provider_event_at &&
-    Date.parse(current.provider_event_at) > Date.parse(e.occurredAt)
-  ) {
-    return "stale";
-  }
-
   let planId: string | null = null;
   if (e.priceId) {
-    const { data: plan } = await admin
+    const { data: plan, error } = await admin
       .from("plans")
       .select("id")
       .eq(`provider_price_ids->>${e.provider}`, e.priceId)
       .limit(1)
       .maybeSingle();
+    if (error) throw new Error(`find plan failed: ${error.message}`);
     planId = plan?.id ?? null;
   }
 
-  const keepGrace =
-    current?.provider === e.provider && current.status === "past_due" && current.grace_until;
-  const grace_until =
-    e.status === "past_due"
-      ? keepGrace
-        ? current!.grace_until
-        : new Date(Date.parse(e.occurredAt) + GRACE_DAYS * 86_400_000).toISOString()
-      : null;
-
-  const { error } = await admin.from("subscriptions").upsert(
-    {
-      user_id: userId,
-      provider: e.provider,
-      provider_customer_id: e.customerId,
-      provider_sub_id: e.subscriptionId,
-      status: e.status,
-      current_period_end: e.currentPeriodEnd,
-      cancel_at_period_end: e.cancelAtPeriodEnd,
-      canceled_at: e.status === "canceled" ? (e.canceledAt ?? e.occurredAt) : null,
-      grace_until,
-      plan_id: planId,
-      price_cents: e.priceCents,
-      billing_interval: e.interval,
-      provider_event_at: e.occurredAt,
-    },
-    { onConflict: "user_id" },
-  );
+  // The generated argument types are all non-null; the function accepts null for these.
+  const args = {
+    p_user_id: userId,
+    p_provider: e.provider,
+    p_customer_id: e.customerId,
+    p_sub_id: e.subscriptionId,
+    p_status: e.status,
+    p_period_end: e.currentPeriodEnd,
+    p_cancel_at_period_end: e.cancelAtPeriodEnd,
+    p_canceled_at: e.canceledAt,
+    p_plan_id: planId,
+    p_price_cents: e.priceCents,
+    p_interval: e.interval,
+    p_event_at: e.occurredAt,
+  } as unknown as ApplyArgs;
+  const { data, error } = await admin.rpc("apply_subscription_event", args);
   if (error) throw new Error(`apply subscription event failed: ${error.message}`);
-  return "applied";
+  if (data !== "applied" && data !== "stale" && data !== "ignored") {
+    throw new Error(`apply subscription event returned ${String(data)}`);
+  }
+  return data;
 }

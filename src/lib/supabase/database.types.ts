@@ -600,6 +600,23 @@ export type Database = {
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
       admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
+      apply_subscription_event: {
+        Args: {
+          p_cancel_at_period_end: boolean;
+          p_canceled_at: string;
+          p_customer_id: string;
+          p_event_at: string;
+          p_interval: Database["public"]["Enums"]["plan_interval"];
+          p_period_end: string;
+          p_plan_id: string;
+          p_price_cents: number;
+          p_provider: Database["public"]["Enums"]["payment_provider"];
+          p_status: Database["public"]["Enums"]["subscription_status"];
+          p_sub_id: string;
+          p_user_id: string;
+        };
+        Returns: string;
+      };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
