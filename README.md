@@ -118,6 +118,12 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
    (see "Payments (Stripe)"; without the Stripe keys the plan picker is disabled and the webhook answers 503).
 5. **Admin user:** after signing up, promote the owner account with the service role
    (`update public.profiles set role = 'admin' where email = '...'`).
+   **Admin TOTP:** `/admin` requires a TOTP second factor, controlled by the database flag
+   `public.security_flags` (`admin_mfa_required`, on by default, not editable from the app). For a **test
+   project** you can let the admin in with the password only:
+   `update public.security_flags set enabled = false, updated_at = now() where key = 'admin_mfa_required';`
+   (the admin panel then shows a warning bar). **Before real traffic turn it back on:**
+   `update public.security_flags set enabled = true, updated_at = now() where key = 'admin_mfa_required';`
 6. **Legal, before any traffic:** a privacy-policy page linked from the health-data consent checkbox in the
    onboarding wizard is still required. The legal text is pending; the consent wording and the deletion/export
    flows exist, the policy page does not.

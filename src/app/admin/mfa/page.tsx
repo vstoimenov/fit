@@ -24,6 +24,8 @@ async function MfaGate() {
   if (!user) redirect("/login?next=/admin/mfa");
   const access = await adminAccess(supabase, user.id);
   if (access === "not_admin") notFound();
-  if (access === "ok") redirect("/admin");
+  // With the test-mode flag off an aal1 admin is "ok" too, but may still enrol TOTP here.
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (access === "ok" && aal?.currentLevel === "aal2") redirect("/admin");
   return <MfaForm />;
 }

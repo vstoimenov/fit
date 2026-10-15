@@ -2,9 +2,9 @@ import "server-only";
 
 import { AppError } from "@/lib/app-error";
 import { requireUser } from "@/server/auth/require-user";
-import { adminAccess } from "./admin-access";
+import { adminAccess, adminMfaBypassed } from "./admin-access";
 
-export { adminAccess };
+export { adminAccess, adminMfaBypassed };
 
 /** For admin pages and server actions. */
 export async function requireAdmin() {

@@ -298,6 +298,25 @@ export type Database = {
         };
         Relationships: [];
       };
+      security_flags: {
+        Row: {
+          enabled: boolean;
+          key: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          enabled: boolean;
+          key: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          key?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       settings: {
         Row: {
           key: string;
@@ -599,6 +618,7 @@ export type Database = {
       };
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
       admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
+      admin_mfa_required: { Args: Record<PropertyKey, never>; Returns: boolean };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       apply_subscription_event: {
         Args: {

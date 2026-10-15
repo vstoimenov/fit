@@ -43,6 +43,7 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 - Streak counts scheduled workout slots, not calendar days — label it (e.g. "тренировки подред") or revisit.
 - English zod defaults still reachable on free numeric inputs (profile height decimals → add `step="1"` / BG messages).
 - Covers: decorative ring vs "no icon-in-circle"; long Cyrillic first words get cropped.
+- Go-live: turn admin TOTP back on if it was switched off for testing: `update public.security_flags set enabled = true, updated_at = now() where key = 'admin_mfa_required';` (README "Hosted go-live checklist", step 5).
 - Hosted Supabase setup: see README "Hosted go-live checklist" (seed content, auth config push, env vars).
 
 ## From the plan 1B final review
