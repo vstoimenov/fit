@@ -35,4 +35,27 @@ describe("parseEnv", () => {
       parseEnv(serverEnvSchema, { ...base, EMAIL_FROM_ADDRESS: "not-an-email" }, "server"),
     ).toThrow(/EMAIL_FROM_ADDRESS/);
   });
+
+  it("treats empty Stripe variables as unset and rejects the wrong key type", () => {
+    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "" },
+      "server",
+    );
+    expect(env.STRIPE_SECRET_KEY).toBeUndefined();
+    expect(env.STRIPE_WEBHOOK_SECRET).toBeUndefined();
+    expect(() =>
+      parseEnv(serverEnvSchema, { ...base, STRIPE_SECRET_KEY: "pk_test_abc" }, "server"),
+    ).toThrow(/STRIPE_SECRET_KEY/);
+    expect(() =>
+      parseEnv(serverEnvSchema, { ...base, STRIPE_WEBHOOK_SECRET: "abc" }, "server"),
+    ).toThrow(/STRIPE_WEBHOOK_SECRET/);
+    const ok = parseEnv(
+      serverEnvSchema,
+      { ...base, STRIPE_SECRET_KEY: "sk_test_abc", STRIPE_WEBHOOK_SECRET: "whsec_abc" },
+      "server",
+    );
+    expect(ok.STRIPE_SECRET_KEY).toBe("sk_test_abc");
+  });
 });

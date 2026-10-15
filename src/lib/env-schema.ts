@@ -12,6 +12,11 @@ export const serverEnvSchema = z.object({
   BREVO_API_KEY: optionalFromEnv(z.string().min(1)),
   EMAIL_FROM_ADDRESS: optionalFromEnv(z.email()),
   EMAIL_FROM_NAME: optionalFromEnv(z.string().min(1).max(60)),
+  // Optional: without them checkout shows "not configured" and the webhook answers 503.
+  STRIPE_SECRET_KEY: optionalFromEnv(
+    z.string().regex(/^(sk|rk)_(test|live)_/, "Stripe secret key"),
+  ),
+  STRIPE_WEBHOOK_SECRET: optionalFromEnv(z.string().startsWith("whsec_")),
 });
 
 export const clientEnvSchema = z.object({
