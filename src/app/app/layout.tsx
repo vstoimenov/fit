@@ -2,7 +2,9 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { pastDueNotice } from "@/lib/subscription-text";
 import { createServerSupabaseClient } from "@/server/db/server";
+import { ManageSubscriptionButton } from "./profile/manage-subscription-button";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,16 +23,32 @@ async function AppGate({ children }: { children: React.ReactNode }) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/app");
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("onboarding_done")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile, error }, { data: sub, error: subError }] = await Promise.all([
+    supabase.from("profiles").select("onboarding_done").eq("id", user.id).single(),
+    supabase
+      .from("subscriptions")
+      .select("provider, provider_sub_id, provider_customer_id, status, grace_until")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+  ]);
   // A failed query must not look like "not onboarded" (that would bounce her into the funnel).
   if (error) throw new Error(`load onboarding state failed: ${error.message}`);
   if (!profile.onboarding_done) redirect("/start/finish");
+  // The banner is a nudge, not an access rule: a failed read only hides it.
+  if (subError) console.error("load subscription for banner failed", subError.message);
+  // Failed renewal, still in grace. The portal is always Stripe's (see openPortalAction).
+  const notice = sub?.provider === "stripe" && sub.provider_customer_id ? pastDueNotice(sub) : null;
   return (
     <div className="mx-auto min-h-dvh max-w-md pb-28">
+      {notice && (
+        <aside
+          role="alert"
+          className="mx-5 mt-5 space-y-2 rounded-[1.75rem] bg-brick/10 p-4 ring-1 ring-brick/30"
+        >
+          <p className="font-semibold text-brick">{notice}</p>
+          <ManageSubscriptionButton label="Обнови картата" />
+        </aside>
+      )}
       {children}
       <BottomNav />
     </div>

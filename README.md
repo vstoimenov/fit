@@ -83,13 +83,17 @@ Never edit an applied migration; add a new one in `supabase/migrations/`.
 1. Stripe dashboard (test mode first): create a Product „Абонамент" with two recurring Prices (monthly, yearly) in EUR.
 2. Settings → Payment methods: enable Cards, Apple Pay, Google Pay (Apple Pay needs the domain verified in Stripe once the site has its own domain).
 3. Settings → Customer portal: allow cancel (at period end), update payment method, view invoices; set the return URL to `<APP_URL>/app/profile`.
-4. Developers → Webhooks: endpoint `<APP_URL>/api/pay/stripe/webhook`, events
+4. Settings → Billing → Subscriptions and emails: turn on the failed-payment emails to customers (with the link to
+   update the card), keep the Smart Retries schedule, and set „if all retries for a payment fail" → **cancel the
+   subscription**. The app gives 3 days of access after a failed renewal and then asks her to update the card; a
+   subscription left `past_due`/`unpaid` forever would keep blocking a new checkout and manual access.
+5. Developers → Webhooks: endpoint `<APP_URL>/api/pay/stripe/webhook`, events
    `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
    Copy the signing secret.
-5. Env: `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…` (Vercel → Project → Environment Variables; never commit them).
-6. Admin → Настройки → Планове: paste each Stripe Price ID (`price_…`) into its plan. After that the plan's price is locked; a new price = a new plan.
-7. Test card: 4242 4242 4242 4242, any future date, any CVC. Failed renewal test: 4000 0000 0000 0341.
-8. Switching to live: repeat 1–6 with live keys and live prices.
+6. Env: `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…` (Vercel → Project → Environment Variables; never commit them).
+7. Admin → Настройки → Планове: paste each Stripe Price ID (`price_…`) into its plan. After that the plan's price is locked; a new price = a new plan.
+8. Test card: 4242 4242 4242 4242, any future date, any CVC. Failed renewal test: 4000 0000 0000 0341.
+9. Switching to live: repeat 1–7 with live keys and live prices.
 
 Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) but is not implemented — it needs a Revolut Business merchant sandbox to verify the Merchant API subscription flow first.
 

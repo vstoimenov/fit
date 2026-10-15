@@ -111,3 +111,19 @@ export function paidSubOpen(
     sub.status !== "canceled"
   );
 }
+
+/** „Плащането не мина…" while a failed renewal is still inside the grace period, else null. */
+export function pastDueNotice(
+  sub: {
+    provider: string;
+    provider_sub_id: string | null;
+    status: Status;
+    grace_until: string | null;
+  } | null,
+  now: Date = new Date(),
+): string | null {
+  if (!sub || !paidSubOpen(sub) || sub.status !== "past_due" || !sub.grace_until) return null;
+  const until = new Date(sub.grace_until);
+  if (until.getTime() <= now.getTime()) return null;
+  return `Плащането не мина. Обнови картата до ${DATE.format(until)}, за да запазиш достъпа.`;
+}

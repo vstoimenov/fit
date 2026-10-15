@@ -3,6 +3,7 @@ import {
   endNotice,
   paidAccessLive,
   paidSubOpen,
+  pastDueNotice,
   subscriptionText,
 } from "./subscription-text";
 
@@ -141,5 +142,35 @@ describe("paidSubOpen", () => {
     expect(paidSubOpen(row({ provider: "manual" }))).toBe(false);
     expect(paidSubOpen(row({ provider_sub_id: null }))).toBe(false);
     expect(paidSubOpen(null)).toBe(false);
+  });
+});
+
+describe("pastDueNotice", () => {
+  const now = new Date("2026-11-20T12:00:00Z");
+  const row = (over: Partial<Parameters<typeof pastDueNotice>[0] & object> = {}) => ({
+    provider: "stripe",
+    provider_sub_id: "sub_1",
+    status: "past_due" as const,
+    grace_until: "2026-11-23T12:00:00Z",
+    ...over,
+  });
+
+  it("asks her to update the card by the end of the grace period (Sofia date)", () => {
+    expect(pastDueNotice(row(), now)).toBe(
+      "Плащането не мина. Обнови картата до 23 ноември 2026 г., за да запазиш достъпа.",
+    );
+    // 23:30 UTC is already the next day in Sofia.
+    expect(pastDueNotice(row({ grace_until: "2026-11-23T23:30:00Z" }), now)).toContain(
+      "24 ноември 2026",
+    );
+  });
+
+  it("says nothing once the grace is over, for other statuses or a non-open row", () => {
+    expect(pastDueNotice(row({ grace_until: "2026-11-19T12:00:00Z" }), now)).toBeNull();
+    expect(pastDueNotice(row({ grace_until: null }), now)).toBeNull();
+    expect(pastDueNotice(row({ status: "active" }), now)).toBeNull();
+    expect(pastDueNotice(row({ provider: "manual" }), now)).toBeNull();
+    expect(pastDueNotice(row({ provider_sub_id: null }), now)).toBeNull();
+    expect(pastDueNotice(null, now)).toBeNull();
   });
 });
