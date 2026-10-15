@@ -74,6 +74,7 @@ export function createStripeProvider(
     name: "stripe",
     ready,
     async createCheckout(i) {
+      const minute = Math.floor(Date.now() / 60_000);
       const session = await need().checkout.sessions.create(
         {
           mode: "subscription",
@@ -90,12 +91,13 @@ export function createStripeProvider(
           metadata: { user_id: i.userId },
           allow_promotion_codes: true,
           locale: "bg",
-          // Stripe's minimum: an old tab cannot be paid much later.
-          expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+          // Stripe needs ≥ 30 min from its own clock; 35–36 min from the minute
+          // bucket keeps a margin and the same params for the idempotency key.
+          expires_at: (minute + 36) * 60,
         },
         {
           // Same user + price within a minute (a double click) returns the same session.
-          idempotencyKey: `checkout-${i.userId}-${i.priceId}-${Math.floor(Date.now() / 60_000)}`,
+          idempotencyKey: `checkout-${i.userId}-${i.priceId}-${minute}`,
         },
       );
       if (!session.url) throw new Error("stripe returned no checkout url");

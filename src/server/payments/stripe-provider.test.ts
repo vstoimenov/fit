@@ -90,9 +90,14 @@ describe("StripeProvider", () => {
     vi.useRealTimers();
     expect(keys[0]).toBe(keys[1]);
     expect(keys[2]).not.toBe(keys[0]);
+    // Stripe rejects a reused idempotency key with different params.
+    const params = (
+      client.checkout.sessions.create.mock.calls as unknown as [Record<string, unknown>][]
+    ).map((c) => c[0]);
+    expect(params[1]).toEqual(params[0]);
   });
 
-  it("expires the session in 30 minutes so an old tab cannot be paid much later", async () => {
+  it("expires the session 35–36 minutes out so an old tab cannot be paid much later", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-10-15T10:00:00Z"));
     const client = fakeClient();
@@ -109,7 +114,7 @@ describe("StripeProvider", () => {
     const args = (
       client.checkout.sessions.create.mock.calls as unknown as [Record<string, unknown>][]
     )[0]![0];
-    expect(args.expires_at).toBe(Date.parse("2026-10-15T10:00:00Z") / 1000 + 30 * 60);
+    expect(args.expires_at).toBe(Date.parse("2026-10-15T10:36:00Z") / 1000);
   });
 
   it("sends no customer_email when the email is empty", async () => {
