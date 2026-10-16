@@ -1,4 +1,6 @@
 import { AppError } from "@/lib/app-error";
+import { completionStats, regularSlotDates } from "@/lib/program/completion-stats";
+import { toLocalDate } from "@/lib/program/dates";
 import type { TypedClient } from "@/server/db/types";
 
 type Feeling = "easy" | "right" | "hard";
@@ -41,4 +43,45 @@ export async function setCompletionFeeling(
 ): Promise<void> {
   const { error } = await db.from("workout_completions").update({ feeling }).eq("id", completionId);
   if (error) throw new Error(`set feeling failed: ${error.message}`);
+}
+
+export interface CompletionStats {
+  streakDays: number;
+  weekDone: number;
+  weekTarget: number;
+}
+
+/**
+ * Streak and week progress for the after-workout screen. Read-only; uses the same helpers and
+ * sources as the Днес screen, so both always agree.
+ */
+export async function getCompletionStats(
+  db: TypedClient,
+  userId: string,
+  now = new Date(),
+): Promise<CompletionStats> {
+  const [profileRes, workoutsRes, completionsRes] = await Promise.all([
+    db.from("profiles").select("level, timezone").eq("id", userId).single(),
+    db
+      .from("workouts")
+      .select("kind, level, publish_at")
+      .not("publish_at", "is", null)
+      .lte("publish_at", now.toISOString()),
+    db.from("workout_completions").select("local_date").eq("user_id", userId),
+  ]);
+  if (profileRes.error) throw new Error(`load profile failed: ${profileRes.error.message}`);
+  if (workoutsRes.error) throw new Error(`load workouts failed: ${workoutsRes.error.message}`);
+  if (completionsRes.error) {
+    throw new Error(`load completions failed: ${completionsRes.error.message}`);
+  }
+  const { level, timezone } = profileRes.data;
+  return completionStats({
+    slotDates: regularSlotDates(
+      workoutsRes.data.map((w) => ({ kind: w.kind, level: w.level, publishAt: w.publish_at })),
+      level,
+      timezone,
+    ),
+    completionDates: completionsRes.data.map((c) => c.local_date),
+    today: toLocalDate(now, timezone),
+  });
 }

@@ -1,4 +1,5 @@
 import { AppError } from "@/lib/app-error";
+import { regularSlotDates } from "@/lib/program/completion-stats";
 import { toLocalDate, weekStrip, type WeekDay } from "@/lib/program/dates";
 import { pickToday, type TodayPick } from "@/lib/program/pick-today";
 import { computeStreak } from "@/lib/program/streak";
@@ -115,9 +116,7 @@ export async function getTodayView(
   });
 
   const today = toLocalDate(now, profile.timezone);
-  const slotDates = workouts
-    .filter((w) => w.kind === "regular" && w.level === profile.level && w.publishAt)
-    .map((w) => toLocalDate(w.publishAt!, profile.timezone));
+  const slotDates = regularSlotDates(workouts, profile.level, profile.timezone);
   const completionDates = completions.map((c) => c.local_date);
 
   const { data: nextDropAt, error: nextDropError } = await db.rpc("next_drop_at", {

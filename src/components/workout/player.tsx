@@ -1,16 +1,19 @@
 "use client";
 
-import confetti from "canvas-confetti";
-import { AnimatePresence, motion } from "motion/react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { completeWorkout, rateWorkout } from "@/app/app/workout/[id]/actions";
 import { Button } from "@/components/ui/button";
-import { FEELING_LABEL } from "@/lib/labels";
+import { Chip } from "@/components/ui/chip";
+import { LEVEL_LABEL, type FEELING_LABEL } from "@/lib/labels";
+import type { CompletionStats } from "@/server/content/completion";
 import type { WorkoutSummary } from "@/server/content/today";
+import { AfterWorkout } from "./after-workout";
 
-type Phase = "watching" | "rating" | "done";
+interface Completed extends CompletionStats {
+  completionId: string;
+}
 
 /**
  * „Завърших" unlocks after `unlockAfterSec` of visible playback time (70% of the
@@ -21,20 +24,23 @@ export function Player({
   embedUrl,
   first,
   unlockAfterSec,
+  name,
 }: {
   workout: WorkoutSummary;
   embedUrl: string;
   first: boolean;
   unlockAfterSec: number;
+  /** First name for the celebration; null when she has none. */
+  name: string | null;
 }) {
-  const router = useRouter();
   const [elapsed, setElapsed] = useState(0);
-  const [phase, setPhase] = useState<Phase>("watching");
-  const [completionId, setCompletionId] = useState<string | null>(null);
+  const [completed, setCompleted] = useState<Completed | null>(null);
   const [error, setError] = useState("");
-  // Refs block a second tap in the same tick; state disables the buttons for the user.
+  // The ref blocks a second tap in the same tick; state disables the button for the user.
   const busy = useRef(false);
   const [pending, setPending] = useState(false);
+  // Ratings are sent one after another so a quick change of mind cannot land out of order.
+  const ratings = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -57,14 +63,7 @@ export function Player({
         setError(result.message);
         return;
       }
-      setCompletionId(result.data.completionId);
-      setPhase("rating");
-      confetti({
-        particleCount: 140,
-        spread: 80,
-        origin: { y: 0.7 },
-        colors: ["#e4572e", "#161412", "#d29a1e", "#f4efe8"],
-      });
+      setCompleted(result.data);
     } catch {
       setError("Нещо се обърка. Опитай отново.");
     } finally {
@@ -73,99 +72,72 @@ export function Player({
     }
   }
 
-  async function rate(feeling: keyof typeof FEELING_LABEL) {
-    if (busy.current) return;
-    busy.current = true;
-    setPending(true);
-    try {
-      if (completionId) await rateWorkout(completionId, feeling);
-    } catch {
-      // The completion is already saved; a lost rating must not trap her on this screen.
-    }
-    if (first) return router.push("/app/plan?after=first");
-    setPhase("done");
-    busy.current = false;
-    setPending(false);
+  function rate(completionId: string, feeling: keyof typeof FEELING_LABEL) {
+    // The completion is already saved; a lost rating must not trap her on this screen.
+    ratings.current = ratings.current
+      .then(() => rateWorkout(completionId, feeling))
+      .catch(() => undefined);
   }
 
-  // -mb-28 (-mb-10 on lg) cancels the app layout's bottom padding so no light strip shows under the dark player.
+  if (completed) {
+    return (
+      <AfterWorkout
+        name={name}
+        streakDays={completed.streakDays}
+        weekDone={completed.weekDone}
+        weekTarget={completed.weekTarget}
+        first={first}
+        completionId={completed.completionId}
+        onRate={(feeling) => rate(completed.completionId, feeling)}
+      />
+    );
+  }
+
   return (
-    <main className="-mb-28 flex min-h-dvh flex-col lg:-mb-10 bg-ink text-paper">
-      <div className="flex items-center justify-between px-5 py-4">
-        <Link href="/app" className="text-sm font-semibold text-paper/70">
-          ← Назад
-        </Link>
-        <p className="text-sm text-paper/60">{workout.durationMin} мин</p>
-      </div>
-      <div className="aspect-video w-full bg-black">
-        <iframe
-          src={embedUrl}
-          title={workout.title}
-          className="h-full w-full"
-          allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
-      </div>
-      <section className="flex flex-1 flex-col justify-between gap-6 px-5 py-6">
-        <div className="space-y-2">
-          <h1 className="font-display text-2xl font-bold leading-tight">{workout.title}</h1>
-          {workout.description && <p className="text-paper/70">{workout.description}</p>}
+    <main className="lg:px-8 lg:pb-6 lg:pt-6">
+      <Link
+        href="/app"
+        className="inline-flex min-h-11 items-center gap-1.5 px-5 text-sm font-semibold text-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink lg:mb-2 lg:px-0"
+      >
+        <ArrowLeft size={18} strokeWidth={2} aria-hidden="true" />
+        Назад
+      </Link>
+      <div className="lg:grid lg:grid-cols-5 lg:items-start lg:gap-8">
+        <div className="aspect-video w-full overflow-hidden bg-black lg:col-span-3 lg:rounded-2xl">
+          <iframe
+            src={embedUrl}
+            title={workout.title}
+            className="h-full w-full"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
         </div>
-        <AnimatePresence mode="wait">
-          {phase === "watching" && (
-            <motion.div key="w" exit={{ opacity: 0, y: 10 }} className="space-y-2">
-              <Button onClick={finish} disabled={!unlocked || pending} className="w-full">
-                {unlocked ? "Завърших!" : `Завърших (след ~${remainingMin} мин)`}
-              </Button>
-              {error && (
-                <p role="alert" className="text-center text-sm text-ember">
-                  {error}
-                </p>
-              )}
-            </motion.div>
-          )}
-          {phase === "rating" && (
-            <motion.div
-              key="r"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <p className="text-center font-display text-xl font-bold">Браво! Как беше?</p>
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.keys(FEELING_LABEL) as Array<keyof typeof FEELING_LABEL>).map((f) => (
-                  <Button
-                    key={f}
-                    variant="quiet"
-                    size="md"
-                    className="bg-paper/10 text-paper"
-                    disabled={pending}
-                    onClick={() => rate(f)}
-                  >
-                    {FEELING_LABEL[f]}
-                  </Button>
-                ))}
-              </div>
-            </motion.div>
-          )}
-          {phase === "done" && (
-            <motion.div
-              key="d"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-3 text-center"
-            >
-              <p className="font-display text-xl font-bold">
-                Отбелязано. Ще се видим на следващата!
+        <section className="space-y-5 px-5 pb-6 pt-5 lg:col-span-2 lg:px-0 lg:pt-0">
+          <div className="space-y-3">
+            <h1 className="text-2xl font-extrabold leading-tight tracking-tight">
+              {workout.title}
+            </h1>
+            <div className="flex flex-wrap gap-2">
+              {workout.level && <Chip tone="powder">{LEVEL_LABEL[workout.level]}</Chip>}
+              <Chip>{workout.durationMin} мин</Chip>
+            </div>
+            {workout.description && (
+              <p className="leading-relaxed text-ink-soft">{workout.description}</p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Button onClick={finish} disabled={!unlocked || pending} className="w-full">
+              {unlocked ? "Завърших тренировката" : `Завърших (след ~${remainingMin} мин)`}
+            </Button>
+            {error && (
+              <p role="alert" className="text-center text-sm font-semibold text-brick">
+                {error}
               </p>
-              <Link href="/app" className="underline underline-offset-4">
-                Към „Днес“
-              </Link>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
+            )}
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

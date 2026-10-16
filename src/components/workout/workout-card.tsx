@@ -1,8 +1,11 @@
+import { Lock } from "lucide-react";
 import Link from "next/link";
-import { FOCUS_LABEL, LEVEL_LABEL, type Focus } from "@/lib/labels";
+import { Chip } from "@/components/ui/chip";
+import { LEVEL_LABEL } from "@/lib/labels";
 import type { WorkoutSummary } from "@/server/content/today";
 import { WorkoutCover } from "./workout-cover";
 
+/** Library card: photo cover, title and level + duration chips. Locked cards lead to the plans. */
 export function WorkoutCard({
   workout,
   locked,
@@ -15,25 +18,27 @@ export function WorkoutCard({
   return (
     <Link
       href={href}
-      className="group block overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-line transition-transform active:scale-[0.98]"
+      className="block overflow-hidden rounded-2xl bg-sand active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
     >
       <div className="relative">
-        <WorkoutCover focus={workout.focus[0] ?? null} title={workout.title} className="h-36" />
+        <WorkoutCover
+          focus={workout.focus[0] ?? null}
+          title={workout.title}
+          showTitle={false}
+          className="h-44"
+        />
         {locked && (
-          <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-sm font-bold text-paper">
-            🔒 С абонамент
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ink">
+            <Lock size={14} strokeWidth={2.25} aria-hidden="true" />С абонамент
           </span>
         )}
       </div>
-      <div className="space-y-1 p-4">
-        <p className="font-semibold leading-snug">{workout.title}</p>
-        <p className="text-sm text-ink-soft">
-          {workout.durationMin} мин
-          {workout.level ? ` · ${LEVEL_LABEL[workout.level]}` : ""}
-          {workout.focus.length
-            ? ` · ${workout.focus.map((f) => FOCUS_LABEL[f as Focus] ?? f).join(", ")}`
-            : ""}
-        </p>
+      <div className="space-y-3 p-4">
+        <p className="text-base font-bold leading-snug">{workout.title}</p>
+        <div className="flex flex-wrap gap-2">
+          {workout.level && <Chip tone="powder">{LEVEL_LABEL[workout.level]}</Chip>}
+          <Chip className="bg-white">{workout.durationMin} мин</Chip>
+        </div>
       </div>
     </Link>
   );

@@ -1,5 +1,9 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { markWorkoutComplete, setCompletionFeeling } from "@/server/content/completion";
+import {
+  getCompletionStats,
+  markWorkoutComplete,
+  setCompletionFeeling,
+} from "@/server/content/completion";
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 import {
   adminClient,
@@ -107,5 +111,20 @@ describe("markWorkoutComplete", () => {
       .eq("id", completionId)
       .single();
     expect(data?.feeling).toBe("hard");
+  });
+});
+
+describe("getCompletionStats", () => {
+  it("counts the just-saved completion in the week and the streak", async () => {
+    const user = await createUser(admin, "stats");
+    const db = await signedInClient(user);
+    const before = await getCompletionStats(db, user.id);
+    expect(before.weekDone).toBe(0);
+    expect(before.weekTarget).toBeGreaterThanOrEqual(1);
+    await markWorkoutComplete(db, user.id, freeId);
+    const after = await getCompletionStats(db, user.id);
+    expect(after.weekDone).toBe(1);
+    expect(after.weekTarget).toBe(before.weekTarget);
+    expect(after.streakDays).toBeGreaterThanOrEqual(before.streakDays);
   });
 });

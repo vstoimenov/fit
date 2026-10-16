@@ -11,12 +11,15 @@ export function WorkoutCover({
   title,
   className,
   preload = false,
+  showTitle = true,
 }: {
   focus: string | null;
   title: string;
   className?: string;
   /** Eager-load the photo when the cover is the first thing on screen. */
   preload?: boolean;
+  /** Show the title band. Off where the title is rendered elsewhere (library cards). */
+  showTitle?: boolean;
 }) {
   const photo = coverPhoto(focus);
   return (
@@ -29,9 +32,11 @@ export function WorkoutCover({
         sizes="(min-width: 1024px) 640px, 100vw"
         className="object-cover"
       />
-      <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-ink/70 px-4 py-3 text-sm font-bold leading-snug text-white">
-        {title}
-      </p>
+      {showTitle && (
+        <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-ink/70 px-4 py-3 text-sm font-bold leading-snug text-white">
+          {title}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
 import { WorkoutCard } from "@/components/workout/workout-card";
-import { cn } from "@/lib/cn";
 import { FOCUS, FOCUS_LABEL, LEVEL_LABEL } from "@/lib/labels";
 import {
   filterLibrary,
@@ -12,7 +13,7 @@ import {
 import { requireUser } from "@/server/auth/require-user";
 import { listPublishedWorkouts } from "@/server/content/workouts";
 
-export const metadata = { title: "Библиотека" };
+export const metadata = { title: "Тренировки" };
 
 const LENGTH_LABEL = { short: "до 15 мин", mid: "16–30 мин", long: "30+ мин" } as const;
 
@@ -27,28 +28,37 @@ function chipHref(current: LibraryFilter, key: keyof LibraryFilter, value: strin
 }
 
 function Chips({
+  label,
   filter,
   keyName,
   options,
 }: {
+  label: string;
   filter: LibraryFilter;
   keyName: keyof LibraryFilter;
   options: Record<string, string>;
 }) {
   return (
-    <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1">
-      {Object.entries(options).map(([value, label]) => (
-        <Link
-          key={value}
-          href={chipHref(filter, keyName, value)}
-          className={cn(
-            "shrink-0 rounded-full border-2 px-4 py-2 text-sm font-semibold",
-            filter[keyName] === value ? "border-ink bg-ink text-paper" : "border-line bg-white",
-          )}
-        >
-          {label}
-        </Link>
-      ))}
+    <div
+      role="group"
+      aria-label={label}
+      className="-mx-5 flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] lg:mx-0 lg:flex-wrap lg:px-0 [&::-webkit-scrollbar]:hidden"
+    >
+      {Object.entries(options).map(([value, text]) => {
+        const active = filter[keyName] === value;
+        return (
+          <Link
+            key={value}
+            href={chipHref(filter, keyName, value)}
+            aria-current={active ? "true" : undefined}
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <Chip tone={active ? "ink" : "neutral"} className="px-4 py-2 text-sm">
+              {text}
+            </Chip>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -74,19 +84,22 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   const shown = filterLibrary(workouts, filter);
 
   return (
-    <main className="space-y-5 px-5 pt-8">
-      <h1 className="font-display text-3xl font-bold">Библиотека</h1>
-      <Chips filter={filter} keyName="level" options={LEVEL_LABEL} />
-      <Chips filter={filter} keyName="length" options={LENGTH_LABEL} />
-      <Chips
-        filter={filter}
-        keyName="focus"
-        options={Object.fromEntries(FOCUS.map((f) => [f, FOCUS_LABEL[f]]))}
-      />
+    <main className="space-y-5 px-5 pb-6 pt-8 lg:px-8">
+      <h1 className="text-3xl font-extrabold tracking-tight">Тренировки</h1>
+      <div className="space-y-1">
+        <Chips label="Ниво" filter={filter} keyName="level" options={LEVEL_LABEL} />
+        <Chips label="Продължителност" filter={filter} keyName="length" options={LENGTH_LABEL} />
+        <Chips
+          label="Фокус"
+          filter={filter}
+          keyName="focus"
+          options={Object.fromEntries(FOCUS.map((f) => [f, FOCUS_LABEL[f]]))}
+        />
+      </div>
       {shown.length === 0 ? (
-        <p className="rounded-2xl bg-ink/5 p-5 text-ink-soft">Няма тренировки с тези филтри.</p>
+        <Card className="p-5 text-ink-soft">Няма тренировки с тези филтри.</Card>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((w) => (
             <WorkoutCard key={w.id} workout={w} locked={!hasAccess && w.kind !== "free"} />
           ))}

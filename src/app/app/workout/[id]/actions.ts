@@ -4,11 +4,16 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/server/auth/require-user";
-import { markWorkoutComplete, setCompletionFeeling } from "@/server/content/completion";
+import {
+  getCompletionStats,
+  markWorkoutComplete,
+  setCompletionFeeling,
+  type CompletionStats,
+} from "@/server/content/completion";
 
 export async function completeWorkout(
   workoutId: string,
-): Promise<ActionResult<{ completionId: string }>> {
+): Promise<ActionResult<{ completionId: string } & CompletionStats>> {
   try {
     const { user, supabase } = await requireUser();
     const { completionId } = await markWorkoutComplete(
@@ -17,7 +22,9 @@ export async function completeWorkout(
       z.uuid().parse(workoutId),
     );
     revalidatePath("/app");
-    return actionOk({ completionId });
+    // Presentation only: the same numbers Днес shows, read after the completion is saved.
+    const stats = await getCompletionStats(supabase, user.id);
+    return actionOk({ completionId, ...stats });
   } catch (error) {
     return actionFail(error);
   }
