@@ -41,9 +41,7 @@ body {
   }
 }
 
-/* Bottom nav clears the iPhone home indicator. In the utilities layer so `lg:pb-0` can override it. */
-@layer utilities {
-  .pb-safe {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
+/* Bottom nav clears the iPhone home indicator. A real utility, so Tailwind sorts `lg:pb-0` after it. */
+@utility pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
 }

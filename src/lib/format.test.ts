@@ -6,6 +6,11 @@ describe("formatPrice", () => {
     expect(formatPrice(1990, "EUR").replace(/ /g, " ")).toBe("19,90 €");
     expect(formatPrice(14900, "EUR").replace(/ /g, " ")).toBe("149,00 €");
   });
+
+  it("formats the yearly per-month equivalent the plan card shows", () => {
+    // 7990 / 12 = 665.83 cents, rounded to 666 before formatting.
+    expect(formatPrice(Math.round(7990 / 12), "EUR").replace(/\u00a0/g, " ")).toBe("6,66 €");
+  });
 });
 
 describe("formatTodayDate", () => {
