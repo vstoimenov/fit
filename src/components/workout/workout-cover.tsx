@@ -10,13 +10,13 @@ export function WorkoutCover({
   focus,
   title,
   className,
-  priority = false,
+  preload = false,
 }: {
   focus: string | null;
   title: string;
   className?: string;
   /** Eager-load the photo when the cover is the first thing on screen. */
-  priority?: boolean;
+  preload?: boolean;
 }) {
   const photo = coverPhoto(focus);
   return (
@@ -25,11 +25,11 @@ export function WorkoutCover({
         src={photo.src}
         alt={photo.alt}
         fill
-        priority={priority}
+        preload={preload}
         sizes="(min-width: 1024px) 640px, 100vw"
         className="object-cover"
       />
-      <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-ink/40 px-4 py-3 text-sm font-bold leading-snug text-white">
+      <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-ink/70 px-4 py-3 text-sm font-bold leading-snug text-white">
         {title}
       </p>
     </div>

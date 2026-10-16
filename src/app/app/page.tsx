@@ -56,7 +56,7 @@ async function Today() {
                     focus={view.workout.focus[0] ?? null}
                     title={view.workout.title}
                     className="h-72 lg:h-96"
-                    priority
+                    preload
                   />
                   <div className="absolute left-3 top-3 flex gap-2">
                     <Chip tone="powder">{LEVEL_LABEL[view.workout.level ?? view.level]}</Chip>
