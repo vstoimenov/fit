@@ -26,6 +26,17 @@ export const SETTINGS = {
     nudgeSubject: z.string().trim().min(1, "Нужна е тема").max(150),
     nudgeBody: z.string().trim().min(1, "Нужен е текст").max(4000),
   }),
+  community_url: z.union(
+    [
+      z.literal(""),
+      z
+        .string()
+        .trim()
+        .max(300, "До 300 знака")
+        .regex(/^https:\/\/\S+$/, "Адресът трябва да започва с https://"),
+    ],
+    "Адресът трябва да започва с https://",
+  ),
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS;
@@ -41,6 +52,7 @@ export const SETTING_DEFAULTS: Settings = {
     nudgeBody:
       "Здравей, {{name}}!\n\nНе сме те виждали от няколко дни. Днешната тренировка те чака — 20 минути стигат.\n\nДо скоро!",
   },
+  community_url: "",
 };
 
 export function parseSetting<K extends SettingKey>(key: K, raw: unknown): SettingValue<K> {

@@ -23,6 +23,49 @@ export type Database = {
   };
   public: {
     Tables: {
+      articles: {
+        Row: {
+          body: string;
+          cover_url: string | null;
+          created_at: string;
+          excerpt: string;
+          id: string;
+          level: Database["public"]["Enums"]["workout_level"] | null;
+          members_only: boolean;
+          published_at: string | null;
+          slug: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          body?: string;
+          cover_url?: string | null;
+          created_at?: string;
+          excerpt?: string;
+          id?: string;
+          level?: Database["public"]["Enums"]["workout_level"] | null;
+          members_only?: boolean;
+          published_at?: string | null;
+          slug: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          body?: string;
+          cover_url?: string | null;
+          created_at?: string;
+          excerpt?: string;
+          id?: string;
+          level?: Database["public"]["Enums"]["workout_level"] | null;
+          members_only?: boolean;
+          published_at?: string | null;
+          slug?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           action: string;
@@ -638,6 +681,7 @@ export type Database = {
         Returns: string;
       };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
+      community_link: { Args: Record<PropertyKey, never>; Returns: string };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       my_access: { Args: Record<PropertyKey, never>; Returns: boolean };
