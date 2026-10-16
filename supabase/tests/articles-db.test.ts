@@ -44,6 +44,24 @@ afterAll(async () => {
   await admin.from("settings").delete().eq("key", "community_url");
 });
 
+describe("articles cover_url CHECK", () => {
+  it("accepts a plain local or https cover and refuses a query string, fragment or whitespace", async () => {
+    await insertArticle(boss, "cover-ok", { cover_url: "/photos/a.jpg" });
+    await insertArticle(boss, "cover-https", { cover_url: "https://x.bg/a.jpg?v=1" });
+    for (const [i, bad] of [
+      "/photos/a.jpg?v=1",
+      "/photos/a.jpg#x",
+      "/photos/a b.jpg",
+      "https://x y",
+    ].entries()) {
+      const { error } = await boss
+        .from("articles")
+        .insert({ slug: `${tag}-cover-bad-${i}`, title: "x", body: "x", cover_url: bad });
+      expect(error?.code, bad).toBe("23514");
+    }
+  });
+});
+
 describe("articles RLS", () => {
   it("shows a member only published, non-members-only articles until she has access", async () => {
     const draft = await insertArticle(boss, "draft");

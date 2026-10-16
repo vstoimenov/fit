@@ -5,7 +5,12 @@ import { formatArticleDate } from "@/lib/format";
 import { LEVEL_LABEL } from "@/lib/labels";
 import type { ArticleSummary } from "@/server/content/articles";
 
-/** Cover images: `/photos/…` is optimised locally; owner-supplied https URLs are served as-is. */
+/**
+ * Cover images: a plain `/photos/…` path is optimised locally; owner-supplied https URLs, and anything
+ * with a query string or fragment (which next/image can't resolve for local files), are served as-is.
+ */
+export const coverIsUnoptimized = (src: string) => !src.startsWith("/") || /[?#]/.test(src);
+
 export function ArticleCover({
   src,
   sizes,
@@ -25,7 +30,7 @@ export function ArticleCover({
         fill
         sizes={sizes}
         preload={preload}
-        unoptimized={!src.startsWith("/")}
+        unoptimized={coverIsUnoptimized(src)}
         className="object-cover"
       />
     </div>

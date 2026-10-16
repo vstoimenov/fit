@@ -19,7 +19,8 @@ export const articleInputSchema = z.object({
         .string()
         .trim()
         .max(500)
-        .regex(/^(https:\/\/\S+|\/photos\/\S+)$/),
+        // Local covers go through next/image, so no query string/fragment/space; https ones are served as-is.
+        .regex(/^(https:\/\/\S+|\/photos\/[A-Za-z0-9._/-]+)$/),
     ],
     "Корицата е https:// линк или /photos/…",
   ),

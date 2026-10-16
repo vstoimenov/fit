@@ -61,6 +61,10 @@ describe("articleInputSchema", () => {
     ["huge body", { body: "a".repeat(50_001) }],
     ["http cover", { coverUrl: "http://x.bg/a.jpg" }],
     ["script cover", { coverUrl: "javascript:alert(1)" }],
+    ["local cover with a query string", { coverUrl: "/photos/a.jpg?v=1" }],
+    ["local cover with a fragment", { coverUrl: "/photos/a.jpg#x" }],
+    ["local cover with a space", { coverUrl: "/photos/a b.jpg" }],
+    ["https cover with whitespace", { coverUrl: "https://x y" }],
     ["unknown level", { level: "guru" }],
   ])("rejects %s", (_name, over) => {
     expect(articleInputSchema.safeParse(input("bad", over)).success).toBe(false);
