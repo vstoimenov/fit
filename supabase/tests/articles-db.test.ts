@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getSettings, saveSetting } from "@/server/admin/settings";
 import {
   adminClient,
+  anonClient,
   createAdminUser,
   createUser,
   grantAccess,
@@ -92,9 +93,9 @@ describe("articles RLS", () => {
   });
 
   it("has no access for anon", async () => {
-    const { anonClient } = await import("./helpers");
     const { data, error } = await anonClient().from("articles").select("id").limit(1);
-    expect(error !== null || (data ?? []).length === 0).toBe(true);
+    expect(data).toBeNull();
+    expect(error?.code).toBe("42501");
   });
 });
 
@@ -145,6 +146,10 @@ describe("community_link()", () => {
     expect(await link(db)).toBeNull();
     await admin.from("settings").upsert({ key: "community_url", value: 42 });
     expect(await link(db)).toBeNull();
+    await admin
+      .from("settings")
+      .upsert({ key: "community_url", value: { url: "https://t.me/grupa" } });
+    expect(await link(db)).toBeNull();
 
     await admin.from("settings").upsert({ key: "community_url", value: "https://t.me/grupa" });
     expect(await link(db)).toBe("https://t.me/grupa");
@@ -153,7 +158,6 @@ describe("community_link()", () => {
   });
 
   it("is not callable by anon", async () => {
-    const { anonClient } = await import("./helpers");
     const { error } = await anonClient().rpc("community_link");
     expect(error).not.toBeNull();
   });

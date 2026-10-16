@@ -46,6 +46,10 @@ export async function saveTrackingAction(_prev: unknown, form: FormData) {
   );
 }
 
+export async function saveCommunityAction(_prev: unknown, form: FormData) {
+  return run((db) => saveSetting(db, "community_url", formString(form, "communityUrl")));
+}
+
 export async function saveTemplatesAction(_prev: unknown, form: FormData) {
   return run((db) =>
     saveSetting(db, "email_templates", {

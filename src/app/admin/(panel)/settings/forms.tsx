@@ -4,6 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field, inputClass } from "@/components/ui/field";
 import type { Settings } from "@/lib/admin/settings";
 import {
+  saveCommunityAction,
   savePlanAction,
   saveProviderAction,
   saveRiskAction,
@@ -184,6 +185,30 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
               name="googleAdsId"
               defaultValue={settings.tracking.googleAdsId}
               placeholder="AW-123456789"
+              className={inputClass}
+            />
+          </Field>
+        </ActionForm>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">Общност</h2>
+        <ActionForm
+          action={saveCommunityAction}
+          submitLabel="Запази"
+          className="max-w-xl space-y-3"
+        >
+          <Field
+            label="Линк към общността"
+            hint="Групата на клиентките (Viber, Telegram, Facebook…). Започва с https://. Празно = няма линк."
+          >
+            <input
+              name="communityUrl"
+              type="url"
+              defaultValue={settings.community_url}
+              placeholder="https://"
+              maxLength={300}
+              autoComplete="off"
               className={inputClass}
             />
           </Field>

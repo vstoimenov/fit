@@ -20,6 +20,7 @@ export function ActionForm({
   submitLabel,
   successMessage = "Запазено ✓",
   resetOnSuccess = false,
+  submitVariant = "primary",
   className,
   children,
 }: {
@@ -27,6 +28,8 @@ export function ActionForm({
   submitLabel: string;
   successMessage?: string;
   resetOnSuccess?: boolean;
+  /** `secondary` for a form that sits beside the screen's main save button. */
+  submitVariant?: "primary" | "secondary";
   className?: string;
   children: React.ReactNode;
 }) {
@@ -63,7 +66,7 @@ export function ActionForm({
     <form onSubmit={onSubmit} className={className ?? "space-y-3"}>
       {children}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" size="md" disabled={pending}>
+        <Button type="submit" variant={submitVariant} size="md" disabled={pending}>
           {pending ? "Запазване…" : submitLabel}
         </Button>
         {state?.ok && (

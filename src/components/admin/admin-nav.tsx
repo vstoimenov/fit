@@ -8,6 +8,7 @@ const ITEMS = [
   { href: "/admin", label: "Табло" },
   { href: "/admin/calendar", label: "Календар" },
   { href: "/admin/workouts", label: "Тренировки" },
+  { href: "/admin/articles", label: "Статии" },
   { href: "/admin/clients", label: "Клиентки" },
   { href: "/admin/activity", label: "Активност" },
   { href: "/admin/at-risk", label: "Изостават" },
