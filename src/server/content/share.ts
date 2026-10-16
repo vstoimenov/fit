@@ -7,6 +7,10 @@ import type { TypedClient } from "@/server/db/types";
  * The share card for one of her own completions, or null. `db` must be her session client:
  * RLS hides other members' completions, so their ids read as unknown. Only the workout title
  * and the streak/week numbers are read; nothing from the profile reaches the card.
+ *
+ * The `.eq("user_id", userId)` filter is load-bearing, not redundant: the `completions_select`
+ * policy also has an `is_admin()` branch, so RLS alone would let an admin session render
+ * another member's card.
  */
 export async function getShareCard(
   db: TypedClient,

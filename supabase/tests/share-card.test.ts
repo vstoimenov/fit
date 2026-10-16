@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { markWorkoutComplete } from "@/server/content/completion";
+import { toShareCard } from "@/lib/share/share-card";
 import { getShareCard } from "@/server/content/share";
 import {
   adminClient,
@@ -33,7 +34,7 @@ describe("getShareCard", () => {
     expect(Object.keys(card!).sort()).toEqual(
       ["streakDays", "weekDone", "weekTarget", "workoutTitle"].sort(),
     );
-    expect(card!.workoutTitle).toBe(freeTitle.trim().slice(0, 60));
+    expect(card!.workoutTitle).toBe(toShareCard({ workoutTitle: freeTitle }).workoutTitle);
     expect(card!.streakDays).toBeGreaterThanOrEqual(1);
     expect(card!.weekDone).toBeGreaterThanOrEqual(1);
     expect(JSON.stringify(card)).not.toMatch(/Sofia|@example/);
@@ -45,6 +46,14 @@ describe("getShareCard", () => {
     const { completionId } = await markWorkoutComplete(await signedInClient(a), a.id, freeId);
     const dbB = await signedInClient(b);
     expect(await getShareCard(dbB, b.id, completionId)).toBeNull();
+  });
+
+  it("returns null when another member passes the owner's id: RLS blocks, not only the filter", async () => {
+    const a = await createUser(admin, "share-rls-owner");
+    const b = await createUser(admin, "share-rls-other");
+    const { completionId } = await markWorkoutComplete(await signedInClient(a), a.id, freeId);
+    const dbB = await signedInClient(b);
+    expect(await getShareCard(dbB, a.id, completionId)).toBeNull();
   });
 
   it("returns null for an unknown or malformed id", async () => {

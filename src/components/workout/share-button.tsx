@@ -30,7 +30,8 @@ function download(file: File) {
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(href), 1000);
+  // Generous delay: some browsers start reading the blob for the download only later.
+  setTimeout(() => URL.revokeObjectURL(href), 30_000);
 }
 
 async function copyText(value: string): Promise<boolean> {
