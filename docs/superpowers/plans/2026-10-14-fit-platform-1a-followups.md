@@ -71,3 +71,9 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 - Verify a pasted Stripe Price ID against Stripe (amount, interval, currency, active) in `savePlanAction`; today only the `price_…` format is checked.
 - MRR uses the undiscounted `unit_amount`: promotion codes / coupons are not reflected.
 - The displaced-subscription cancel is lost if the function dies after the apply and before the cancel (the event is already applied, a retry does not repeat it). Robust fix: on each live event list the customer's other non-canceled subscriptions at Stripe and cancel them.
+
+## Product ideas (from the owner, reference pumpandrun.fit)
+
+- [ ] Gift voucher: one-time purchase of 1 or 3 months (Stripe Checkout `mode: payment`), optional recipient e-mail + personal message, delivered by e-mail (Brevo) with a code; redeemable within 6 months, never auto-activated; redemption grants N months through the same path as the manual grant (`admin_grant_manual`-style RPC, refused while a paid subscription is open); admin list of vouchers (sold / redeemed / expired).
+- [ ] Recipes / nutrition section ("в кухнята") as part of the subscription.
+- [ ] Live chat / support channel inside the app.
