@@ -1,36 +1,37 @@
+import Image from "next/image";
 import { cn } from "@/lib/cn";
-import type { Level, WorkoutKind } from "@/lib/program/types";
-
-const TONE: Record<Level | "intro", string> = {
-  intro: "bg-ember",
-  beginner: "bg-moss",
-  advanced: "bg-mustard",
-  pro: "bg-brick",
-};
+import { coverPhoto } from "@/lib/photos";
 
 /**
- * A typographic cover built from the title. Provider thumbnails are not used:
- * their URLs carry the video ID (see thumbnail_url CHECK in the content migration).
+ * Photo cover for a workout, picked by its (first) focus. The title sits on a solid
+ * dark band at the bottom so it stays readable on any photo (no gradient).
  */
 export function WorkoutCover({
-  level,
-  kind,
+  focus,
   title,
   className,
+  priority = false,
 }: {
-  level: Level | null;
-  kind: WorkoutKind;
+  focus: string | null;
   title: string;
   className?: string;
+  /** Eager-load the photo when the cover is the first thing on screen. */
+  priority?: boolean;
 }) {
-  const tone = TONE[kind === "regular" && level ? level : "intro"];
-  const word = title.split(/\s+/)[0] ?? title;
+  const photo = coverPhoto(focus);
   return (
-    <div className={cn("relative overflow-hidden", tone, className)} aria-hidden>
-      <span className="absolute -bottom-6 -left-2 select-none font-display text-[7rem] font-black uppercase leading-none text-white/15">
-        {word}
-      </span>
-      <span className="absolute right-4 top-4 h-10 w-10 rounded-full border-4 border-white/30" />
+    <div className={cn("relative overflow-hidden bg-sand", className)}>
+      <Image
+        src={photo.src}
+        alt={photo.alt}
+        fill
+        priority={priority}
+        sizes="(min-width: 1024px) 640px, 100vw"
+        className="object-cover"
+      />
+      <p className="absolute inset-x-0 bottom-0 line-clamp-2 bg-ink/40 px-4 py-3 text-sm font-bold leading-snug text-white">
+        {title}
+      </p>
     </div>
   );
 }

@@ -62,10 +62,9 @@ async function WorkoutScreen({
           ← Назад
         </Link>
         <WorkoutCover
-          level={result.workout.level}
-          kind={result.workout.kind}
+          focus={result.workout.focus[0] ?? null}
           title={result.workout.title}
-          className="h-48 rounded-[2rem]"
+          className="h-48 rounded-2xl"
         />
         <h1 className="font-display text-2xl font-bold">{result.workout.title}</h1>
         <p className="text-ink-soft">Тази тренировка се отключва с абонамента.</p>

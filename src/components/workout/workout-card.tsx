@@ -18,12 +18,7 @@ export function WorkoutCard({
       className="group block overflow-hidden rounded-[1.75rem] bg-white ring-1 ring-line transition-transform active:scale-[0.98]"
     >
       <div className="relative">
-        <WorkoutCover
-          level={workout.level}
-          kind={workout.kind}
-          title={workout.title}
-          className="h-28"
-        />
+        <WorkoutCover focus={workout.focus[0] ?? null} title={workout.title} className="h-36" />
         {locked && (
           <span className="absolute inset-0 flex items-center justify-center bg-ink/40 text-sm font-bold text-paper">
             🔒 С абонамент
