@@ -30,6 +30,12 @@ export function completionStats(input: {
 
 /** „N тренировки“ for the Днес series tile; `computeStreak` counts workouts, not days. */
 export function seriesText(n: number): string {
-  if (n <= 0) return "0";
-  return n === 1 ? "1 тренировка" : `${n} тренировки`;
+  const { value, unit } = seriesParts(n);
+  return unit ? `${value} ${unit}` : value;
+}
+
+/** The same text split into numeral and unit; the Днес tile sets the unit small so it fits. */
+export function seriesParts(n: number): { value: string; unit: string | null } {
+  if (n <= 0) return { value: "0", unit: null };
+  return { value: String(n), unit: n === 1 ? "тренировка" : "тренировки" };
 }

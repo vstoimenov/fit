@@ -9,7 +9,7 @@ import { Chip } from "@/components/ui/chip";
 import { StatTile } from "@/components/ui/stat-tile";
 import { WorkoutCover } from "@/components/workout/workout-cover";
 import { formatTodayDate } from "@/lib/format";
-import { seriesText } from "@/lib/program/completion-stats";
+import { seriesParts } from "@/lib/program/completion-stats";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { requireUser } from "@/server/auth/require-user";
 import { getTodayView } from "@/server/content/today";
@@ -118,7 +118,7 @@ async function Today() {
               progress={view.weekDone / view.weekTarget}
               note={view.weekDone >= view.weekTarget ? "Целта е изпълнена" : undefined}
             />
-            <StatTile label="Серия" value={seriesText(view.streak)} />
+            <StatTile label="Серия" {...seriesParts(view.streak)} />
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6">

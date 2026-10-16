@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completionStats, regularSlotDates, seriesText } from "./completion-stats";
+import { completionStats, regularSlotDates, seriesParts, seriesText } from "./completion-stats";
 
 // 2026-10-14 is a Wednesday; the week is Mon 12 .. Sun 18.
 const today = "2026-10-14";
@@ -57,5 +57,13 @@ describe("seriesText", () => {
     [22, "22 тренировки"],
   ])("%i -> %s", (n, text) => {
     expect(seriesText(n)).toBe(text);
+  });
+});
+
+describe("seriesParts", () => {
+  it("splits the numeral from the unit so the tile can set the unit small", () => {
+    expect(seriesParts(0)).toEqual({ value: "0", unit: null });
+    expect(seriesParts(1)).toEqual({ value: "1", unit: "тренировка" });
+    expect(seriesParts(22)).toEqual({ value: "22", unit: "тренировки" });
   });
 });

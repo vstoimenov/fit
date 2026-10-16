@@ -5,6 +5,7 @@ export function StatTile({
   label,
   value,
   progress,
+  unit,
   note,
   className,
 }: {
@@ -12,6 +13,8 @@ export function StatTile({
   value: string;
   /** 0..1 — renders a thin powder bar when provided. */
   progress?: number;
+  /** Small text set after the value (e.g. „тренировки“), so a long unit never crowds the numeral. */
+  unit?: string | null;
   /** A small explanatory line under the value. */
   note?: string;
   className?: string;
@@ -20,7 +23,10 @@ export function StatTile({
   return (
     <Card className={cn("space-y-1", className)}>
       <p className="text-xs font-semibold text-ink-soft">{label}</p>
-      <p className="text-2xl font-extrabold tracking-tight text-ink">{value}</p>
+      <p className="text-2xl font-extrabold tracking-tight text-ink">
+        {value}
+        {unit ? <span className="text-sm font-semibold text-ink-soft"> {unit}</span> : null}
+      </p>
       {note ? <p className="text-xs font-semibold text-ink-soft">{note}</p> : null}
       {pct !== null ? (
         <div

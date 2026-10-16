@@ -6,7 +6,7 @@ export const PHOTOS = {
   hero: { src: "/photos/hero.jpg", alt: "Жена се разтяга на постелка у дома" },
   step1: { src: "/photos/step-1.jpg", alt: "Гири и шейк върху постелка за йога" },
   step2: { src: "/photos/step-2.jpg", alt: "Две жени си дават пет по време на планк" },
-  step3: { src: "/photos/step-3.jpg", alt: "Жена прави клек на постелка у дома" },
+  step3: { src: "/photos/step-3.jpg", alt: "Жена в дълбок клек, йога поза на постелка у дома" },
   welcome: { src: "/photos/welcome.jpg", alt: "Жена с разперени ръце при изгрев край морето" },
 } as const satisfies Record<string, Photo>;
 
