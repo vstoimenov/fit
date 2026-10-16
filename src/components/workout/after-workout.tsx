@@ -8,13 +8,11 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { FEELING_LABEL } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
+import { shareText, streakPhrase, toShareCard } from "@/lib/share/share-card";
 import type { CompletionStats } from "@/server/content/completion";
+import { ShareButton } from "./share-button";
 
 type Feeling = keyof typeof FEELING_LABEL;
-
-function daysInARow(n: number): string {
-  return n === 1 ? "1 ден поред" : `${n} дни поред`;
-}
 
 /**
  * Shown by the player once „Завърших" is saved: celebration, streak and week progress,
@@ -22,17 +20,21 @@ function daysInARow(n: number): string {
  */
 export function AfterWorkout({
   name,
+  workoutTitle,
   stats,
   first,
   onRate,
+  completionId,
 }: {
   name?: string | null;
+  /** Shown in the share text; the image reads its own copy on the server. */
+  workoutTitle: string;
   /** Null when the numbers could not be read; the line is then hidden. */
   stats: CompletionStats | null;
   first: boolean;
   /** Fire-and-forget: a lost rating must not trap her on this screen. */
   onRate: (feeling: Feeling) => void;
-  /** The saved completion. Not rendered yet; the share slot (Task 5) will use it. */
+  /** The saved completion; the share image is rendered from it. */
   completionId: string;
 }) {
   const reduced = useReducedMotion() ?? false;
@@ -44,12 +46,17 @@ export function AfterWorkout({
 
   const statsLine = stats
     ? [
-        stats.streakDays > 0 ? daysInARow(stats.streakDays) : null,
+        stats.streakDays > 0 ? streakPhrase(stats.streakDays) : null,
         `${stats.weekDone} от ${stats.weekTarget} тази седмица`,
       ]
         .filter(Boolean)
         .join(" · ")
     : null;
+
+  // Title and numbers only (see toShareCard); without stats the text is just the title.
+  const text = stats
+    ? shareText(toShareCard({ workoutTitle, ...stats }))
+    : toShareCard({ workoutTitle }).workoutTitle;
 
   return (
     <main className="mx-auto flex min-h-[calc(100dvh-7rem)] max-w-md flex-col justify-center gap-8 px-5 py-10 text-center lg:min-h-[calc(100dvh-2.5rem)]">
@@ -99,7 +106,10 @@ export function AfterWorkout({
         </div>
       </section>
 
-      {/* share: Task 5 */}
+      <div className="space-y-3">
+        <ShareButton completionId={completionId} text={text} />
+        {/* Community share („Сподели в общността") goes here once the community exists. */}
+      </div>
 
       <Link
         href={first ? "/app/plan?after=first" : "/app"}

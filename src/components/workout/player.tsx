@@ -84,6 +84,7 @@ export function Player({
     return (
       <AfterWorkout
         name={name}
+        workoutTitle={workout.title}
         stats={completed.stats}
         first={first}
         completionId={completed.completionId}
