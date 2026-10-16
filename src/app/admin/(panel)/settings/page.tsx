@@ -20,7 +20,7 @@ async function SettingsContent() {
   const [settings, plans] = await Promise.all([getSettings(supabase), listPlans(supabase)]);
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Настройки</h1>
+      <h1 className="font-display text-2xl font-extrabold">Настройки</h1>
       <SettingsForms settings={settings} plans={plans} />
     </div>
   );

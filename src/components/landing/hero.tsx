@@ -26,7 +26,7 @@ export function Hero() {
           src={PHOTOS.hero.src}
           alt={PHOTOS.hero.alt}
           fill
-          priority
+          preload
           sizes="(min-width: 1024px) 560px, 100vw"
           className="object-cover"
         />

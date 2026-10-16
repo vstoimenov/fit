@@ -32,7 +32,7 @@ async function AdminGate({ children }: { children: React.ReactNode }) {
       {mfaOff && (
         <p
           role="status"
-          className="bg-mustard/20 px-4 py-2 text-center text-sm font-medium text-ink"
+          className="bg-mustard/20 px-4 py-2 text-center text-sm font-semibold text-ink"
         >
           Двуфакторният вход е изключен (тестов режим). Включи го преди пускане.
         </p>

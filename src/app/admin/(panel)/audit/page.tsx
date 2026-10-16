@@ -38,7 +38,7 @@ async function Audit({ searchParams }: { searchParams: Search }) {
   const entries = await listAudit(supabase, { beforeId, limit: PAGE });
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Одит</h1>
+      <h1 className="font-display text-2xl font-extrabold">Одит</h1>
       <ul className="space-y-2 text-sm">
         {entries.map((e) => {
           const at = utcToZoned(e.createdAt);

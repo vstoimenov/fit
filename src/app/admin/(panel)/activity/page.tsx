@@ -43,7 +43,7 @@ async function Activity({ searchParams }: { searchParams: Search }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">Активност</h1>
+      <h1 className="font-display text-2xl font-extrabold">Активност</h1>
       <p className="text-sm text-ink-soft">
         Само клиентки с достъп. Серията се вижда в профила на всяка клиентка.
       </p>
@@ -56,7 +56,7 @@ async function Activity({ searchParams }: { searchParams: Search }) {
                 <th key={k} className="p-3" aria-sort={k === sort ? "descending" : undefined}>
                   <Link
                     href={`?sort=${k}`}
-                    className={cn("hover:underline", k === sort && "font-bold text-ink")}
+                    className={cn("hover:underline", k === sort && "font-extrabold text-ink")}
                   >
                     {SORTS[k].label}
                   </Link>

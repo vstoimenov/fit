@@ -68,7 +68,7 @@ export function MfaForm() {
 
   return (
     <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6">
-      <h1 className="font-display text-2xl font-bold">Двуфакторна защита</h1>
+      <h1 className="font-display text-2xl font-extrabold">Двуфакторна защита</h1>
       {mode.kind === "loading" && !error && <p>Зареждане…</p>}
       {mode.kind === "enroll" && (
         <section className="space-y-3">

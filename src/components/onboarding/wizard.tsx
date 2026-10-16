@@ -22,7 +22,7 @@ import {
   TIMES,
 } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
-import { QUESTION_STEPS, type QuestionStepId } from "@/lib/onboarding/question-steps";
+import { QUESTION_STEPS, stepCounter, type QuestionStepId } from "@/lib/onboarding/question-steps";
 import { onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { browserTimezone } from "@/lib/timezone";
@@ -272,8 +272,8 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
               transition={transitionFor(reduced, "page")}
             />
           </div>
-          <span className="w-9 text-right text-sm tabular-nums text-ink-soft">
-            {index + 1}/{steps.length}
+          <span className="min-w-9 text-right text-sm tabular-nums text-ink-soft">
+            {stepCounter(step, index)}
           </span>
         </div>
 

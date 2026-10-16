@@ -48,7 +48,7 @@ async function Clients({ searchParams }: { searchParams: Search }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="font-display text-2xl font-bold">
+      <h1 className="font-display text-2xl font-extrabold">
         Клиентки <span className="text-ink-soft">({total})</span>
       </h1>
       <form className="flex gap-2">

@@ -35,7 +35,7 @@ function PlanForm({ plan }: { plan?: Plan }) {
       action={savePlanAction.bind(null, plan?.id ?? null)}
       submitLabel={plan ? "Запази" : "Добави план"}
       resetOnSuccess={!plan}
-      className="grid items-end gap-2 rounded-xl bg-paper p-3 sm:grid-cols-4 2xl:grid-cols-[minmax(0,2fr)_7.5rem_minmax(0,1fr)_minmax(0,2fr)_5rem_auto_7rem]"
+      className="grid items-end gap-2 rounded-xl bg-sand p-3 sm:grid-cols-4 2xl:grid-cols-[minmax(0,2fr)_7.5rem_minmax(0,1fr)_minmax(0,2fr)_5rem_auto_7rem]"
     >
       <Field label="Име">
         <input name="name" defaultValue={plan?.name} required className={inputClass + " h-11"} />

@@ -39,7 +39,7 @@ async function EditWorkout({
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-bold">{workout.title}</h1>
+        <h1 className="font-display text-2xl font-extrabold">{workout.title}</h1>
         <StatusBadge status={workout.status} />
         <span className="text-sm text-ink-soft">{workout.completions} завършвания</span>
       </header>

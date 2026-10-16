@@ -22,7 +22,7 @@ export function Sparkline({ points, label }: { points: number[]; label: string }
       <path
         d={d}
         fill="none"
-        stroke="var(--color-ember)"
+        stroke="var(--color-ink)"
         strokeWidth="2.5"
         strokeLinecap="round"
         strokeLinejoin="round"

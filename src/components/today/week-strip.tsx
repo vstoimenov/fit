@@ -17,7 +17,7 @@ export function WeekStrip({ week }: { week: WeekDay[] }) {
           <span
             aria-hidden="true"
             className={cn(
-              "flex aspect-square w-full max-w-11 flex-col items-center justify-center rounded-full text-sm font-bold leading-none",
+              "flex aspect-square w-full max-w-11 flex-col items-center justify-center rounded-full text-sm font-extrabold leading-none",
               d.done && "bg-powder text-ink",
               !d.done && (d.isToday ? "bg-white text-ink" : "bg-sand text-ink-soft"),
               d.isToday && "ring-2 ring-ink ring-offset-2 ring-offset-white",

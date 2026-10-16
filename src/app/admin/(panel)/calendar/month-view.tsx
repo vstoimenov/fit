@@ -72,7 +72,7 @@ export function MonthView({
                     draggable
                     onDragStart={(e) => e.dataTransfer.setData("text/plain", w.id)}
                     className={cn(
-                      "block truncate rounded-lg border-l-4 bg-paper px-1 py-0.5 text-left text-[11px]",
+                      "block truncate rounded-lg border-l-4 bg-sand px-1 py-0.5 text-left text-[11px]",
                       w.level ? TONE[w.level] : "border-ember",
                       w.status === "scheduled" &&
                         "outline outline-1 -outline-offset-1 outline-dashed outline-ink/40",

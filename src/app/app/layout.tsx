@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { HideOnPlayer } from "@/components/app/hide-on-player";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { pastDueNotice } from "@/lib/subscription-text";
 import { createServerSupabaseClient } from "@/server/db/server";
@@ -45,13 +46,15 @@ async function AppGate({ children }: { children: React.ReactNode }) {
       <div className="min-w-0 flex-1 pb-28 lg:pb-10">
         <div className="mx-auto max-w-md lg:max-w-5xl">
           {notice && (
-            <aside
-              role="alert"
-              className="mx-5 mt-5 space-y-2 rounded-2xl bg-brick/10 p-4 ring-1 ring-brick/30 lg:mx-8"
-            >
-              <p className="font-semibold text-brick">{notice}</p>
-              <ManageSubscriptionButton label="Обнови картата" />
-            </aside>
+            <HideOnPlayer>
+              <aside
+                role="alert"
+                className="mx-5 mt-5 space-y-2 rounded-2xl bg-brick/10 p-4 ring-1 ring-brick/30 lg:mx-8"
+              >
+                <p className="font-semibold text-brick">{notice}</p>
+                <ManageSubscriptionButton label="Обнови картата" />
+              </aside>
+            </HideOnPlayer>
           )}
           {children}
         </div>

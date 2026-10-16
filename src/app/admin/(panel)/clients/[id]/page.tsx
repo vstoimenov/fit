@@ -63,7 +63,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-3">
-        <h1 className="font-display text-2xl font-bold">{p.name || p.email}</h1>
+        <h1 className="font-display text-2xl font-extrabold">{p.name || p.email}</h1>
         <LevelBadge level={p.level} />
         {p.phone && p.phone_call_consent ? (
           <a
@@ -230,7 +230,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
         </ActionForm>
         <ul className="space-y-2 text-sm">
           {c.notes.map((n) => (
-            <li key={n.id} className="rounded-xl bg-paper p-2">
+            <li key={n.id} className="rounded-xl bg-sand p-2">
               <span className="font-semibold">{NOTE_LABEL[n.kind]}</span> · {when(n.created_at)} ·{" "}
               {n.authorName}
               {n.body && <p className="whitespace-pre-line break-words">{n.body}</p>}

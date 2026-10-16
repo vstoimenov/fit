@@ -137,7 +137,7 @@ export function BulkAdd({ today }: { today: string }) {
 
       {rows.length > 0 && (
         <>
-          <div className="flex flex-wrap items-end gap-3 rounded-xl bg-paper p-3 text-sm">
+          <div className="flex flex-wrap items-end gap-3 rounded-xl bg-sand p-3 text-sm">
             <label className="space-y-1">
               <span className="block font-semibold">Ниво за всички</span>
               <select

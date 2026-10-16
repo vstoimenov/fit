@@ -48,7 +48,7 @@ async function Workouts({ searchParams }: { searchParams: Search }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl font-bold">Тренировки</h1>
+        <h1 className="font-display text-2xl font-extrabold">Тренировки</h1>
         <Link href="/admin/workouts/new" className={buttonClass("primary", "md")}>
           Нова
         </Link>

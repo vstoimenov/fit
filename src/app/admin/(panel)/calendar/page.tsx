@@ -63,7 +63,7 @@ async function Calendar({ searchParams }: { searchParams: Search }) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center gap-2">
-        <h1 className="mr-auto font-display text-2xl font-bold">Календар</h1>
+        <h1 className="mr-auto font-display text-2xl font-extrabold">Календар</h1>
         <Link href={prevHref} aria-label="Назад" className={buttonClass("quiet", "md")}>
           ←
         </Link>

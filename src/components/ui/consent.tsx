@@ -18,7 +18,7 @@ export function Consent({
         name={name}
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-ember)]"
+        className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--color-ink)]"
       />
       <span>{children}</span>
     </label>

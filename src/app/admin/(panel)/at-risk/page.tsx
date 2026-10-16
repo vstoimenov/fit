@@ -27,7 +27,7 @@ async function AtRisk() {
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="font-display text-2xl font-bold">
+        <h1 className="font-display text-2xl font-extrabold">
           Изостават <span className="text-ink-soft">({list.length})</span>
         </h1>
         <p className="text-sm text-ink-soft">

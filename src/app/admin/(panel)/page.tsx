@@ -13,7 +13,7 @@ function Tile({ label, value, hint }: { label: string; value: string | number; h
   return (
     <div className="min-w-0 rounded-2xl bg-white p-4 ring-1 ring-line">
       <p className="break-words text-sm text-ink-soft">{label}</p>
-      <p className="break-words font-display text-2xl font-bold tabular-nums sm:text-3xl">
+      <p className="break-words font-display text-2xl font-extrabold tabular-nums sm:text-3xl">
         {value}
       </p>
       {hint && <p className="text-xs text-ink-soft">{hint}</p>}
@@ -39,7 +39,7 @@ async function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <h1 className="font-display text-2xl font-bold">Табло</h1>
+      <h1 className="font-display text-2xl font-extrabold">Табло</h1>
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile label="Посещения днес" value={d.visits.today} />
         <Tile label="Посещения 7 дни" value={d.visits.d7} />

@@ -19,7 +19,7 @@ export function AdminNav() {
   const pathname = usePathname();
   return (
     <nav className="border-b border-line bg-white lg:min-h-dvh lg:border-b-0 lg:border-r">
-      <p className="px-4 pt-4 font-display text-lg font-bold">Админ</p>
+      <p className="px-4 pt-4 font-display text-lg font-extrabold">Админ</p>
       <ul className="flex gap-1 overflow-x-auto px-2 py-3 lg:flex-col">
         {ITEMS.map((item) => {
           const active =

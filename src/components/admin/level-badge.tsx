@@ -12,7 +12,7 @@ export function LevelBadge({ level }: { level: Level | null }) {
   return (
     <span
       className={cn(
-        "inline-block rounded-full px-2 py-0.5 text-xs font-bold text-white",
+        "inline-block rounded-full px-2 py-0.5 text-xs font-extrabold text-white",
         level ? TONE[level] : "bg-ember",
       )}
     >

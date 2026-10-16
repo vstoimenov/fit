@@ -25,16 +25,18 @@ export function WorkoutCard({
           focus={workout.focus[0] ?? null}
           title={workout.title}
           showTitle={false}
+          decorative
+          sizes="(min-width:1024px) 320px, (min-width:640px) 50vw, 100vw"
           className="h-44"
         />
         {locked && (
-          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-ink">
+          <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-ink">
             <Lock size={14} strokeWidth={2.25} aria-hidden="true" />С абонамент
           </span>
         )}
       </div>
       <div className="space-y-3 p-4">
-        <p className="text-base font-bold leading-snug">{workout.title}</p>
+        <p className="text-base font-extrabold leading-snug">{workout.title}</p>
         <div className="flex flex-wrap gap-2">
           {workout.level && <Chip tone="powder">{LEVEL_LABEL[workout.level]}</Chip>}
           <Chip className="bg-white">{workout.durationMin} мин</Chip>
