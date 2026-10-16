@@ -2,40 +2,39 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { APP_NAV, activeNavHref, navHidden } from "@/lib/app-nav";
 import { cn } from "@/lib/cn";
+import { NAV_ICON } from "./nav-icons";
 
-const ITEMS = [
-  { href: "/app", label: "Днес", match: (p: string) => p === "/app" },
-  { href: "/app/library", label: "Библиотека", match: (p: string) => p.startsWith("/app/library") },
-  {
-    href: "/app/profile",
-    label: "Профил",
-    match: (p: string) => p.startsWith("/app/profile") || p.startsWith("/app/check-in"),
-  },
-];
-
+/** Mobile tab bar. Desktop gets the sidebar instead. */
 export function BottomNav() {
   const pathname = usePathname();
-  if (pathname.startsWith("/app/workout/")) return null; // the player is full-screen
+  if (navHidden(pathname)) return null;
+  const active = activeNavHref(pathname);
   return (
-    <nav className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/90 backdrop-blur">
-      <ul className="mx-auto flex max-w-md justify-around px-4 pt-2">
-        {ITEMS.map((item) => {
-          const active = item.match(pathname);
+    <nav
+      aria-label="Основна навигация"
+      className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white lg:hidden"
+    >
+      <ul className="mx-auto flex max-w-md justify-around px-2 pt-1">
+        {APP_NAV.map((item) => {
+          const Icon = NAV_ICON[item.href];
+          const isActive = active === item.href;
           return (
-            <li key={item.href}>
+            <li key={item.href} className="flex-1">
               <Link
                 href={item.href}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-1 px-4 py-1 text-xs font-semibold transition-colors",
-                  active ? "text-ink" : "text-ink-soft",
+                  "flex min-h-11 flex-col items-center justify-center gap-0.5 py-1 text-[11px] font-semibold",
+                  isActive ? "text-rose-deep" : "text-ink-soft",
                 )}
               >
-                <span
-                  className={cn(
-                    "h-1.5 w-6 rounded-full transition-all",
-                    active ? "bg-ember" : "bg-transparent",
-                  )}
+                <Icon
+                  size={24}
+                  strokeWidth={2}
+                  aria-hidden="true"
+                  className={isActive ? "text-powder" : "text-ink-soft"}
                 />
                 {item.label}
               </Link>

@@ -2,6 +2,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/app/bottom-nav";
+import { SidebarNav } from "@/components/app/sidebar-nav";
 import { pastDueNotice } from "@/lib/subscription-text";
 import { createServerSupabaseClient } from "@/server/db/server";
 import { ManageSubscriptionButton } from "./profile/manage-subscription-button";
@@ -39,17 +40,22 @@ async function AppGate({ children }: { children: React.ReactNode }) {
   // Failed renewal, still in grace. The portal is always Stripe's (see openPortalAction).
   const notice = sub?.provider === "stripe" && sub.provider_customer_id ? pastDueNotice(sub) : null;
   return (
-    <div className="mx-auto min-h-dvh max-w-md pb-28">
-      {notice && (
-        <aside
-          role="alert"
-          className="mx-5 mt-5 space-y-2 rounded-[1.75rem] bg-brick/10 p-4 ring-1 ring-brick/30"
-        >
-          <p className="font-semibold text-brick">{notice}</p>
-          <ManageSubscriptionButton label="Обнови картата" />
-        </aside>
-      )}
-      {children}
+    <div className="min-h-dvh lg:flex">
+      <SidebarNav />
+      <div className="min-w-0 flex-1 pb-28 lg:pb-10">
+        <div className="mx-auto max-w-md lg:max-w-5xl">
+          {notice && (
+            <aside
+              role="alert"
+              className="mx-5 mt-5 space-y-2 rounded-2xl bg-brick/10 p-4 ring-1 ring-brick/30 lg:mx-8"
+            >
+              <p className="font-semibold text-brick">{notice}</p>
+              <ManageSubscriptionButton label="Обнови картата" />
+            </aside>
+          )}
+          {children}
+        </div>
+      </div>
       <BottomNav />
     </div>
   );

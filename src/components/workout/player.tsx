@@ -88,9 +88,9 @@ export function Player({
     setPending(false);
   }
 
-  // -mb-28 cancels the app layout's bottom-nav padding so no light strip shows under the dark player.
+  // -mb-28 (-mb-10 on lg) cancels the app layout's bottom padding so no light strip shows under the dark player.
   return (
-    <main className="-mb-28 flex min-h-dvh flex-col bg-ink text-paper">
+    <main className="-mb-28 flex min-h-dvh flex-col lg:-mb-10 bg-ink text-paper">
       <div className="flex items-center justify-between px-5 py-4">
         <Link href="/app" className="text-sm font-semibold text-paper/70">
           ← Назад

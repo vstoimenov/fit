@@ -34,9 +34,11 @@ body {
   font-family: var(--font-sans);
 }
 
-/* Display type is always Manrope ExtraBold, whatever weight the class asks for. */
-.font-display {
-  font-weight: 800;
+/* Display type defaults to Manrope ExtraBold. Layered, so weight utilities still win where used. */
+@layer components {
+  .font-display {
+    font-weight: 800;
+  }
 }
 
 /* Bottom nav clears the iPhone home indicator. */

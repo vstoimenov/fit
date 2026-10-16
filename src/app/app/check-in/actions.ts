@@ -20,5 +20,5 @@ export async function saveCheckIn(_prev: unknown, form: FormData): Promise<Check
     );
     return { ...actionFail(error), values };
   }
-  redirect("/app/profile?saved=1");
+  redirect("/app/progress?saved=1");
 }
