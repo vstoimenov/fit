@@ -11,7 +11,7 @@ import {
   type LibraryFilter,
 } from "@/lib/program/library-filter";
 import { requireUser } from "@/server/auth/require-user";
-import { listPublishedWorkouts } from "@/server/content/workouts";
+import { getLibrary } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировки" };
 
@@ -75,9 +75,9 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
   const filter = parseLibraryFilter(await searchParams);
-  const { supabase } = await requireUser();
-  const [workouts, { data: hasAccess, error: accessError }] = await Promise.all([
-    listPublishedWorkouts(supabase),
+  const { supabase, user } = await requireUser();
+  const [{ level, workouts }, { data: hasAccess, error: accessError }] = await Promise.all([
+    getLibrary(supabase, user.id),
     supabase.rpc("my_access"),
   ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
@@ -86,8 +86,17 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   return (
     <main className="space-y-5 px-5 pb-6 pt-8 lg:px-8">
       <h1 className="text-3xl font-extrabold tracking-tight">Тренировки</h1>
+      <p className="text-sm text-ink-soft">
+        Показваме тренировки за ниво {LEVEL_LABEL[level]}. Можеш да го смениш в{" "}
+        <Link
+          href="/app/profile"
+          className="py-3 font-semibold text-ink underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          профила
+        </Link>
+        .
+      </p>
       <div className="space-y-1">
-        <Chips label="Ниво" filter={filter} keyName="level" options={LEVEL_LABEL} />
         <Chips label="Продължителност" filter={filter} keyName="length" options={LENGTH_LABEL} />
         <Chips
           label="Фокус"

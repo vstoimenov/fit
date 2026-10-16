@@ -18,14 +18,20 @@ const w = (over: Partial<WorkoutSummary>): WorkoutSummary => ({
 
 describe("parseLibraryFilter", () => {
   it("keeps only known values", () => {
-    expect(parseLibraryFilter({ level: "pro", length: "short", focus: "core" })).toEqual({
-      level: "pro",
+    expect(parseLibraryFilter({ length: "short", focus: "core" })).toEqual({
       length: "short",
       focus: "core",
     });
     expect(
       parseLibraryFilter({ level: "god", length: ["mid", "long"], focus: "<script>" }),
     ).toEqual({});
+  });
+});
+
+describe("parseLibraryFilter level", () => {
+  it("ignores an old ?level= link: the library is always the member's own level", () => {
+    expect(parseLibraryFilter({ level: "pro" })).not.toHaveProperty("level");
+    expect(parseLibraryFilter({ level: "pro", length: "mid" })).toEqual({ length: "mid" });
   });
 });
 
@@ -36,8 +42,8 @@ describe("filterLibrary", () => {
     w({ id: "c", kind: "starter", level: null, durationMin: 25, focus: ["stretch"] }),
   ];
 
-  it("filters by level, length and focus together", () => {
-    expect(filterLibrary(all, { level: "beginner" }).map((x) => x.id)).toEqual(["a"]);
+  it("filters by length and focus together", () => {
+    expect(filterLibrary(all, { length: "short" }).map((x) => x.id)).toEqual(["a"]);
     expect(filterLibrary(all, { length: "long" }).map((x) => x.id)).toEqual(["b"]);
     expect(filterLibrary(all, { length: "mid", focus: "stretch" }).map((x) => x.id)).toEqual(["c"]);
   });

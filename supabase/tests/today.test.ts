@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
 import { getTodayView } from "@/server/content/today";
-import { listPublishedWorkouts } from "@/server/content/workouts";
+import { getLibrary, listPublishedWorkouts } from "@/server/content/workouts";
 import {
   adminClient,
   createAdminUser,
@@ -138,5 +138,56 @@ describe("getTodayView profile errors", () => {
     await expect(getTodayView(failing, randomUUID())).rejects.toThrow(
       "load profile failed: connection lost",
     );
+  });
+});
+
+describe("getLibrary", () => {
+  async function seedLevels() {
+    const mk = (level: "beginner" | "advanced" | "pro") =>
+      createWorkout(admin, {
+        title: `lib-${level}`,
+        kind: "regular",
+        level,
+        duration_min: 20,
+        publish_at: new Date(Date.now() - 1000).toISOString(),
+      });
+    return { beginner: await mk("beginner"), advanced: await mk("advanced"), pro: await mk("pro") };
+  }
+
+  it("returns only the member's level of regular workouts, keeping free and starter ones", async () => {
+    const ids = await seedLevels();
+    const user = await createUser(admin, "lib-beginner");
+    const db = await signedInClient(user);
+    const lib = await getLibrary(db, user.id);
+    expect(lib.level).toBe("beginner");
+    const got = lib.workouts.map((w) => w.id);
+    expect(got).toContain(ids.beginner);
+    expect(got).not.toContain(ids.advanced);
+    expect(got).not.toContain(ids.pro);
+    expect(
+      lib.workouts.filter((w) => w.kind === "regular").every((w) => w.level === "beginner"),
+    ).toBe(true);
+    expect(lib.workouts.some((w) => w.kind === "starter")).toBe(true);
+    expect(got).toContain(await freeWorkoutId(admin));
+  });
+
+  it("an advanced member sees only advanced regular workouts", async () => {
+    const ids = await seedLevels();
+    const user = await createUser(admin, "lib-advanced");
+    await admin.from("profiles").update({ level: "advanced" }).eq("id", user.id);
+    const lib = await getLibrary(await signedInClient(user), user.id);
+    expect(lib.level).toBe("advanced");
+    const got = lib.workouts.map((w) => w.id);
+    expect(got).toContain(ids.advanced);
+    expect(got).not.toContain(ids.beginner);
+    expect(got).not.toContain(ids.pro);
+  });
+
+  it("falls back to beginner when the profile cannot be read", async () => {
+    const lib = await getLibrary(
+      await signedInClient(await createUser(admin, "lib-nofile")),
+      randomUUID(),
+    );
+    expect(lib.level).toBe("beginner");
   });
 });
