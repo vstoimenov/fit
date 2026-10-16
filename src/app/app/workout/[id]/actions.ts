@@ -13,7 +13,7 @@ import {
 
 export async function completeWorkout(
   workoutId: string,
-): Promise<ActionResult<{ completionId: string } & CompletionStats>> {
+): Promise<ActionResult<{ completionId: string; stats: CompletionStats | null }>> {
   try {
     const { user, supabase } = await requireUser();
     const { completionId } = await markWorkoutComplete(
@@ -22,9 +22,18 @@ export async function completeWorkout(
       z.uuid().parse(workoutId),
     );
     revalidatePath("/app");
-    // Presentation only: the same numbers Днес shows, read after the completion is saved.
-    const stats = await getCompletionStats(supabase, user.id);
-    return actionOk({ completionId, ...stats });
+    // Presentation only: the completion is already saved, so a failed stats read must not fail it.
+    let stats: CompletionStats | null = null;
+    try {
+      stats = await getCompletionStats(supabase, user.id);
+    } catch (error) {
+      console.error(
+        "completion stats failed",
+        { userId: user.id, completionId },
+        error instanceof Error ? error.message : error,
+      );
+    }
+    return actionOk({ completionId, stats });
   } catch (error) {
     return actionFail(error);
   }

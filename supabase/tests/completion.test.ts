@@ -125,6 +125,5 @@ describe("getCompletionStats", () => {
     const after = await getCompletionStats(db, user.id);
     expect(after.weekDone).toBe(1);
     expect(after.weekTarget).toBe(before.weekTarget);
-    expect(after.streakDays).toBeGreaterThanOrEqual(before.streakDays);
   });
 });

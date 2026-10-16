@@ -23,8 +23,6 @@ export default function TodayPage() {
   );
 }
 
-const WEEK_GOAL = 5;
-
 function daysText(n: number): string {
   return n === 1 ? "1 ден" : `${n} дни`;
 }
@@ -35,7 +33,6 @@ async function Today() {
   const { user, supabase } = await requireUser();
   const view = await getTodayView(supabase, user.id);
   const firstName = view.name.split(" ")[0];
-  const doneThisWeek = Math.min(WEEK_GOAL, view.week.filter((d) => d.done).length);
 
   return (
     <main className="px-5 pb-6 pt-8 lg:px-8">
@@ -118,8 +115,8 @@ async function Today() {
           <div className="grid grid-cols-2 gap-3">
             <StatTile
               label="Тази седмица"
-              value={`${doneThisWeek}/${WEEK_GOAL}`}
-              progress={doneThisWeek / WEEK_GOAL}
+              value={`${view.weekDone}/${view.weekTarget}`}
+              progress={view.weekDone / view.weekTarget}
             />
             <StatTile label="Поредица" value={daysText(view.streak)} />
           </div>

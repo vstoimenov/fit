@@ -38,7 +38,11 @@ async function WorkoutScreen({
   await connection();
   const [{ id }, { first }] = await Promise.all([params, searchParams]);
   const { user, supabase } = await requireUser();
-  const result = await getWorkoutForPlayer(supabase, id);
+  // The name is only needed for the celebration; load it alongside the workout.
+  const [result, { data: profile }] = await Promise.all([
+    getWorkoutForPlayer(supabase, id),
+    supabase.from("profiles").select("name").eq("id", user.id).maybeSingle(),
+  ]);
   if (!result) notFound();
 
   if (result.state === "broken") {
@@ -88,12 +92,6 @@ async function WorkoutScreen({
       </main>
     );
   }
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("name")
-    .eq("id", user.id)
-    .maybeSingle();
 
   return (
     <Player

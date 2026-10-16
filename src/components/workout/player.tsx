@@ -11,8 +11,9 @@ import type { CompletionStats } from "@/server/content/completion";
 import type { WorkoutSummary } from "@/server/content/today";
 import { AfterWorkout } from "./after-workout";
 
-interface Completed extends CompletionStats {
+interface Completed {
   completionId: string;
+  stats: CompletionStats | null;
 }
 
 /**
@@ -83,9 +84,7 @@ export function Player({
     return (
       <AfterWorkout
         name={name}
-        streakDays={completed.streakDays}
-        weekDone={completed.weekDone}
-        weekTarget={completed.weekTarget}
+        stats={completed.stats}
         first={first}
         completionId={completed.completionId}
         onRate={(feeling) => rate(completed.completionId, feeling)}

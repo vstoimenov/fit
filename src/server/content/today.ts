@@ -1,8 +1,7 @@
 import { AppError } from "@/lib/app-error";
-import { regularSlotDates } from "@/lib/program/completion-stats";
+import { completionStats, regularSlotDates } from "@/lib/program/completion-stats";
 import { toLocalDate, weekStrip, type WeekDay } from "@/lib/program/dates";
 import { pickToday, type TodayPick } from "@/lib/program/pick-today";
-import { computeStreak } from "@/lib/program/streak";
 import type { Level, WorkoutKind, WorkoutLite } from "@/lib/program/types";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
@@ -60,6 +59,10 @@ export interface TodayView {
   workout: WorkoutSummary | null;
   streak: number;
   week: WeekDay[];
+  /** Days done this week, capped at `weekTarget`. */
+  weekDone: number;
+  /** Scheduled slot days this week (5 when none). */
+  weekTarget: number;
   nextDropAt: string | null;
   doneTotal: number;
 }
@@ -118,6 +121,7 @@ export async function getTodayView(
   const today = toLocalDate(now, profile.timezone);
   const slotDates = regularSlotDates(workouts, profile.level, profile.timezone);
   const completionDates = completions.map((c) => c.local_date);
+  const stats = completionStats({ slotDates, completionDates, today });
 
   const { data: nextDropAt, error: nextDropError } = await db.rpc("next_drop_at", {
     p_level: profile.level,
@@ -130,7 +134,9 @@ export async function getTodayView(
     hasAccess: accessRes.data === true,
     pick,
     workout: "workoutId" in pick ? (workouts.find((w) => w.id === pick.workoutId) ?? null) : null,
-    streak: computeStreak({ slotDates, completionDates, today }),
+    streak: stats.streakDays,
+    weekDone: stats.weekDone,
+    weekTarget: stats.weekTarget,
     week: weekStrip(today, completionDates, slotDates),
     nextDropAt: nextDropAt ?? null,
     doneTotal: completions.length,

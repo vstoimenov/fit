@@ -52,8 +52,9 @@ export interface CompletionStats {
 }
 
 /**
- * Streak and week progress for the after-workout screen. Read-only; uses the same helpers and
- * sources as the Днес screen, so both always agree.
+ * Streak and week progress (done days and target) for the after-workout screen. Read-only;
+ * built with `completionStats` and `regularSlotDates`, the same helpers `getTodayView` uses,
+ * so both screens agree.
  */
 export async function getCompletionStats(
   db: TypedClient,

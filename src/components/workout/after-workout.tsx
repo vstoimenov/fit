@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { FEELING_LABEL } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
+import type { CompletionStats } from "@/server/content/completion";
 
 type Feeling = keyof typeof FEELING_LABEL;
 
@@ -21,16 +22,13 @@ function daysInARow(n: number): string {
  */
 export function AfterWorkout({
   name,
-  streakDays,
-  weekDone,
-  weekTarget,
+  stats,
   first,
   onRate,
 }: {
   name?: string | null;
-  streakDays: number;
-  weekDone: number;
-  weekTarget: number;
+  /** Null when the numbers could not be read; the line is then hidden. */
+  stats: CompletionStats | null;
   first: boolean;
   /** Fire-and-forget: a lost rating must not trap her on this screen. */
   onRate: (feeling: Feeling) => void;
@@ -44,12 +42,14 @@ export function AfterWorkout({
   // The previous screen (the video) is gone; move focus to the new heading.
   useEffect(() => heading.current?.focus(), []);
 
-  const stats = [
-    streakDays > 0 ? daysInARow(streakDays) : null,
-    `${weekDone} от ${weekTarget} тази седмица`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const statsLine = stats
+    ? [
+        stats.streakDays > 0 ? daysInARow(stats.streakDays) : null,
+        `${stats.weekDone} от ${stats.weekTarget} тази седмица`,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : null;
 
   return (
     <main className="mx-auto flex min-h-[calc(100dvh-7rem)] max-w-md flex-col justify-center gap-8 px-5 py-10 text-center lg:min-h-[calc(100dvh-2.5rem)]">
@@ -69,7 +69,7 @@ export function AfterWorkout({
         >
           {name ? `Браво, ${name}!` : "Браво!"}
         </h1>
-        <p className="font-semibold text-ink-soft">{stats}</p>
+        {statsLine && <p className="font-semibold text-ink-soft">{statsLine}</p>}
       </div>
 
       <section aria-labelledby="feeling-title" className="space-y-3">
