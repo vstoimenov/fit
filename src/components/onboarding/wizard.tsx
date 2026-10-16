@@ -22,6 +22,7 @@ import {
   TIMES,
 } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
+import { QUESTION_STEPS, type QuestionStepId } from "@/lib/onboarding/question-steps";
 import { onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { browserTimezone } from "@/lib/timezone";
@@ -58,7 +59,7 @@ const STEP_OF_FIELD: Record<string, StepId> = {
   marketingConsent: "contact",
 };
 
-type StepId = "goal" | "problems" | "experience" | "body" | "time" | "contact" | "account";
+type StepId = QuestionStepId | "account";
 
 const TITLE: Record<StepId, string> = {
   goal: "Какво искаш да постигнеш?",
@@ -81,15 +82,7 @@ const TITLE_ID = "question-title";
 
 export function Wizard({ signedIn }: { signedIn: boolean }) {
   const router = useRouter();
-  const steps: StepId[] = [
-    "goal",
-    "problems",
-    "experience",
-    "body",
-    "time",
-    "contact",
-    ...(signedIn ? [] : ["account" as const]),
-  ];
+  const steps: StepId[] = [...QUESTION_STEPS, ...(signedIn ? [] : ["account" as const])];
   const [index, setIndexRaw] = useState(0);
   // The first screen paints at once (it is server-rendered); only later steps animate in.
   const [navigated, setNavigated] = useState(false);
