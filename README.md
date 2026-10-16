@@ -59,6 +59,36 @@ pnpm build
 
 Never edit an applied migration; add a new one in `supabase/migrations/`.
 
+## Design tokens
+
+Spec: `docs/superpowers/specs/2026-10-16-fit-platform-redesign-design.md`. Tokens live in `src/app/globals.css`
+(Tailwind 4 `@theme`), so classes like `bg-powder` and `text-ink-soft` work everywhere, including the admin panel.
+
+| Token          | Hex       | Use                                     |
+| -------------- | --------- | --------------------------------------- |
+| `ink`          | `#111111` | text, primary buttons                   |
+| `ink-soft`     | `#5C5A55` | secondary text (6.9:1 on white)         |
+| `white`        | `#FFFFFF` | page background                         |
+| `sand`         | `#F4F3F0` | cards, inputs                           |
+| `powder`       | `#E5A9AE` | accent: progress bar, active nav icon   |
+| `powder-light` | `#FBEFEF` | selected-option background              |
+| `powder-chip`  | `#F4D6D6` | chips, active nav pill                  |
+| `rose-deep`    | `#7A3B45` | text on powder (6.1:1 on `powder-chip`) |
+
+- Type: Manrope only, weights 400 / 600 / 800.
+- UI primitives: `src/components/ui/` (`Button`, `Card`, `Chip`, `Field`, `Consent`, `StatTile`, `AuthCard`).
+  Combine classes with `cn()` (`src/lib/cn.ts`, built on `tailwind-merge`) so overrides win over defaults.
+- Photos: `public/photos/`, registry in code; sources and licences in `public/photos/CREDITS.md`
+  (temporary stock images, to be replaced by own photography).
+- Screenshots of the redesign (375 and 1280 px): `docs/screenshots/redesign/`.
+
+### Share card (`/api/share/[completionId]`)
+
+„Сподели" on the after-workout screen fetches a PNG share card (`next/og`). Privacy rule: the image contains only
+the workout title, the streak, the week count and the app's own host name; the completion must belong to the
+signed-in user (signed out: 401, someone else's or unknown id: 404); the response is `private, no-store`.
+No name, weight, measurements or e-mail ever go into the image.
+
 ## Admin
 
 - Promote an account (local): `node --env-file=.env.local scripts/make-admin.mjs you@example.com`.

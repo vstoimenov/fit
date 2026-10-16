@@ -42,9 +42,29 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 - Privacy policy page linked from the health-data consent checkbox (needs legal text).
 - Streak counts scheduled workout slots, not calendar days — label it (e.g. "тренировки подред") or revisit.
 - English zod defaults still reachable on free numeric inputs (profile height decimals → add `step="1"` / BG messages).
-- Covers: decorative ring vs "no icon-in-circle"; long Cyrillic first words get cropped.
+- [x] Covers: decorative ring vs "no icon-in-circle"; long Cyrillic first words get cropped. → done in the redesign (photo covers with a bottom title bar; no ring).
 - Go-live: turn admin TOTP back on if it was switched off for testing: `update public.security_flags set enabled = true, updated_at = now() where key = 'admin_mfa_required';` (README "Hosted go-live checklist", step 5).
 - Hosted Supabase setup: see README "Hosted go-live checklist" (seed content, auth config push, env vars).
+- [x] Design pass → delivered by the redesign (branch `redesign`, 2026-10-16): tokens + Manrope, UI primitives, photo registry with credits, app shell (bottom tabs / sidebar, Прогрес tab), Днес, library, workout page, after-workout screen with share card, one-question onboarding, auth pages, plans / welcome / profile / check-in, landing page. Screenshots: `docs/screenshots/redesign/`.
+
+## Redesign deferred (2026-10-16)
+- Replace the stock photos (Unsplash, see `public/photos/CREDITS.md`) with own photography.
+- Dark mode.
+- Community share slot on the after-workout screen (appears with stage 7).
+- Welcome (active state): the copy repeats the h1.
+- The `ghost` button variant is unused.
+- `StatTile`: add a NaN guard.
+- Photo tests do not check that the files exist on disk.
+- Share prefetch is not aborted on unmount; one render per finished workout.
+- iOS: tap-before-prefetch may consume the user activation (device test pending).
+- Square share layout with a 60-character title is unverified.
+- Placeholder `supportEmail` `hello@example.com` is public on `/` — set the real address before launch.
+- A Supabase outage during the build bakes the no-amount price fallback into the landing page until revalidation.
+- Disabled plan radios lack `aria-disabled`.
+- Active powder nav icon has about 2:1 contrast (label and `aria-current` carry the state).
+- The profile-name query also runs for the locked/broken workout branches.
+- The completion DB test title mentions the streak.
+- Real-device Web Share test is pending.
 
 ## From the plan 1B final review
 - Go-live: decide `audit_log` retention / pseudonymisation after account deletion; document that `client_notes` is the client-relationship trail (or merge it into the audit viewer); owner decision on sending „Липсваш ни" without marketing consent + an opt-out line in the template.
