@@ -27,3 +27,9 @@ export function completionStats(input: {
   const weekDone = Math.min(weekTarget, week.filter((d) => d.done).length);
   return { streakDays: computeStreak(input), weekDone, weekTarget };
 }
+
+/** „N тренировки“ for the Днес series tile; `computeStreak` counts workouts, not days. */
+export function seriesText(n: number): string {
+  if (n <= 0) return "0";
+  return n === 1 ? "1 тренировка" : `${n} тренировки`;
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completionStats, regularSlotDates } from "./completion-stats";
+import { completionStats, regularSlotDates, seriesText } from "./completion-stats";
 
 // 2026-10-14 is a Wednesday; the week is Mon 12 .. Sun 18.
 const today = "2026-10-14";
@@ -44,5 +44,18 @@ describe("regularSlotDates", () => {
     ];
     // 21:30Z on the 12th is already the 13th in Sofia (UTC+3 in October).
     expect(regularSlotDates(workouts, "beginner", "Europe/Sofia")).toEqual(["2026-10-13"]);
+  });
+});
+
+describe("seriesText", () => {
+  it.each([
+    [0, "0"],
+    [1, "1 тренировка"],
+    [2, "2 тренировки"],
+    [5, "5 тренировки"],
+    [21, "21 тренировки"],
+    [22, "22 тренировки"],
+  ])("%i -> %s", (n, text) => {
+    expect(seriesText(n)).toBe(text);
   });
 });

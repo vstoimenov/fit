@@ -33,11 +33,17 @@ export function toShareCard(input: Record<string, unknown>): ShareCard {
   };
 }
 
+/** „4 поредни тренировки“ / „1 поредна тренировка“ — the series counts workouts, not days. */
 export function streakPhrase(days: number): string {
-  return days === 1 ? "1 ден поред" : `${days} дни поред`;
+  return days === 1 ? "1 поредна тренировка" : `${days} поредни тренировки`;
 }
 
-/** „Цяло тяло · 4 дни поред · 3/5 тази седмица"; the streak is left out at 0. */
+/** The phrase without its numeral, for the caption under the big number on the share image. */
+export function streakCaption(days: number): string {
+  return streakPhrase(days).replace(/^\d+ /, "");
+}
+
+/** „Цяло тяло · 4 поредни тренировки · 3/5 тази седмица"; the streak is left out at 0. */
 export function shareText(card: ShareCard): string {
   return [
     card.workoutTitle,

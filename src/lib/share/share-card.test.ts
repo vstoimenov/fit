@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shareText, toShareCard } from "./share-card";
+import { shareText, streakCaption, toShareCard } from "./share-card";
 
 const base = { workoutTitle: "Цяло тяло", streakDays: 4, weekDone: 3, weekTarget: 5 };
 
@@ -56,16 +56,26 @@ describe("toShareCard", () => {
 
 describe("shareText", () => {
   it("names the workout, the streak and the week", () => {
-    expect(shareText(toShareCard(base))).toBe("Цяло тяло · 4 дни поред · 3/5 тази седмица");
+    expect(shareText(toShareCard(base))).toBe(
+      "Цяло тяло · 4 поредни тренировки · 3/5 тази седмица",
+    );
   });
 
-  it("uses the singular for a one-day streak", () => {
+  it("uses the singular for a one-workout streak", () => {
     expect(shareText(toShareCard({ ...base, streakDays: 1 }))).toBe(
-      "Цяло тяло · 1 ден поред · 3/5 тази седмица",
+      "Цяло тяло · 1 поредна тренировка · 3/5 тази седмица",
     );
   });
 
   it("leaves the streak out when it is zero", () => {
     expect(shareText(toShareCard({ ...base, streakDays: 0 }))).toBe("Цяло тяло · 3/5 тази седмица");
+  });
+});
+
+describe("streakCaption", () => {
+  it("is the phrase without the numeral, for the image caption", () => {
+    expect(streakCaption(1)).toBe("поредна тренировка");
+    expect(streakCaption(4)).toBe("поредни тренировки");
+    expect(streakCaption(21)).toBe("поредни тренировки");
   });
 });

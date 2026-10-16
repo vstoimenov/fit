@@ -39,6 +39,13 @@ describe("getTodayView", () => {
     expect(view.week).toHaveLength(7);
   });
 
+  it("exposes the member's timezone for the date line", async () => {
+    const user = await createUser(admin, "today-tz");
+    await admin.from("profiles").update({ timezone: "America/Los_Angeles" }).eq("id", user.id);
+    const view = await getTodayView(await signedInClient(user), user.id);
+    expect(view.timezone).toBe("America/Los_Angeles");
+  });
+
   it("counts finished workouts", async () => {
     const user = await createUser(admin, "today-done");
     const db = await signedInClient(user);

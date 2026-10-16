@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 import { serverEnv } from "@/env";
 import { isAppError } from "@/lib/app-error";
 import { brand } from "@/lib/brand";
-import { streakPhrase, type ShareCard } from "@/lib/share/share-card";
+import { streakCaption, type ShareCard } from "@/lib/share/share-card";
 import { requireUser } from "@/server/auth/require-user";
 import { getShareCard } from "@/server/content/share";
 
@@ -101,7 +101,7 @@ function ShareImage({
               {String(card.streakDays)}
             </div>
             <div style={{ fontSize: square ? 52 : 64, fontWeight: 800, color: C.roseDeep }}>
-              {streakPhrase(card.streakDays).replace(/^\d+ /, "")}
+              {streakCaption(card.streakDays)}
             </div>
           </div>
         )}

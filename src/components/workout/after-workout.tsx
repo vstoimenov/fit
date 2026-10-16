@@ -47,7 +47,7 @@ export function AfterWorkout({
   const statsLine = stats
     ? [
         stats.streakDays > 0 ? streakPhrase(stats.streakDays) : null,
-        `${stats.weekDone} от ${stats.weekTarget} тази седмица`,
+        `${stats.weekDone}/${stats.weekTarget} тази седмица`,
       ]
         .filter(Boolean)
         .join(" · ")
@@ -80,7 +80,7 @@ export function AfterWorkout({
       </div>
 
       <section aria-labelledby="feeling-title" className="space-y-3">
-        <h2 id="feeling-title" className="text-base font-bold">
+        <h2 id="feeling-title" className="text-base font-extrabold">
           Как беше?
         </h2>
         <div className="grid grid-cols-3 gap-2">

@@ -1,11 +1,11 @@
-import { Bell, CalendarDays, LineChart, PlayCircle } from "lucide-react";
+import { CalendarDays, LineChart, PlayCircle, Timer } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
 const ITEMS = [
   {
     icon: CalendarDays,
     title: "Седмична програма по ниво",
-    text: "Нови тренировки всяка седмица, подбрани за твоето ниво и време.",
+    text: "Нови тренировки всяка седмица, подбрани за твоето ниво.",
   },
   {
     icon: PlayCircle,
@@ -18,9 +18,9 @@ const ITEMS = [
     text: "Тегло, мерки и серии на едно място, за да виждаш как вървиш.",
   },
   {
-    icon: Bell,
-    title: "Напомняния",
-    text: "Тихо напомняне в удобен за теб час, за да не изпускаш ритъма.",
+    icon: Timer,
+    title: "Кратки тренировки",
+    text: "15 до 40 минути, у дома, без пътуване до залата.",
   },
 ];
 

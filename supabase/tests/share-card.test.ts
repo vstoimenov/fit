@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { markWorkoutComplete } from "@/server/content/completion";
-import { toShareCard } from "@/lib/share/share-card";
+import { shareText, toShareCard } from "@/lib/share/share-card";
 import { getShareCard } from "@/server/content/share";
 import {
   adminClient,
@@ -24,8 +24,23 @@ beforeAll(async () => {
 describe("getShareCard", () => {
   it("returns her own completion as the four public fields only", async () => {
     const a = await createUser(admin, "share-a");
-    // Health and questionnaire data that must never reach the card.
-    await admin.from("profiles").update({ timezone: "Europe/Sofia" }).eq("id", a.id);
+    // Health and questionnaire data that must never reach the card or its text.
+    const seeded = await admin
+      .from("profiles")
+      .update({
+        timezone: "Europe/Sofia",
+        height_cm: 171,
+        weight_kg: 71.3,
+        target_weight_kg: 64.7,
+        goal: "lose_weight",
+        problems: ["belly", "legs"],
+      })
+      .eq("id", a.id);
+    const seededCheckIn = await admin
+      .from("check_ins")
+      .insert({ user_id: a.id, weight_kg: 70.8, waist_cm: 77.3, note: "лична бележка 0451" });
+    expect(seeded.error).toBeNull();
+    expect(seededCheckIn.error).toBeNull();
     const dbA = await signedInClient(a);
     const { completionId } = await markWorkoutComplete(dbA, a.id, freeId);
 
@@ -37,7 +52,9 @@ describe("getShareCard", () => {
     expect(card!.workoutTitle).toBe(toShareCard({ workoutTitle: freeTitle }).workoutTitle);
     expect(card!.streakDays).toBeGreaterThanOrEqual(1);
     expect(card!.weekDone).toBeGreaterThanOrEqual(1);
-    expect(JSON.stringify(card)).not.toMatch(/Sofia|@example/);
+    const leaked = /Sofia|@example|71\.3|64\.7|70\.8|77\.3|171|lose_weight|belly|legs|бележка|0451/;
+    expect(JSON.stringify(card)).not.toMatch(leaked);
+    expect(shareText(card!)).not.toMatch(leaked);
   });
 
   it("returns null for another member's completion", async () => {

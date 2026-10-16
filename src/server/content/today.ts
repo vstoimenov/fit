@@ -54,6 +54,8 @@ export function toSummary(row: WorkoutRow): WorkoutSummary {
 export interface TodayView {
   name: string;
   level: Level;
+  /** The member's IANA timezone (drives „today“ and the date line). */
+  timezone: string;
   hasAccess: boolean;
   pick: TodayPick;
   workout: WorkoutSummary | null;
@@ -131,6 +133,7 @@ export async function getTodayView(
   return {
     name: profile.name,
     level: profile.level,
+    timezone: profile.timezone,
     hasAccess: accessRes.data === true,
     pick,
     workout: "workoutId" in pick ? (workouts.find((w) => w.id === pick.workoutId) ?? null) : null,

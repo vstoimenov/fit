@@ -9,6 +9,7 @@ import { Chip } from "@/components/ui/chip";
 import { StatTile } from "@/components/ui/stat-tile";
 import { WorkoutCover } from "@/components/workout/workout-cover";
 import { formatTodayDate } from "@/lib/format";
+import { seriesText } from "@/lib/program/completion-stats";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { requireUser } from "@/server/auth/require-user";
 import { getTodayView } from "@/server/content/today";
@@ -23,10 +24,6 @@ export default function TodayPage() {
   );
 }
 
-function daysText(n: number): string {
-  return n === 1 ? "1 ден" : `${n} дни`;
-}
-
 async function Today() {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
@@ -38,7 +35,8 @@ async function Today() {
     <main className="px-5 pb-6 pt-8 lg:px-8">
       <header className="mb-6 space-y-1">
         <p className="text-sm font-semibold text-ink-soft">
-          {firstName ? `Здравей, ${firstName}` : "Здравей"} · {formatTodayDate(new Date())}
+          {firstName ? `Здравей, ${firstName}` : "Здравей"} ·{" "}
+          {formatTodayDate(new Date(), view.timezone)}
         </p>
         <h1 className="text-3xl font-extrabold tracking-tight">Днес</h1>
       </header>
@@ -53,6 +51,7 @@ async function Today() {
                     focus={view.workout.focus[0] ?? null}
                     title={view.workout.title}
                     className="h-72 lg:h-96"
+                    decorative
                     preload
                   />
                   <div className="absolute left-3 top-3 flex gap-2">
@@ -101,7 +100,7 @@ async function Today() {
               <Clock size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
               <p>
                 Нова тренировка след{" "}
-                <strong className="font-bold">
+                <strong className="font-extrabold">
                   <Countdown to={view.nextDropAt} />
                 </strong>
               </p>
@@ -117,8 +116,9 @@ async function Today() {
               label="Тази седмица"
               value={`${view.weekDone}/${view.weekTarget}`}
               progress={view.weekDone / view.weekTarget}
+              note={view.weekDone >= view.weekTarget ? "Целта е изпълнена" : undefined}
             />
-            <StatTile label="Поредица" value={daysText(view.streak)} />
+            <StatTile label="Серия" value={seriesText(view.streak)} />
           </div>
 
           <div className="flex flex-wrap items-center justify-center gap-x-6">
