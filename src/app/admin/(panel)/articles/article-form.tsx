@@ -72,7 +72,7 @@ export function ArticleForm({ action, article }: { action: FormAction; article?:
         </Field>
         <Field
           label="Текст"
-          hint="Markdown: **удебелено**, *курсив*, # Заглавие, - списък, [линк](https://…)"
+          hint="Markdown: **удебелено**, *курсив*, # Заглавие, - списък, [линк](https://…). Поддържат се и таблици и списъци."
         >
           <textarea
             name="body"
@@ -83,7 +83,10 @@ export function ArticleForm({ action, article }: { action: FormAction; article?:
             className={inputClass + " h-auto py-3 font-mono text-sm"}
           />
         </Field>
-        <Field label="Корица (по желание)" hint="Линк, който започва с https:// или /photos/">
+        <Field
+          label="Корица (по желание)"
+          hint="Линк, който започва с https://, или път /photos/име.jpg (без ? и интервали)"
+        >
           <input
             name="coverUrl"
             defaultValue={article?.coverUrl ?? ""}

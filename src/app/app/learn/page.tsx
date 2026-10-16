@@ -5,6 +5,7 @@ import { CommunityCard } from "@/components/learn/community-card";
 import { Card } from "@/components/ui/card";
 import { requireUser } from "@/server/auth/require-user";
 import { getCommunityLink, listArticlesFor } from "@/server/content/articles";
+import { getMemberLevel } from "@/server/content/member";
 
 export const metadata = { title: "Полезно" };
 
@@ -20,14 +21,9 @@ async function Learn() {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
   const { user, supabase } = await requireUser();
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("level")
-    .eq("id", user.id)
-    .single();
-  if (error) throw new Error(`load profile failed: ${error.message}`);
+  const level = await getMemberLevel(supabase, user.id);
   const [articles, communityUrl] = await Promise.all([
-    listArticlesFor(supabase, profile.level),
+    listArticlesFor(supabase, level),
     getCommunityLink(supabase),
   ]);
 

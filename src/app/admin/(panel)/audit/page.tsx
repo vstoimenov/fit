@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { truncateDiff } from "@/lib/admin/audit-diff";
 import { utcToZoned } from "@/lib/admin/time";
 import { listAudit } from "@/server/admin/audit";
 import { requireAdmin } from "@/server/admin/require-admin";
@@ -16,6 +17,7 @@ const TYPE: Record<string, string> = {
   subscriptions: "Абонамент",
   settings: "Настройка",
   profiles: "Роля",
+  articles: "Статия",
 };
 const ACTION: Record<string, string> = { insert: "създаде", update: "промени", delete: "изтри" };
 
@@ -55,7 +57,7 @@ async function Audit({ searchParams }: { searchParams: Search }) {
               <details>
                 <summary className="cursor-pointer py-1 text-ink-soft">Детайли</summary>
                 <pre className="overflow-x-auto whitespace-pre-wrap break-all text-xs">
-                  {JSON.stringify(e.diff, null, 2)}
+                  {JSON.stringify(truncateDiff(e.diff), null, 2)}
                 </pre>
               </details>
             </li>

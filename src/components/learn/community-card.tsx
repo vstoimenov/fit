@@ -20,6 +20,7 @@ export function CommunityCard({ url }: { url: string | null }) {
             className={buttonClass("secondary", "md")}
           >
             Влез в общността
+            <span className="sr-only"> (отваря се в нов раздел)</span>
             <ExternalLink size={16} strokeWidth={2} aria-hidden="true" />
           </a>
         </>

@@ -71,4 +71,39 @@ describe("ArticleBody", () => {
     expect(render("![d](data:image/png;base64,AAAA)")).not.toContain("<img");
     expect(render("![e](//evil.test/e.jpg)")).not.toContain("<img");
   });
+
+  it("treats http:// links as external too", () => {
+    const html = render("[h](http://example.com)");
+    expect(html).toContain('href="http://example.com"');
+    expect(html).toContain('target="_blank"');
+    expect(html).toContain('rel="noopener noreferrer"');
+  });
+
+  it("tells screen readers that external links open in a new tab", () => {
+    expect(render("[y](https://example.com)")).toContain("(отваря се в нов раздел)");
+    expect(render("[z](/app/library)")).not.toContain("нов раздел");
+  });
+
+  it("styles h4-h6 like h3", () => {
+    for (const hashes of ["####", "#####", "######"]) {
+      const html = render(`${hashes} Под`);
+      expect(html).toMatch(/<h[456] class="mb-2 mt-6 text-xl/);
+    }
+  });
+
+  it("renders GFM tables, and autolinks a bare https URL as a safe external anchor", () => {
+    const table = render("| a | b |\n|---|---|\n| 1 | 2 |");
+    expect(table).toContain("<table");
+    expect(table).toMatch(/<td[^>]*>1<\/td>/);
+    const link = render("Виж https://t.me/x днес");
+    expect(link).toContain('href="https://t.me/x"');
+    expect(link).toContain('target="_blank"');
+    expect(link).toContain('rel="noopener noreferrer"');
+  });
+
+  it("leaves a bare javascript: text as text", () => {
+    const html = render("javascript:alert(1) и <javascript:alert(1)>");
+    expect(html).not.toContain("<a ");
+    expect(html).not.toMatch(/href=/i);
+  });
 });

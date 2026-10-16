@@ -1,6 +1,7 @@
 import Markdown, { type Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-const EXTERNAL = /^https:\/\//i;
+const EXTERNAL = /^https?:\/\//i;
 /** What a link may point to: web, mail, same-site paths and in-page anchors. `//host` is not allowed. */
 const SAFE_HREF = /^(https?:|mailto:|\/(?!\/)|#)/i;
 const IMAGE_SRC = /^(https:\/\/|\/photos\/)/;
@@ -9,6 +10,8 @@ const IMAGE_SRC = /^(https:\/\/|\/photos\/)/;
  * Markdown from the owner, never trusted as HTML: no `rehype-raw`, so tags in the source are
  * printed as text, and react-markdown's default `urlTransform` drops `javascript:`/`data:` hrefs.
  */
+const H3_CLASS = "mb-2 mt-6 text-xl font-extrabold tracking-tight";
+
 const components: Components = {
   // The page title is the only h1; a "#" in the body is shown as a section heading.
   h1: ({ children }) => (
@@ -17,9 +20,10 @@ const components: Components = {
   h2: ({ children }) => (
     <h2 className="mb-3 mt-8 text-2xl font-extrabold tracking-tight">{children}</h2>
   ),
-  h3: ({ children }) => (
-    <h3 className="mb-2 mt-6 text-xl font-extrabold tracking-tight">{children}</h3>
-  ),
+  h3: ({ children }) => <h3 className={H3_CLASS}>{children}</h3>,
+  h4: ({ children }) => <h4 className={H3_CLASS}>{children}</h4>,
+  h5: ({ children }) => <h5 className={H3_CLASS}>{children}</h5>,
+  h6: ({ children }) => <h6 className={H3_CLASS}>{children}</h6>,
   p: ({ children }) => <p className="mb-4 text-base leading-[1.7] text-ink">{children}</p>,
   ul: ({ children }) => (
     <ul className="mb-4 list-disc space-y-1.5 pl-6 leading-[1.7]">{children}</ul>
@@ -43,13 +47,29 @@ const components: Components = {
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
       >
         {children}
+        {external && <span className="sr-only"> (отваря се в нов раздел)</span>}
       </a>
     );
   },
+  table: ({ children }) => (
+    <div className="mb-4 overflow-x-auto">
+      <table className="w-full border-collapse text-left text-sm">{children}</table>
+    </div>
+  ),
+  th: ({ children, style }) => (
+    <th style={style} className="border-b-2 border-line px-3 py-2 font-extrabold">
+      {children}
+    </th>
+  ),
+  td: ({ children, style }) => (
+    <td style={style} className="border-b border-line px-3 py-2">
+      {children}
+    </td>
+  ),
   img: ({ src, alt }) => {
     if (typeof src !== "string" || !IMAGE_SRC.test(src)) return null;
-    // eslint-disable-next-line @next/next/no-img-element -- owner-supplied remote URLs; no host allow-list to optimise against
     return (
+      // eslint-disable-next-line @next/next/no-img-element -- owner-supplied remote URLs; no host allow-list to optimise against
       <img
         src={src}
         alt={alt ?? ""}
@@ -64,7 +84,9 @@ const components: Components = {
 export function ArticleBody({ body }: { body: string }) {
   return (
     <div>
-      <Markdown components={components}>{body}</Markdown>
+      <Markdown remarkPlugins={[remarkGfm]} components={components}>
+        {body}
+      </Markdown>
     </div>
   );
 }
