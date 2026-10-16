@@ -1,16 +1,26 @@
 @import "tailwindcss";
 
 @theme {
-  --color-paper: #f4efe8;
-  --color-ink: #161412;
-  --color-ink-soft: #5b544d;
-  --color-line: #e2dad0;
-  --color-ember: #e4572e;
-  --color-ember-deep: #a8361a;
+  --color-white: #ffffff;
+  --color-ink: #111111;
+  --color-ink-soft: #5c5a55;
+  --color-line: #e6e4df;
+  --color-sand: #f4f3f0;
+  --color-powder: #e5a9ae;
+  --color-powder-light: #fbefef;
+  --color-powder-chip: #f4d6d6;
+  --color-rose-deep: #7a3b45;
   --color-moss: #3f7d5c;
   --color-mustard: #d29a1e;
   --color-brick: #b23a2a;
-  --font-display: var(--font-unbounded), system-ui, sans-serif;
+
+  /* Legacy names, kept as aliases so untouched screens inherit the new palette. */
+  --color-paper: #ffffff;
+  --color-ember: #111111;
+  --color-ember-deep: #7a3b45;
+
+  /* Manrope only. `font-display` stays as an alias so existing classes keep working. */
+  --font-display: var(--font-manrope), system-ui, sans-serif;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
 }
 
@@ -19,9 +29,14 @@ html {
 }
 
 body {
-  background: var(--color-paper);
+  background: var(--color-white);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* Display type is always Manrope ExtraBold, whatever weight the class asks for. */
+.font-display {
+  font-weight: 800;
 }
 
 /* Bottom nav clears the iPhone home indicator. */

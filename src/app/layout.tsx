@@ -1,18 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope, Unbounded } from "next/font/google";
+import { Manrope } from "next/font/google";
 import { Suspense } from "react";
 import { SwRegister } from "@/components/app/sw-register";
 import { VisitBeacon } from "@/components/app/visit-beacon";
 import { brand } from "@/lib/brand";
 import "./globals.css";
 
-const display = Unbounded({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-unbounded",
-});
 const sans = Manrope({
   subsets: ["latin", "cyrillic"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["400", "600", "800"],
   variable: "--font-manrope",
 });
 
@@ -32,7 +28,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="bg" className={`${display.variable} ${sans.variable}`}>
+    <html lang="bg" className={sans.variable}>
       <body className="min-h-dvh antialiased">
         {children}
         <Suspense>
