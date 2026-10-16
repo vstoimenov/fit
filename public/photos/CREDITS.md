@@ -7,11 +7,11 @@ Resized to ≤1600px and re-encoded; source = the original Unsplash image URL.
 
 | File                  | Source                                                       |
 | --------------------- | ------------------------------------------------------------ |
-| hero.jpg              | https://images.unsplash.com/photo-1571902943202-507ec2618e8f |
+| hero.jpg              | https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b |
 | step-1.jpg            | https://images.unsplash.com/photo-1558017487-06bf9f82613a    |
 | step-2.jpg            | https://images.unsplash.com/photo-1518644961665-ed172691aaa1 |
-| step-3.jpg            | https://images.unsplash.com/photo-1594737625785-a6cbdabd333c |
-| welcome.jpg           | https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b |
+| step-3.jpg            | https://images.unsplash.com/photo-1593164842264-854604db2260 |
+| welcome.jpg           | https://images.unsplash.com/photo-1579126038374-6064e9370f0f |
 | focus-full_body.jpg   | https://images.unsplash.com/photo-1518611012118-696072aa579a |
 | focus-core.jpg        | https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b |
 | focus-glutes_legs.jpg | https://images.unsplash.com/photo-1518459031867-a89b944bffe4 |
