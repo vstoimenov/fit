@@ -23,7 +23,7 @@ export function ManageSubscriptionButton({ label = "Управлявай або�
 
   return (
     <div className="space-y-2 pt-1">
-      <Button variant="ghost" size="md" className="w-full" disabled={busy} onClick={open}>
+      <Button variant="secondary" size="md" className="w-full" disabled={busy} onClick={open}>
         {busy ? "Пренасочване…" : label}
       </Button>
       {error && (

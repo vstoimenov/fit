@@ -1,6 +1,9 @@
+import { Check } from "lucide-react";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { Card } from "@/components/ui/card";
+import { Chip } from "@/components/ui/chip";
 import { serverEnv } from "@/env";
 import { LEVEL_LABEL, type Goal, type Time } from "@/lib/labels";
 import { buildPlanSummary } from "@/lib/onboarding/plan-summary";
@@ -11,6 +14,13 @@ import { ManageSubscriptionButton } from "../profile/manage-subscription-button"
 import { PlanPicker } from "./plan-picker";
 
 export const metadata = { title: "Твоят план" };
+
+const BENEFITS = [
+  "Стартова седмица, за да влезеш в ритъм без мускулна треска",
+  "Нови тренировки за твоето ниво всяка седмица",
+  "Цялата библиотека, по всяко време",
+  "Проследяване на тегло, мерки и серии",
+];
 
 type SearchParams = Promise<{ after?: string }>;
 
@@ -72,66 +82,72 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
   }));
 
   return (
-    <main className="space-y-8 px-5 pt-8">
-      {after === "first" && (
-        <p className="inline-block rounded-full bg-moss px-4 py-1.5 text-sm font-bold text-white">
-          Първата тренировка е направена ✓
-        </p>
-      )}
-      <header className="space-y-3">
-        <p className="text-sm font-semibold text-ink-soft">
-          Твоят план, {profile.name.split(" ")[0]}
-        </p>
-        <h1 className="font-display text-4xl font-black leading-[0.95]">{summary.headline}</h1>
-      </header>
+    <main className="px-5 pt-8 lg:px-8">
+      <div className="grid gap-8 lg:grid-cols-2 lg:items-start lg:gap-12">
+        <div className="space-y-6">
+          {after === "first" && (
+            <Chip tone="ink" className="px-4 py-1.5 text-sm" role="status">
+              <Check aria-hidden className="h-4 w-4" strokeWidth={3} />
+              Първата тренировка е направена
+            </Chip>
+          )}
+          <header className="space-y-2">
+            <p className="text-sm font-semibold text-ink-soft">
+              Твоят план, {profile.name.split(" ")[0]}
+            </p>
+            <h1 className="font-display text-[34px] leading-[1.05] tracking-[-0.02em]">
+              {summary.headline}
+            </h1>
+          </header>
 
-      <dl className="grid grid-cols-[1fr_1fr_1.5fr] gap-2 text-center">
-        {[
-          [String(summary.perWeek), "пъти седмично"],
-          [summary.minutes.replace(" минути", ""), "минути"],
-          [LEVEL_LABEL[profile.level], "ниво"],
-        ].map(([value, label]) => (
-          <div key={label} className="min-w-0 rounded-3xl bg-white px-2 py-4 ring-1 ring-line">
-            <dt className="sr-only">{label}</dt>
-            <dd className="font-display text-sm font-bold break-words">{value}</dd>
-            <dd aria-hidden="true" className="text-xs text-ink-soft">
-              {label}
-            </dd>
-          </div>
-        ))}
-      </dl>
+          <dl className="grid grid-cols-[1fr_1fr_1.5fr] gap-2 text-center">
+            {[
+              [String(summary.perWeek), "пъти седмично"],
+              [summary.minutes.replace(" минути", ""), "минути"],
+              [LEVEL_LABEL[profile.level], "ниво"],
+            ].map(([value, label]) => (
+              <Card key={label} className="min-w-0 px-2 py-4">
+                <dt className="sr-only">{label}</dt>
+                <dd className="font-display text-base break-words">{value}</dd>
+                <dd aria-hidden="true" className="text-xs text-ink-soft">
+                  {label}
+                </dd>
+              </Card>
+            ))}
+          </dl>
 
-      <section className="space-y-2">
-        <h2 className="font-semibold">Фокус</h2>
-        <div className="flex flex-wrap gap-2">
-          {summary.focus.map((f) => (
-            <span
-              key={f}
-              className="rounded-full bg-ink px-4 py-2 text-sm font-semibold text-paper"
-            >
-              {f}
-            </span>
-          ))}
+          <section className="space-y-2">
+            <h2 className="font-semibold">Фокус</h2>
+            <div className="flex flex-wrap gap-2">
+              {summary.focus.map((f) => (
+                <Chip key={f} tone="powder" className="px-4 py-2 text-sm">
+                  {f}
+                </Chip>
+              ))}
+            </div>
+          </section>
+
+          <ul className="space-y-3 text-[15px] leading-relaxed">
+            {BENEFITS.map((benefit) => (
+              <li key={benefit} className="flex gap-3">
+                <Check aria-hidden className="mt-1 h-4 w-4 shrink-0" strokeWidth={3} />
+                {benefit}
+              </li>
+            ))}
+          </ul>
         </div>
-      </section>
 
-      <ul className="space-y-3 text-[15px]">
-        <li>✓ Стартова седмица, за да влезеш в ритъм без мускулна треска</li>
-        <li>✓ Нови тренировки за твоето ниво всяка седмица</li>
-        <li>✓ Цялата библиотека, по всяко време</li>
-        <li>✓ Проследяване на тегло, мерки и серии</li>
-      </ul>
-
-      {cardUpdate ? (
-        <section className="space-y-3 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
-          <p role="status" className="font-semibold text-brick">
-            Плащането не мина. Обнови картата, за да продължиш.
-          </p>
-          <ManageSubscriptionButton label="Обнови картата" />
-        </section>
-      ) : (
-        <PlanPicker plans={pickerPlans} ready={provider.ready} />
-      )}
+        {cardUpdate ? (
+          <Card className="space-y-3 p-5">
+            <p role="status" className="font-semibold text-brick">
+              Плащането не мина. Обнови картата, за да продължиш.
+            </p>
+            <ManageSubscriptionButton label="Обнови картата" />
+          </Card>
+        ) : (
+          <PlanPicker plans={pickerPlans} ready={provider.ready} />
+        )}
+      </div>
     </main>
   );
 }

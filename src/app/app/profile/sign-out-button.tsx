@@ -8,7 +8,7 @@ import { signOut } from "./actions";
 export function SignOutButton() {
   return (
     <form action={signOut} onSubmit={clearDraft}>
-      <button type="submit" className={buttonClass("quiet", "md") + " w-full"}>
+      <button type="submit" className={buttonClass("secondary", "md") + " w-full"}>
         Изход
       </button>
     </form>

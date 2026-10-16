@@ -2,11 +2,12 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { buttonClass } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { GOALS, LEVEL_LABEL, PROBLEMS } from "@/lib/labels";
 import { endNotice, subscriptionText } from "@/lib/subscription-text";
 import { requireUser } from "@/server/auth/require-user";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
-import { ProfileForms } from "./profile-forms";
+import { DeleteAccount, PersonalData } from "./profile-forms";
 import { SignOutButton } from "./sign-out-button";
 
 export const metadata = { title: "Профил" };
@@ -48,48 +49,62 @@ async function Profile() {
   const access = hasAccess === true;
 
   return (
-    <main className="space-y-8 px-5 pt-8">
-      <header>
-        <h1 className="font-display text-3xl font-bold break-words">{profile?.name}</h1>
+    <main className="space-y-6 px-5 pt-8 lg:px-8">
+      <header className="space-y-1">
+        <h1 className="font-display text-[34px] leading-[1.05] tracking-[-0.02em] break-words">
+          {profile?.name}
+        </h1>
         <p className="break-words text-ink-soft">
           {profile?.email} · {profile ? LEVEL_LABEL[profile.level] : ""}
         </p>
       </header>
-      <section className="space-y-2 rounded-[1.75rem] bg-white p-5 ring-1 ring-line">
-        <h2 className="font-semibold">Абонамент</h2>
-        <p className="text-ink-soft">{subscriptionText(access, sub)}</p>
-        {endNotice(sub) && <p className="text-ink-soft">{endNotice(sub)}</p>}
-        {sub?.provider === "stripe" && sub.provider_customer_id && <ManageSubscriptionButton />}
-        {(!access || sub?.provider === "manual") && (
-          <Link href="/app/plan" className="font-semibold underline underline-offset-4">
-            Виж плановете
-          </Link>
+
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+        {profile && (
+          <PersonalData
+            name={profile.name}
+            level={profile.level}
+            answers={{
+              goal: GOALS.find((g) => g === profile.goal) ?? "",
+              problems: PROBLEMS.filter((p) => profile.problems.includes(p)),
+              heightCm: profile.height_cm,
+              weightKg: profile.weight_kg,
+              targetWeightKg: profile.target_weight_kg,
+              phone: profile.phone ?? "",
+              phoneCallConsent: profile.phone_call_consent,
+              marketingConsent: profile.marketing_consent,
+            }}
+          />
         )}
-      </section>
 
-      {profile && (
-        <ProfileForms
-          name={profile.name}
-          level={profile.level}
-          answers={{
-            goal: GOALS.find((g) => g === profile.goal) ?? "",
-            problems: PROBLEMS.filter((p) => profile.problems.includes(p)),
-            heightCm: profile.height_cm,
-            weightKg: profile.weight_kg,
-            targetWeightKg: profile.target_weight_kg,
-            phone: profile.phone ?? "",
-            phoneCallConsent: profile.phone_call_consent,
-            marketingConsent: profile.marketing_consent,
-          }}
-        />
-      )}
+        <div className="space-y-4">
+          <Card className="space-y-2 p-5">
+            <h2 className="font-semibold">Абонамент</h2>
+            <p className="text-ink-soft">{subscriptionText(access, sub)}</p>
+            {endNotice(sub) && <p className="text-ink-soft">{endNotice(sub)}</p>}
+            {sub?.provider === "stripe" && sub.provider_customer_id && <ManageSubscriptionButton />}
+            {(!access || sub?.provider === "manual") && (
+              <Link
+                href="/app/plan"
+                className={buttonClass(access ? "secondary" : "primary", "md") + " mt-1 w-full"}
+              >
+                Виж плановете
+              </Link>
+            )}
+          </Card>
 
-      <section className="space-y-3">
-        <a href="/api/me/export" className={buttonClass("quiet", "md") + " w-full"}>
-          Изтегли моите данни
-        </a>
-        <SignOutButton />
-      </section>
+          <Card className="space-y-4 p-5">
+            <h2 className="font-semibold">Акаунт</h2>
+            <div className="space-y-3">
+              <a href="/api/me/export" className={buttonClass("secondary", "md") + " w-full"}>
+                Изтегли моите данни
+              </a>
+              <SignOutButton />
+            </div>
+            <DeleteAccount />
+          </Card>
+        </div>
+      </div>
     </main>
   );
 }

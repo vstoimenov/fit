@@ -1,7 +1,9 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import { startCheckoutAction } from "./actions";
@@ -40,39 +42,60 @@ export function PlanPicker({ plans, ready }: { plans: Plan[]; ready: boolean }) 
   return (
     <section className="space-y-3">
       <div role="radiogroup" aria-label="Избери план" className="space-y-3">
-        {plans.map((plan) => (
-          <button
-            key={plan.id}
-            type="button"
-            role="radio"
-            aria-checked={selected === plan.id}
-            disabled={!plan.payable || busy}
-            onClick={() => setSelected(plan.id)}
-            className={cn(
-              "flex w-full items-center justify-between rounded-3xl border-2 bg-white p-5 text-left disabled:cursor-not-allowed",
-              selected === plan.id ? "border-ink" : "border-line",
-              !plan.payable && "opacity-50",
-            )}
-          >
-            <span>
-              <span className="block font-display text-lg font-bold">{plan.name}</span>
-              {plan.interval === "year" && (
-                <span className="text-sm text-moss">
-                  {formatPrice(Math.round(plan.price_cents / 12), plan.currency)} на месец
-                </span>
+        {plans.map((plan) => {
+          const on = selected === plan.id;
+          const disabled = !plan.payable || busy;
+          return (
+            <label
+              key={plan.id}
+              className={cn(
+                "flex min-h-20 items-center gap-4 rounded-2xl border-[1.5px] p-5 text-left transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+                on ? "border-ink bg-powder-light" : "border-line bg-white",
+                disabled ? "cursor-not-allowed" : "cursor-pointer",
+                !plan.payable && "opacity-50",
               )}
-            </span>
-            <span className="text-right font-display text-xl font-bold">
-              {formatPrice(plan.price_cents, plan.currency)}
-              <span className="text-sm font-medium text-ink-soft">
-                /{plan.interval === "month" ? "мес" : "год"}
+            >
+              <input
+                type="radio"
+                name="plan"
+                value={plan.id}
+                checked={on}
+                disabled={disabled}
+                onChange={() => setSelected(plan.id)}
+                className="sr-only"
+              />
+              <span
+                aria-hidden
+                className={cn(
+                  "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                  on ? "bg-ink text-white" : "border-[1.5px] border-line",
+                )}
+              >
+                {on && <Check className="h-4 w-4" strokeWidth={3} />}
               </span>
-              {!plan.payable && (
-                <span className="block text-xs font-semibold text-ink-soft">Скоро</span>
-              )}
-            </span>
-          </button>
-        ))}
+              <span className="min-w-0 flex-1 space-y-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-display text-lg">{plan.name}</span>
+                  {plan.interval === "year" && <Chip tone="powder">Най-изгодно</Chip>}
+                </span>
+                {plan.interval === "year" && (
+                  <span className="block text-sm text-ink-soft">
+                    ≈ {formatPrice(Math.round(plan.price_cents / 12), plan.currency)} / месец
+                  </span>
+                )}
+              </span>
+              <span className="text-right font-display text-xl">
+                {formatPrice(plan.price_cents, plan.currency)}
+                <span className="text-sm font-semibold text-ink-soft">
+                  /{plan.interval === "month" ? "мес" : "год"}
+                </span>
+                {!plan.payable && (
+                  <span className="block text-xs font-semibold text-ink-soft">Скоро</span>
+                )}
+              </span>
+            </label>
+          );
+        })}
       </div>
       <Button className="w-full" disabled={!ready || busy || !selected} onClick={subscribe}>
         {ready ? (busy ? "Пренасочване…" : "Абонирай се") : "Плащането се включва скоро"}

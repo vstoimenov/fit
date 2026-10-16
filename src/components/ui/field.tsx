@@ -1,7 +1,11 @@
 import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
 export const inputClass =
   "h-12 w-full rounded-2xl border-2 border-transparent bg-sand px-4 text-base text-ink outline-none transition-colors placeholder:text-ink-soft/70 focus:border-ink focus-visible:ring-2 focus-visible:ring-ink/20";
+
+/** Inputs inside a sand `Card` turn white, or they would vanish into the card. */
+export const inputOnCardClass = cn(inputClass, "bg-white");
 
 export function Field({
   label,
