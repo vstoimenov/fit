@@ -1,15 +1,24 @@
 "use client";
 
+import { Check } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/cn";
 
-/** One big tappable card per option. */
+/**
+ * One big tappable card per option. Real (visually hidden) inputs carry the semantics:
+ * radios for a single answer (arrow keys, Enter submits the step), checkboxes for several.
+ */
 export function ChoiceList<T extends string>({
+  name,
+  labelledBy,
   options,
   labels,
   value,
   onChange,
   multiple = false,
 }: {
+  name: string;
+  labelledBy: string;
   options: readonly T[];
   labels: Record<T, string>;
   value: T | T[] | undefined;
@@ -25,28 +34,40 @@ export function ChoiceList<T extends string>({
     onChange([...next]);
   }
   return (
-    <div className="grid gap-3">
+    <div
+      role={multiple ? "group" : "radiogroup"}
+      aria-labelledby={labelledBy}
+      className="grid gap-3"
+    >
       {options.map((option) => {
         const on = selected.has(option);
         return (
-          <button
+          <label
             key={option}
-            type="button"
-            aria-pressed={on}
-            onClick={() => toggle(option)}
             className={cn(
-              "flex min-h-16 items-center justify-between rounded-3xl border-2 px-5 text-left text-lg font-semibold transition-all active:scale-[0.98]",
-              on ? "border-ink bg-ink text-paper" : "border-line bg-white text-ink",
+              "flex min-h-16 cursor-pointer items-center justify-between gap-3 rounded-2xl border-[1.5px] px-5 py-3 text-left text-base font-semibold text-ink transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink",
+              on ? "border-ink bg-powder-light" : "border-line bg-white",
             )}
           >
+            <input
+              type={multiple ? "checkbox" : "radio"}
+              name={name}
+              value={option}
+              checked={on}
+              onChange={() => toggle(option)}
+              className="sr-only"
+            />
             {labels[option]}
             <span
+              aria-hidden
               className={cn(
-                "h-6 w-6 rounded-full border-2",
-                on ? "border-paper bg-ember" : "border-line",
+                "flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
+                on ? "bg-ink text-white" : "border-[1.5px] border-line",
               )}
-            />
-          </button>
+            >
+              {on && <Check className="h-4 w-4" strokeWidth={3} />}
+            </span>
+          </label>
         );
       })}
     </div>
@@ -62,6 +83,7 @@ export function NumberSlider({
   step = 1,
   value,
   onChange,
+  className,
 }: {
   label: string;
   unit: string;
@@ -70,14 +92,15 @@ export function NumberSlider({
   step?: number;
   value: number;
   onChange: (v: number) => void;
+  className?: string;
 }) {
   return (
-    <div className="space-y-3">
+    <Card className={cn("space-y-2 p-5", className)}>
       <div className="flex items-baseline justify-between">
-        <span className="font-semibold">{label}</span>
-        <span className="font-display text-4xl font-bold tabular-nums">
+        <span className="text-sm font-semibold">{label}</span>
+        <span className="font-display text-4xl tabular-nums leading-none">
           {value}
-          <span className="ml-1 text-base font-medium text-ink-soft">{unit}</span>
+          <span className="ml-1 text-base font-semibold text-ink-soft">{unit}</span>
         </span>
       </div>
       <input
@@ -87,9 +110,15 @@ export function NumberSlider({
         step={step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full accent-[var(--color-ember)]"
+        onKeyDown={(e) => {
+          // Enter advances like in a text field; not every browser submits from a range input.
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          e.currentTarget.form?.requestSubmit();
+        }}
+        className="block h-11 w-full cursor-pointer rounded-full accent-[var(--color-ink)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
         aria-label={label}
       />
-    </div>
+    </Card>
   );
 }

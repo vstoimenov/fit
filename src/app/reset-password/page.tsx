@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AuthCard } from "@/components/ui/auth-card";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -21,8 +22,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6">
-      <h1 className="font-display text-3xl">Избери нова парола</h1>
+    <AuthCard title="Избери нова парола">
       <form action={onSubmit} className="space-y-4">
         <Field label="Нова парола" hint="Поне 10 символа" error={error || undefined}>
           <input
@@ -37,6 +37,6 @@ export default function ResetPasswordPage() {
           Запази
         </Button>
       </form>
-    </main>
+    </AuthCard>
   );
 }

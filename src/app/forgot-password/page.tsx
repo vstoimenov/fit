@@ -1,7 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AuthCard } from "@/components/ui/auth-card";
+import { Button, buttonClass } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Field, inputClass } from "@/components/ui/field";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -28,20 +31,26 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 px-6">
-      <h1 className="font-display text-3xl">Нова парола</h1>
+    <AuthCard title="Нова парола">
       {sent ? (
-        <p>Ако имаш профил с този имейл, ще получиш линк до минута.</p>
+        <Card role="status" className="p-5">
+          Ако имаш профил с този имейл, ще получиш линк до минута.
+        </Card>
       ) : (
         <form action={onSubmit} className="space-y-4">
           <Field label="Имейл" error={error || undefined}>
-            <input name="email" type="email" required className={inputClass} />
+            <input name="email" type="email" autoComplete="email" required className={inputClass} />
           </Field>
           <Button type="submit" className="w-full">
             Изпрати линк
           </Button>
         </form>
       )}
-    </main>
+      <div className="flex justify-center">
+        <Link href="/login" className={buttonClass("link")}>
+          Към входа
+        </Link>
+      </div>
+    </AuthCard>
   );
 }

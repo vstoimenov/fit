@@ -12,7 +12,7 @@ export function Consent({
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex gap-3 text-sm leading-snug">
+    <label className="flex min-h-11 gap-3 py-2.5 text-sm leading-snug">
       <input
         type="checkbox"
         name={name}

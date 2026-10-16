@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { AuthCard } from "@/components/ui/auth-card";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { clientEnv } from "@/env";
 import { safeNext } from "@/lib/auth-redirect";
@@ -53,8 +54,7 @@ function LoginForm() {
   }
 
   return (
-    <main className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-8 px-6 py-12">
-      <h1 className="font-display text-4xl leading-none">Влез</h1>
+    <AuthCard title="Влез">
       <form action={onSubmit} className="space-y-4">
         <Field label="Имейл">
           <input name="email" type="email" autoComplete="email" required className={inputClass} />
@@ -73,19 +73,19 @@ function LoginForm() {
         </Button>
       </form>
       {clientEnv.NEXT_PUBLIC_GOOGLE_AUTH === "1" && (
-        <Button variant="ghost" onClick={google} className="w-full">
+        <Button variant="secondary" onClick={google} className="w-full">
           Продължи с Google
         </Button>
       )}
-      <div className="flex justify-between text-sm">
-        <Link href="/forgot-password" className="underline underline-offset-4">
+      <div className="flex flex-col items-center">
+        <Link href="/forgot-password" className={buttonClass("link")}>
           Забравена парола
         </Link>
-        <Link href="/start" className="font-semibold underline underline-offset-4">
+        <Link href="/start" className={buttonClass("link")}>
           Нямам профил
         </Link>
       </div>
-    </main>
+    </AuthCard>
   );
 }
 

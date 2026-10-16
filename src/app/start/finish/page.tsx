@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { completeOnboarding } from "@/app/start/actions";
+import { AuthCard } from "@/components/ui/auth-card";
 import { clearDraft, loadDraft } from "@/components/onboarding/storage";
 import { browserTimezone } from "@/lib/timezone";
 
@@ -35,8 +36,10 @@ export default function FinishPage() {
   }, [router]);
 
   return (
-    <main className="flex min-h-dvh items-center justify-center px-6 text-center">
-      <p className="font-display text-2xl font-bold">{error || "Изграждаме твоя план…"}</p>
-    </main>
+    <AuthCard title="Твоят план">
+      <p role={error ? "alert" : "status"} className={error ? "text-brick" : "text-ink-soft"}>
+        {error || "Изграждаме твоя план…"}
+      </p>
+    </AuthCard>
   );
 }
