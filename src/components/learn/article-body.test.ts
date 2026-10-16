@@ -32,6 +32,22 @@ describe("ArticleBody", () => {
     expect(html).not.toMatch(/href="data:/i);
   });
 
+  it.each([
+    ["vbscript:", "[x](vbscript:msgbox(1))"],
+    ["mixed-case JaVaScRiPt:", "[x](JaVaScRiPt:alert(1))"],
+    ["protocol-relative //", "[x](//evil.test/p)"],
+    ["ftp:", "[x](ftp://example.com/f)"],
+  ])("renders a %s link as plain text, not an anchor", (_label, md) => {
+    const html = render(md);
+    expect(html).not.toContain("<a ");
+    expect(html).toContain("x");
+  });
+
+  it("allows mailto and anchor links", () => {
+    expect(render("[m](mailto:a@b.co)")).toContain('href="mailto:a@b.co"');
+    expect(render("[h](#top)")).toContain('href="#top"');
+  });
+
   it("opens external https links safely in a new tab", () => {
     const html = render("[y](https://example.com)");
     expect(html).toContain('href="https://example.com"');
@@ -49,6 +65,7 @@ describe("ArticleBody", () => {
     const https = render("![a](https://example.com/a.jpg)");
     expect(https).toContain('src="https://example.com/a.jpg"');
     expect(https).toContain('loading="lazy"');
+    expect(https).toMatch(/referrerpolicy="no-referrer"/i);
     expect(render("![b](/photos/b.jpg)")).toContain('src="/photos/b.jpg"');
     expect(render("![c](http://example.com/c.jpg)")).not.toContain("<img");
     expect(render("![d](data:image/png;base64,AAAA)")).not.toContain("<img");

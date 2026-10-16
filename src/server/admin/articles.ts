@@ -1,9 +1,8 @@
 import { z } from "zod";
 import { AppError } from "@/lib/app-error";
+import { SLUG } from "@/lib/articles/slug";
 import type { Level } from "@/lib/program/types";
 import type { TypedClient } from "@/server/db/types";
-
-const SLUG = /^[a-z0-9-]{3,80}$/;
 
 export const articleInputSchema = z.object({
   title: z.string().trim().min(1, "Нужно е заглавие").max(120, "До 120 знака"),

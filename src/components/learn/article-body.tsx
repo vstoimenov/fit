@@ -1,6 +1,8 @@
 import Markdown, { type Components } from "react-markdown";
 
 const EXTERNAL = /^https:\/\//i;
+/** What a link may point to: web, mail, same-site paths and in-page anchors. `//host` is not allowed. */
+const SAFE_HREF = /^(https?:|mailto:|\/(?!\/)|#)/i;
 const IMAGE_SRC = /^(https:\/\/|\/photos\/)/;
 
 /**
@@ -31,8 +33,8 @@ const components: Components = {
     </blockquote>
   ),
   a: ({ href, children }) => {
-    // The default urlTransform already removes unsafe schemes; an empty href renders as text.
-    if (!href) return <>{children}</>;
+    // Own allow-list on top of react-markdown's urlTransform; anything else renders as text.
+    if (!href || !SAFE_HREF.test(href)) return <>{children}</>;
     const external = EXTERNAL.test(href);
     return (
       <a
@@ -47,7 +49,15 @@ const components: Components = {
   img: ({ src, alt }) => {
     if (typeof src !== "string" || !IMAGE_SRC.test(src)) return null;
     // eslint-disable-next-line @next/next/no-img-element -- owner-supplied remote URLs; no host allow-list to optimise against
-    return <img src={src} alt={alt ?? ""} loading="lazy" className="my-4 w-full rounded-2xl" />;
+    return (
+      <img
+        src={src}
+        alt={alt ?? ""}
+        loading="lazy"
+        referrerPolicy="no-referrer"
+        className="my-4 w-full rounded-2xl"
+      />
+    );
   },
 };
 

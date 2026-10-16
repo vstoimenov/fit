@@ -1,3 +1,4 @@
+import { SLUG } from "@/lib/articles/slug";
 import type { Level } from "@/lib/program/types";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
@@ -29,6 +30,8 @@ export async function listArticlesFor(db: TypedClient, level: Level): Promise<Ar
 
 /** One article by slug, or null when it doesn't exist or RLS hides it from this viewer. */
 export async function getArticleBySlug(db: TypedClient, slug: string): Promise<ArticleRow | null> {
+  // A malformed slug can't match a row; skip the query (the page turns null into a 404).
+  if (!SLUG.test(slug)) return null;
   const { data, error } = await db
     .from("articles")
     .select("*")
