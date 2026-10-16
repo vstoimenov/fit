@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { APP_NAV, activeNavHref, navHidden } from "./app-nav";
 
 describe("APP_NAV", () => {
-  it("lists the four tabs in order", () => {
+  it("lists the five tabs in order", () => {
     expect(APP_NAV.map((i) => [i.href, i.label])).toEqual([
       ["/app", "Днес"],
       ["/app/library", "Тренировки"],
       ["/app/progress", "Прогрес"],
+      ["/app/learn", "Полезно"],
       ["/app/profile", "Профил"],
     ]);
   });
@@ -19,6 +20,8 @@ describe("activeNavHref", () => {
     ["/app/library/x", "/app/library"],
     ["/app/progress", "/app/progress"],
     ["/app/check-in", "/app/progress"],
+    ["/app/learn", "/app/learn"],
+    ["/app/learn/some-article", "/app/learn"],
     ["/app/profile", "/app/profile"],
     ["/app/plan", "/app/profile"],
   ])("%s -> %s", (path, href) => {
@@ -32,6 +35,7 @@ describe("activeNavHref", () => {
 
   it("does not match sibling prefixes", () => {
     expect(activeNavHref("/app/library-old")).toBeNull();
+    expect(activeNavHref("/app/learner")).toBeNull();
   });
 });
 

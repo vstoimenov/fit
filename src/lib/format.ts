@@ -12,3 +12,13 @@ export function formatTodayDate(at: Date, timeZone = "Europe/Sofia"): string {
   }).format(at);
   return text.charAt(0).toLocaleUpperCase("bg-BG") + text.slice(1);
 }
+
+/** "16 октомври 2026" — the calendar day of `at` in `timeZone` (Sofia by default). */
+export function formatArticleDate(at: Date, timeZone = "Europe/Sofia"): string {
+  return new Intl.DateTimeFormat("bg-BG", {
+    timeZone,
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(at);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPrice, formatTodayDate } from "./format";
+import { formatArticleDate, formatPrice, formatTodayDate } from "./format";
 
 describe("formatPrice", () => {
   it("formats euro cents the Bulgarian way", () => {
@@ -33,5 +33,11 @@ describe("formatTodayDate", () => {
       "Петък, 16 октомври",
     );
     expect(formatTodayDate(new Date("2026-10-17T03:00:00Z"))).toBe("Събота, 17 октомври");
+  });
+});
+
+describe("formatArticleDate", () => {
+  it("shows the Sofia calendar day with the year", () => {
+    expect(formatArticleDate(new Date("2026-10-16T22:30:00Z"))).toMatch(/^17 октомври 2026/);
   });
 });
