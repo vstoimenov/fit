@@ -3,11 +3,11 @@ import { FOCUS } from "@/lib/labels";
 export type Photo = { src: string; alt: string };
 
 export const PHOTOS = {
-  hero: { src: "/photos/hero.jpg", alt: "Жена тренира у дома на сутрешна светлина" },
-  step1: { src: "/photos/step-1.jpg", alt: "Жена избира тренировка на телефона си" },
-  step2: { src: "/photos/step-2.jpg", alt: "Жена тренира във всекидневната" },
-  step3: { src: "/photos/step-3.jpg", alt: "Жена се усмихва след тренировка" },
-  welcome: { src: "/photos/welcome.jpg", alt: "Добре дошла във Форма" },
+  hero: { src: "/photos/hero.jpg", alt: "Жена се разтяга на постелка у дома" },
+  step1: { src: "/photos/step-1.jpg", alt: "Гири и шейк върху постелка за йога" },
+  step2: { src: "/photos/step-2.jpg", alt: "Две жени си дават пет по време на планк" },
+  step3: { src: "/photos/step-3.jpg", alt: "Жена прави клек на постелка у дома" },
+  welcome: { src: "/photos/welcome.jpg", alt: "Жена с разперени ръце при изгрев край морето" },
 } as const satisfies Record<string, Photo>;
 
 const FOCUS_ALT: Record<(typeof FOCUS)[number], string> = {

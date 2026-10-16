@@ -3,6 +3,7 @@ import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { formatPrice } from "@/lib/format";
+import { yearlyIsBestValue } from "@/lib/plan-badge";
 
 export type LandingPlan = {
   id: string;
@@ -15,6 +16,7 @@ export type LandingPlan = {
 /** `plans` is null when the prices could not be read: the section then renders without amounts. */
 export function Pricing({ plans }: { plans: LandingPlan[] | null }) {
   const shown = plans && plans.length > 0 ? plans : null;
+  const bestValue = shown ? yearlyIsBestValue(shown) : false;
   return (
     <section
       aria-labelledby="price-title"
@@ -33,7 +35,7 @@ export function Pricing({ plans }: { plans: LandingPlan[] | null }) {
               <Card className="h-full space-y-2 p-6">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-display text-xl font-extrabold">{plan.name}</h3>
-                  {plan.interval === "year" && <Chip tone="powder">Най-изгодно</Chip>}
+                  {plan.interval === "year" && bestValue && <Chip tone="powder">Най-изгодно</Chip>}
                 </div>
                 <p className="font-display text-4xl font-extrabold">
                   {formatPrice(plan.price_cents, plan.currency)}

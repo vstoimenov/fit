@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
+import { yearlyIsBestValue } from "@/lib/plan-badge";
 import { startCheckoutAction } from "./actions";
 
 type Plan = {
@@ -20,6 +21,7 @@ type Plan = {
 
 export function PlanPicker({ plans, ready }: { plans: Plan[]; ready: boolean }) {
   const payable = plans.filter((p) => p.payable);
+  const bestValue = yearlyIsBestValue(plans);
   const [selected, setSelected] = useState(
     (payable.find((p) => p.interval === "month") ?? payable[0])?.id ?? "",
   );
@@ -76,7 +78,7 @@ export function PlanPicker({ plans, ready }: { plans: Plan[]; ready: boolean }) 
               <span className="min-w-0 flex-1 space-y-1">
                 <span className="flex flex-wrap items-center gap-2">
                   <span className="font-display text-lg">{plan.name}</span>
-                  {plan.interval === "year" && <Chip tone="powder">Най-изгодно</Chip>}
+                  {plan.interval === "year" && bestValue && <Chip tone="powder">Най-изгодно</Chip>}
                 </span>
                 {plan.interval === "year" && (
                   <span className="block text-sm text-ink-soft">
