@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { HealthSyncCard } from "@/components/profile/health-sync-card";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GOALS, LEVEL_LABEL, PROBLEMS } from "@/lib/labels";
@@ -92,6 +93,8 @@ async function Profile() {
               </Link>
             )}
           </Card>
+
+          <HealthSyncCard />
 
           <Card className="space-y-4 p-5">
             <h2 className="font-semibold">Акаунт</h2>
