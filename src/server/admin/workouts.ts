@@ -23,6 +23,14 @@ export const workoutInputSchema = z
     thumbnailUrl: z.string().regex(THUMBNAIL_URL, "Невалидна картинка.").nullable().optional(),
     publishAt: z.iso.datetime({ offset: true }).nullable(),
     notify: z.boolean(),
+    /** Points level needed to watch it (2–10); null = every member. */
+    minMemberLevel: z
+      .number()
+      .int("Невалидно ниво.")
+      .min(2, "Нивото е от 2 до 10.")
+      .max(10, "Нивото е от 2 до 10.")
+      .nullable()
+      .default(null),
   })
   .refine((w) => (w.kind === "regular") === (w.level !== null), {
     path: ["level"],
@@ -46,6 +54,7 @@ export interface AdminWorkout {
   thumbnailUrl: string | null;
   publishAt: string | null;
   notify: boolean;
+  minMemberLevel: number | null;
   starterOrder: number | null;
   videoUrl: string | null;
   status: WorkoutStatus;
@@ -53,7 +62,7 @@ export interface AdminWorkout {
 }
 
 const COLUMNS =
-  "id, title, description, kind, level, duration_min, focus, thumbnail_url, publish_at, notify, starter_order, workout_media(video_url), workout_completions(count)";
+  "id, title, description, kind, level, duration_min, focus, thumbnail_url, publish_at, notify, min_member_level, starter_order, workout_media(video_url), workout_completions(count)";
 
 type Row = {
   id: string;
@@ -66,6 +75,7 @@ type Row = {
   thumbnail_url: string | null;
   publish_at: string | null;
   notify: boolean;
+  min_member_level: number | null;
   starter_order: number | null;
   workout_media: { video_url: string } | { video_url: string }[] | null;
   workout_completions: { count: number }[];
@@ -84,6 +94,7 @@ function toAdminWorkout(r: Row, now: Date): AdminWorkout {
     thumbnailUrl: r.thumbnail_url,
     publishAt: r.publish_at,
     notify: r.notify,
+    minMemberLevel: r.min_member_level,
     starterOrder: r.starter_order,
     videoUrl: media?.video_url ?? null,
     status: workoutStatus(r.publish_at, now),
@@ -144,6 +155,7 @@ function rowFields(w: WorkoutInput) {
     ...(w.thumbnailUrl !== undefined && { thumbnail_url: w.thumbnailUrl }),
     publish_at: w.publishAt,
     notify: w.notify,
+    min_member_level: w.minMemberLevel,
   };
 }
 

@@ -1,4 +1,4 @@
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
@@ -8,7 +8,9 @@ import { Chip } from "@/components/ui/chip";
 import { Player } from "@/components/workout/player";
 import { WorkoutCover } from "@/components/workout/workout-cover";
 import { LEVEL_LABEL } from "@/lib/labels";
+import { exclusiveLockLevel } from "@/lib/points/levels";
 import { requireUser } from "@/server/auth/require-user";
+import { getMemberPoints } from "@/server/content/points";
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировка" };
@@ -39,9 +41,10 @@ async function WorkoutScreen({
   const [{ id }, { first }] = await Promise.all([params, searchParams]);
   const { user, supabase } = await requireUser();
   // The name is only needed for the celebration; load it alongside the workout.
-  const [result, { data: profile }] = await Promise.all([
+  const [result, { data: profile }, points] = await Promise.all([
     getWorkoutForPlayer(supabase, id),
     supabase.from("profiles").select("name").eq("id", user.id).maybeSingle(),
+    getMemberPoints(supabase, user.id),
   ]);
   if (!result) notFound();
 
@@ -62,6 +65,9 @@ async function WorkoutScreen({
 
   if (result.state === "locked") {
     const { workout } = result;
+    // The server withholds the video below the exclusive level whatever the subscription, so that
+    // is the reason to show first: subscribing would not open it.
+    const unlockLevel = exclusiveLockLevel(workout.minMemberLevel, points.level);
     return (
       <main className="pb-6 lg:px-8 lg:pt-6">
         <BackLink />
@@ -82,11 +88,29 @@ async function WorkoutScreen({
                 {workout.level && <Chip tone="powder">{LEVEL_LABEL[workout.level]}</Chip>}
                 <Chip>{workout.durationMin} мин</Chip>
               </div>
-              <p className="text-ink-soft">Тази тренировка се отключва с абонамента.</p>
+              {unlockLevel !== null ? (
+                <p className="inline-flex items-center gap-2 font-semibold">
+                  <Lock size={18} strokeWidth={2.25} aria-hidden="true" />
+                  Отключва се на ниво {unlockLevel}
+                </p>
+              ) : (
+                <p className="text-ink-soft">Тази тренировка се отключва с абонамента.</p>
+              )}
+              {unlockLevel !== null && (
+                <p className="text-ink-soft">
+                  Ти си на ниво {points.level}. Точки печелиш с всяка тренировка и отбелязване.
+                </p>
+              )}
             </div>
-            <Link href="/app/plan" className={`${buttonClass("primary", "lg")} w-full`}>
-              Отключи всички тренировки
-            </Link>
+            {unlockLevel !== null ? (
+              <Link href="/app" className={`${buttonClass("primary", "lg")} w-full`}>
+                Виж напредъка си
+              </Link>
+            ) : (
+              <Link href="/app/plan" className={`${buttonClass("primary", "lg")} w-full`}>
+                Отключи всички тренировки
+              </Link>
+            )}
           </section>
         </div>
       </main>

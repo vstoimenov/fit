@@ -8,6 +8,7 @@ import { formInt, formString } from "@/lib/form-data";
 import { grantManualAccess, revokeManualAccess } from "@/server/admin/clients";
 import { addNote } from "@/server/admin/notes";
 import { requireAdmin } from "@/server/admin/require-admin";
+import { adjustPoints } from "@/server/admin/rewards";
 
 const idSchema = z.uuid();
 
@@ -63,6 +64,23 @@ export async function revokeAccessAction(userId: string): Promise<ActionResult<n
     const { supabase } = await requireAdmin();
     await revokeManualAccess(supabase, id);
     revalidatePath(`/admin/clients/${id}`);
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+export async function adjustPointsAction(
+  userId: string,
+  _prev: unknown,
+  form: FormData,
+): Promise<ActionResult<null>> {
+  try {
+    const id = validId(userId);
+    const { supabase } = await requireAdmin();
+    await adjustPoints(supabase, id, formInt(form, "points"), formString(form, "reason"));
+    revalidatePath(`/admin/clients/${id}`);
+    revalidatePath("/admin/rewards");
     return actionOk(null);
   } catch (error) {
     return actionFail(error);

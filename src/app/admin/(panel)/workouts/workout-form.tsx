@@ -89,6 +89,23 @@ export function WorkoutForm({ action, workout }: { action: FormAction; workout?:
             />
           </Field>
         </div>
+        <Field
+          label="Само от ниво"
+          hint="Ексклузивна тренировка: клиентките я гледат от това ниво точки нагоре."
+        >
+          <select
+            name="minMemberLevel"
+            defaultValue={workout?.minMemberLevel ?? ""}
+            className={inputClass}
+          >
+            <option value="">Всички</option>
+            {Array.from({ length: 9 }, (_, i) => i + 2).map((n) => (
+              <option key={n} value={n}>
+                Ниво {n}
+              </option>
+            ))}
+          </select>
+        </Field>
         <fieldset className="space-y-2">
           <legend className="text-sm font-semibold">Зони</legend>
           <div className="flex flex-wrap gap-3">

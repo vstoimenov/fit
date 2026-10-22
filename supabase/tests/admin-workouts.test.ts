@@ -58,6 +58,17 @@ describe("admin workouts service", () => {
     });
   });
 
+  it("stores, changes and clears the exclusive level, and rejects a value out of range", async () => {
+    const id = await createAdminWorkout(boss, bossId, input({ minMemberLevel: 6 }));
+    expect((await getAdminWorkout(boss, id))?.minMemberLevel).toBe(6);
+    await updateAdminWorkout(boss, id, input({ minMemberLevel: 3 }));
+    expect((await getAdminWorkout(boss, id))?.minMemberLevel).toBe(3);
+    await updateAdminWorkout(boss, id, input({ minMemberLevel: null }));
+    expect((await getAdminWorkout(boss, id))?.minMemberLevel).toBeNull();
+    await expect(createAdminWorkout(boss, bossId, input({ minMemberLevel: 11 }))).rejects.toThrow();
+    await expect(updateAdminWorkout(boss, id, input({ minMemberLevel: 1 }))).rejects.toThrow();
+  });
+
   it("rejects a non-video link and a regular workout without level", async () => {
     await expect(
       createAdminWorkout(boss, bossId, input({ videoUrl: "https://example.com/v" })),

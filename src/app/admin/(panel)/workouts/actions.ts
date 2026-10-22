@@ -39,6 +39,7 @@ function readWorkout(form: FormData) {
     videoUrl: formString(form, "videoUrl"),
     publishAt: date ? zonedToUtc(date, time) : null,
     notify: formBool(form, "notify"),
+    minMemberLevel: formString(form, "minMemberLevel") ? formInt(form, "minMemberLevel") : null,
   };
 }
 

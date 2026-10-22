@@ -56,3 +56,14 @@ export function levelProgress(rawPoints: number): LevelProgress {
     nextReward: rewarded === undefined ? null : REWARDS[rewarded],
   };
 }
+
+/**
+ * The level a member still has to reach to watch an exclusive workout, or null when she may watch it
+ * (no requirement, or she is already there). Mirrors the gate in `public.can_watch`.
+ */
+export function exclusiveLockLevel(
+  minMemberLevel: number | null,
+  memberLevel: number,
+): number | null {
+  return minMemberLevel !== null && memberLevel < minMemberLevel ? minMemberLevel : null;
+}

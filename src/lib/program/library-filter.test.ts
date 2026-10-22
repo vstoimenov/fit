@@ -13,6 +13,7 @@ const w = (over: Partial<WorkoutSummary>): WorkoutSummary => ({
   thumbnailUrl: null,
   publishAt: "2026-10-01T00:00:00Z",
   starterOrder: null,
+  minMemberLevel: null,
   ...over,
 });
 

@@ -10,16 +10,24 @@ import { utcToZoned } from "@/lib/admin/time";
 import {
   FEELING_LABEL,
   GOAL_LABEL,
+  POINTS_SOURCE_LABEL,
   PROBLEM_LABEL,
   TIME_LABEL,
   type Goal,
   type Problem,
   type Time,
 } from "@/lib/labels";
+import { levelProgress } from "@/lib/points/levels";
 import { endNotice } from "@/lib/subscription-text";
 import { getClientDetail } from "@/server/admin/clients";
 import { requireAdmin } from "@/server/admin/require-admin";
-import { addNoteAction, grantAccessAction, revokeAccessAction } from "./actions";
+import { getMemberPoints, listPointsLedger } from "@/server/content/points";
+import {
+  addNoteAction,
+  adjustPointsAction,
+  grantAccessAction,
+  revokeAccessAction,
+} from "./actions";
 
 export const metadata = { title: "Клиентка" };
 const when = (iso: string | null | undefined) =>
@@ -54,6 +62,11 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
   const parsed = z.uuid().safeParse(id);
   const c = parsed.success ? await getClientDetail(supabase, parsed.data) : null;
   if (!c) notFound();
+  const [points, ledger] = await Promise.all([
+    getMemberPoints(supabase, c.profile.id),
+    listPointsLedger(supabase, c.profile.id, 20),
+  ]);
+  const progress = levelProgress(points.points);
   const p = c.profile;
   const weights = c.checkIns.map((x) => x.weight_kg).filter((w): w is number => w !== null);
   const manual = c.subscription?.provider === "manual";
@@ -166,6 +179,65 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
           )}
         </section>
       </div>
+
+      <section className="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-line">
+        <h2 className="font-semibold">Точки</h2>
+        <p className="text-sm">
+          <span className="font-extrabold tabular-nums">{points.points}</span> точки · ниво{" "}
+          <span className="font-extrabold">{points.level}</span>
+          {progress.nextLevel !== null && progress.toNext !== null ? (
+            <span className="text-ink-soft">
+              {" "}
+              · още {progress.toNext} до ниво {progress.nextLevel} ({progress.percent}%)
+            </span>
+          ) : (
+            <span className="text-ink-soft"> · най-високо ниво</span>
+          )}
+        </p>
+        <ActionForm
+          action={adjustPointsAction.bind(null, p.id)}
+          submitLabel="Запази корекцията"
+          submitVariant="secondary"
+          successMessage="Точките са коригирани ✓"
+          resetOnSuccess
+          className="space-y-3"
+        >
+          <h3 className="text-sm font-semibold">Корекция на точки</h3>
+          <div className="flex flex-wrap items-start gap-2">
+            <Field label="Точки" hint="Минус за отнемане">
+              <input
+                name="points"
+                type="number"
+                step={1}
+                min={-10000}
+                max={10000}
+                required
+                className={inputClass + " h-11 w-32"}
+              />
+            </Field>
+            <div className="min-w-[14rem] flex-1">
+              <Field label="Причина">
+                <input name="reason" required maxLength={200} className={inputClass + " h-11"} />
+              </Field>
+            </div>
+          </div>
+        </ActionForm>
+        {ledger.length === 0 ? (
+          <p className="text-sm text-ink-soft">Още няма точки.</p>
+        ) : (
+          <ul className="max-h-72 space-y-1 overflow-y-auto text-sm">
+            {ledger.map((e) => (
+              <li key={e.id}>
+                {when(e.createdAt)} · {POINTS_SOURCE_LABEL[e.source] ?? e.source} ·{" "}
+                <span className="font-semibold tabular-nums">
+                  {e.points > 0 ? `+${e.points}` : e.points}
+                </span>
+                {e.reason ? ` · ${e.reason}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <section className="space-y-2 rounded-2xl bg-white p-4 ring-1 ring-line">
         <h2 className="font-semibold">Тегло</h2>

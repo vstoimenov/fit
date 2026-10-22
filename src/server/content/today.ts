@@ -7,7 +7,7 @@ import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
 
 export const WORKOUT_COLUMNS =
-  "id, title, description, kind, level, duration_min, focus, thumbnail_url, publish_at, starter_order" as const;
+  "id, title, description, kind, level, duration_min, focus, thumbnail_url, publish_at, starter_order, min_member_level" as const;
 
 type WorkoutRow = Pick<
   Database["public"]["Tables"]["workouts"]["Row"],
@@ -21,6 +21,7 @@ type WorkoutRow = Pick<
   | "thumbnail_url"
   | "publish_at"
   | "starter_order"
+  | "min_member_level"
 >;
 
 export interface WorkoutSummary {
@@ -34,6 +35,8 @@ export interface WorkoutSummary {
   thumbnailUrl: string | null;
   publishAt: string | null;
   starterOrder: number | null;
+  /** Points level needed to watch it; null = every member. */
+  minMemberLevel: number | null;
 }
 
 export function toSummary(row: WorkoutRow): WorkoutSummary {
@@ -48,6 +51,7 @@ export function toSummary(row: WorkoutRow): WorkoutSummary {
     thumbnailUrl: row.thumbnail_url,
     publishAt: row.publish_at,
     starterOrder: row.starter_order,
+    minMemberLevel: row.min_member_level,
   };
 }
 

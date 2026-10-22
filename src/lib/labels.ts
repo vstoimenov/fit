@@ -63,3 +63,14 @@ export const LEVEL_LABEL: Record<Level, string> = {
 };
 
 export const FEELING_LABEL = { easy: "Лесно", right: "Точно", hard: "Трудно" } as const;
+
+/** What earned a points-ledger entry, as the admin reads it. */
+export const POINTS_SOURCE_LABEL: Record<string, string> = {
+  workout: "Тренировка",
+  checkin: "Отбелязване",
+  admin: "Корекция",
+  challenge: "Предизвикателство",
+  live: "На живо",
+  post: "Пост",
+  comment: "Коментар",
+};

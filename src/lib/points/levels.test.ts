@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { LEVEL_THRESHOLDS, REWARDS, levelForPoints, levelProgress } from "./levels";
+import {
+  LEVEL_THRESHOLDS,
+  REWARDS,
+  exclusiveLockLevel,
+  levelForPoints,
+  levelProgress,
+} from "./levels";
 
 describe("levelForPoints", () => {
   it.each([
@@ -88,5 +94,21 @@ describe("levelProgress", () => {
       8: "Лична консултация с Аксения",
       10: "6 месеца клуб безплатно",
     });
+  });
+});
+
+describe("exclusiveLockLevel", () => {
+  it("is null for a workout open to everyone", () => {
+    expect(exclusiveLockLevel(null, 1)).toBeNull();
+  });
+
+  it("returns the needed level while the member is below it", () => {
+    expect(exclusiveLockLevel(6, 1)).toBe(6);
+    expect(exclusiveLockLevel(6, 5)).toBe(6);
+  });
+
+  it("is null once she reaches the level", () => {
+    expect(exclusiveLockLevel(6, 6)).toBeNull();
+    expect(exclusiveLockLevel(6, 10)).toBeNull();
   });
 });

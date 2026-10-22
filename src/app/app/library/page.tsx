@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { WorkoutCard } from "@/components/workout/workout-card";
 import { FOCUS, FOCUS_LABEL, LEVEL_LABEL } from "@/lib/labels";
+import { exclusiveLockLevel } from "@/lib/points/levels";
 import {
   filterLibrary,
   parseLibraryFilter,
   type LibraryFilter,
 } from "@/lib/program/library-filter";
 import { requireUser } from "@/server/auth/require-user";
+import { getMemberPoints } from "@/server/content/points";
 import { getLibrary } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировки" };
@@ -76,9 +78,10 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const filter = parseLibraryFilter(await searchParams);
   const { supabase, user } = await requireUser();
-  const [{ level, workouts }, { data: hasAccess, error: accessError }] = await Promise.all([
+  const [{ level, workouts }, { data: hasAccess, error: accessError }, points] = await Promise.all([
     getLibrary(supabase, user.id),
     supabase.rpc("my_access"),
+    getMemberPoints(supabase, user.id),
   ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
   const shown = filterLibrary(workouts, filter);
@@ -110,7 +113,12 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {shown.map((w) => (
-            <WorkoutCard key={w.id} workout={w} locked={!hasAccess && w.kind !== "free"} />
+            <WorkoutCard
+              key={w.id}
+              workout={w}
+              locked={!hasAccess && w.kind !== "free"}
+              unlockLevel={exclusiveLockLevel(w.minMemberLevel, points.level)}
+            />
           ))}
         </div>
       )}
