@@ -34,7 +34,7 @@ the next live session and the latest community posts. Nothing auto-starts a work
 - Append-only ledger `points_ledger(id, user_id, source, ref, points, created_at)`, unique `(user_id, source, ref)`
   so every award is idempotent. Members read their own rows; admins read all; nobody writes from the client —
   awards come only from `security definer` triggers/functions.
-- Phase 1 sources: a completed workout **10** (`ref` = completion id), a progress check-in **5** at most once per ISO
+- Phase 1 sources: a completed workout **10**, at most once per day (`ref` = the Sofia date of `completed_at`, so extra workouts the same day earn nothing — anti-farming), a progress check-in **5** at most once per ISO
   week (`ref` = `YYYY-Www` in Europe/Sofia). Later phases: challenge day 5, live attendance 5, community post 3 /
   comment 1 with a combined community cap of 5 points per day. An admin adjustment source exists for corrections.
 - Deleting a completion or check-in does not claw points back (keeps the ledger append-only; cost: rare over-count).

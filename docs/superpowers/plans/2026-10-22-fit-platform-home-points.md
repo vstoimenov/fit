@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Repo `/Users/macbookpro/Downloads/cloude-c/fit-platform`, branch `home-points` (off `main`). Shell `export PATH="$HOME/.npm-global/bin:$PATH" DOCKER_CONFIG=/tmp/dockercfg`; local Supabase `*_fit-platform` only; `pnpm db:reset && pnpm db:types` after migrations; never edit applied migrations; no schema-wide statements (`all tables in schema …`).
-- Points exact values: workout completion **10** (`source='workout'`, `ref`=completion id); check-in **5** once per ISO week Europe/Sofia (`source='checkin'`, `ref`=`YYYY-Www`); admin adjustment (`source='admin'`, `ref`=a new uuid, points may be negative, reason required).
+- Points exact values: workout completion **10**, once per Sofia day (`source='workout'`, `ref`=`YYYY-MM-DD` of `completed_at` at Europe/Sofia); check-in **5** once per ISO week Europe/Sofia (`source='checkin'`, `ref`=`YYYY-Www`); admin adjustment (`source='admin'`, `ref`=a new uuid, points may be negative, reason required).
 - Level thresholds (total points ≥): 1:0 · 2:50 · 3:120 · 4:220 · 5:350 · 6:520 · 7:730 · 8:980 · 9:1270 · 10:1600.
 - Rewards copy: 4 „20% отстъпка от следващия абонамент“, 6 „Ексклузивни тренировки“, 8 „Лична консултация с Аксения“, 10 „6 месеца клуб безплатно“.
 - Members never insert/update/delete ledger rows (no grants, no policies for that); members select only their own rows; admins (`is_admin()`) select all.
