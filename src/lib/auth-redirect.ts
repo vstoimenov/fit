@@ -31,3 +31,13 @@ export function safeNext(next: string | null, fallback = "/app"): string {
     return fallback;
   }
 }
+
+const EMAIL_LINK_TYPES = ["magiclink", "recovery", "invite", "email"] as const;
+export type EmailLinkType = (typeof EMAIL_LINK_TYPES)[number];
+
+/** The one-time e-mail link types the callback may verify (`token_hash` links); anything else is refused. */
+export function emailLinkType(type: string | null): EmailLinkType | null {
+  return (EMAIL_LINK_TYPES as readonly string[]).includes(type ?? "")
+    ? (type as EmailLinkType)
+    : null;
+}

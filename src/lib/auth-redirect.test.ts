@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideAuthRedirect, safeNext } from "./auth-redirect";
+import { decideAuthRedirect, emailLinkType, safeNext } from "./auth-redirect";
 
 describe("decideAuthRedirect", () => {
   it("sends signed-out visitors of /app and /admin to login with a return path", () => {
@@ -57,5 +57,17 @@ describe("safeNext", () => {
 
   it("keeps query and hash on same-site paths", () => {
     expect(safeNext("/app/plan?week=2#top")).toBe("/app/plan?week=2#top");
+  });
+});
+
+describe("emailLinkType", () => {
+  it("accepts the one-time e-mail link types Supabase issues", () => {
+    for (const t of ["magiclink", "recovery", "invite", "email"]) expect(emailLinkType(t)).toBe(t);
+  });
+
+  it("rejects anything else", () => {
+    for (const t of [null, "", "signup", "sms", "phone_change", "MAGICLINK", "magiclink "]) {
+      expect(emailLinkType(t)).toBeNull();
+    }
   });
 });
