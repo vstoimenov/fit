@@ -28,26 +28,30 @@ interface GivenRow {
   given_at: string;
 }
 
-/** Pure part of `listRewardCandidates`: members at level 4+, highest level first, then most points. */
+/**
+ * Pure part of `listRewardCandidates`: members at level 4+ or with any reward already given (a
+ * given reward never disappears from the list, even after a later negative adjustment), highest
+ * level first, then most points. A reward is offered at or below her level, or when it was given.
+ */
 export function buildRewardCandidates(input: {
   totals: Map<string, number>;
   profiles: ProfileLite[];
   given: GivenRow[];
 }): RewardCandidate[] {
   const givenAt = new Map(input.given.map((g) => [`${g.user_id}:${g.level}`, g.given_at]));
+  const hasGiven = new Set(input.given.map((g) => g.user_id));
   const rows: RewardCandidate[] = [];
   for (const p of input.profiles) {
-    const points = input.totals.get(p.id);
-    if (points === undefined) continue;
+    const points = input.totals.get(p.id) ?? 0;
     const level = levelForPoints(points);
-    if (level < REWARD_LEVELS[0]) continue;
+    if (level < REWARD_LEVELS[0] && !hasGiven.has(p.id)) continue;
     rows.push({
       userId: p.id,
       name: p.name || p.email,
       email: p.email,
       level,
       points,
-      reached: REWARD_LEVELS.filter((l) => l <= level).map((l) => {
+      reached: REWARD_LEVELS.filter((l) => l <= level || givenAt.has(`${p.id}:${l}`)).map((l) => {
         const at = givenAt.get(`${p.id}:${l}`) ?? null;
         return { level: l, given: at !== null, givenAt: at };
       }),
@@ -71,7 +75,8 @@ async function ledgerTotals(db: TypedClient): Promise<Map<string, number>> {
     const { data, error } = await query;
     if (error) throw new Error(`load points ledger failed: ${error.message}`);
     for (const row of data) totals.set(row.user_id, (totals.get(row.user_id) ?? 0) + row.points);
-    if (data.length < PAGE) return totals;
+    // Stop on an empty page, not a short one: a lower server row cap must not truncate silently.
+    if (data.length === 0) return totals;
     after = data[data.length - 1].id;
   }
   throw new Error("load points ledger failed: too many rows to scan");
@@ -83,31 +88,41 @@ function chunks<T>(items: T[], size: number): T[][] {
   return out;
 }
 
-/** Members who reached level 4 or more, with which of the 4/8/10 rewards were handed out. */
+/** Every reward handed out so far (a small table), paged the same defensive way. */
+async function allGiven(db: TypedClient): Promise<GivenRow[]> {
+  const rows: GivenRow[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await db
+      .from("rewards_given")
+      .select("user_id, level, given_at")
+      .order("user_id")
+      .order("level")
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    if (error) throw new Error(`load given rewards failed: ${error.message}`);
+    if (data.length === 0) return rows;
+    rows.push(...data);
+  }
+  throw new Error("load given rewards failed: too many rows to scan");
+}
+
+/**
+ * Members who reached level 4 or more, or were already given a reward, with which of the 4/8/10
+ * rewards were handed out.
+ */
 export async function listRewardCandidates(db: TypedClient): Promise<RewardCandidate[]> {
-  const totals = await ledgerTotals(db);
-  const ids = [...totals.entries()]
-    .filter(([, points]) => levelForPoints(points) >= REWARD_LEVELS[0])
-    .map(([id]) => id);
-  if (ids.length === 0) return [];
-  const groups = chunks(ids, IN_CHUNK);
-  const [profileResults, givenResults] = await Promise.all([
-    Promise.all(groups.map((g) => db.from("profiles").select("id, name, email").in("id", g))),
-    Promise.all(
-      groups.map((g) =>
-        db.from("rewards_given").select("user_id, level, given_at").in("user_id", g),
-      ),
+  const [totals, given] = await Promise.all([ledgerTotals(db), allGiven(db)]);
+  const ids = new Set<string>(given.map((g) => g.user_id));
+  for (const [id, points] of totals) if (levelForPoints(points) >= REWARD_LEVELS[0]) ids.add(id);
+  if (ids.size === 0) return [];
+  const results = await Promise.all(
+    chunks([...ids], IN_CHUNK).map((g) =>
+      db.from("profiles").select("id, name, email").in("id", g),
     ),
-  ]);
+  );
   const profiles: ProfileLite[] = [];
-  for (const res of profileResults) {
+  for (const res of results) {
     if (res.error) throw new Error(`load reward members failed: ${res.error.message}`);
     profiles.push(...res.data);
-  }
-  const given: GivenRow[] = [];
-  for (const res of givenResults) {
-    if (res.error) throw new Error(`load given rewards failed: ${res.error.message}`);
-    given.push(...res.data);
   }
   return buildRewardCandidates({ totals, profiles, given });
 }

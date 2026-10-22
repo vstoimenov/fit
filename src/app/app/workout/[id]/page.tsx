@@ -41,10 +41,9 @@ async function WorkoutScreen({
   const [{ id }, { first }] = await Promise.all([params, searchParams]);
   const { user, supabase } = await requireUser();
   // The name is only needed for the celebration; load it alongside the workout.
-  const [result, { data: profile }, points] = await Promise.all([
+  const [result, { data: profile }] = await Promise.all([
     getWorkoutForPlayer(supabase, id),
     supabase.from("profiles").select("name").eq("id", user.id).maybeSingle(),
-    getMemberPoints(supabase, user.id),
   ]);
   if (!result) notFound();
 
@@ -65,6 +64,7 @@ async function WorkoutScreen({
 
   if (result.state === "locked") {
     const { workout } = result;
+    const points = await getMemberPoints(supabase, user.id);
     // The server withholds the video below the exclusive level whatever the subscription, so that
     // is the reason to show first: subscribing would not open it.
     const unlockLevel = exclusiveLockLevel(workout.minMemberLevel, points.level);

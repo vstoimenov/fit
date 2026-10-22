@@ -76,8 +76,8 @@ export async function adjustPointsAction(
   form: FormData,
 ): Promise<ActionResult<null>> {
   try {
-    const id = validId(userId);
     const { supabase } = await requireAdmin();
+    const id = validId(userId);
     await adjustPoints(supabase, id, formInt(form, "points"), formString(form, "reason"));
     revalidatePath(`/admin/clients/${id}`);
     revalidatePath("/admin/rewards");

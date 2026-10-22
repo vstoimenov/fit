@@ -103,6 +103,32 @@ describe("setRewardGiven", () => {
   });
 });
 
+describe("a given reward never disappears", () => {
+  it("keeps the level-8 chip of a level-5 member and lets it be taken back", async () => {
+    const user = await member("rw-drop", 500);
+    await setRewardGiven(boss, user.id, 8, true);
+    let row = (await listRewardCandidates(boss)).find((r) => r.userId === user.id);
+    expect(row?.level).toBe(5);
+    expect(row?.reached.map((r) => [r.level, r.given])).toEqual([
+      [4, false],
+      [8, true],
+    ]);
+    await setRewardGiven(boss, user.id, 8, false);
+    row = (await listRewardCandidates(boss)).find((r) => r.userId === user.id);
+    expect(row?.reached.map((r) => r.level)).toEqual([4]);
+  });
+
+  it("still lists a member with a given level-4 reward and no points", async () => {
+    const user = await member("rw-zero", 0);
+    await setRewardGiven(boss, user.id, 4, true);
+    const row = (await listRewardCandidates(boss)).find((r) => r.userId === user.id);
+    expect(row).toMatchObject({ level: 1, points: 0 });
+    expect(row?.reached).toEqual([{ level: 4, given: true, givenAt: expect.any(String) }]);
+    await setRewardGiven(boss, user.id, 4, false);
+    expect((await listRewardCandidates(boss)).find((r) => r.userId === user.id)).toBeUndefined();
+  });
+});
+
 describe("listRewardCandidates for a member", () => {
   it("never shows other members: only her own row, and only when she is at level 4+", async () => {
     const other = await member("rw-other", 300);

@@ -17,11 +17,11 @@ export async function setRewardGivenAction(
   given: boolean,
 ): Promise<ActionResult<null>> {
   try {
+    const { supabase } = await requireAdmin();
     const id = idSchema.safeParse(userId);
     if (!id.success) throw new AppError("INVALID", "Невалидна клиентка.");
     const lvl = levelSchema.safeParse(level);
     if (!lvl.success) throw new AppError("INVALID", "Тази награда не се дава ръчно.");
-    const { supabase } = await requireAdmin();
     await setRewardGiven(supabase, id.data, lvl.data, given);
     revalidatePath("/admin/rewards");
     return actionOk(null);
