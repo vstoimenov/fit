@@ -65,7 +65,7 @@ export async function getCompletionStats(
     db.from("profiles").select("level, timezone").eq("id", userId).single(),
     db
       .from("workouts")
-      .select("kind, level, publish_at")
+      .select("kind, level, publish_at, min_member_level")
       .not("publish_at", "is", null)
       .lte("publish_at", now.toISOString()),
     db.from("workout_completions").select("local_date").eq("user_id", userId),
@@ -78,7 +78,12 @@ export async function getCompletionStats(
   const { level, timezone } = profileRes.data;
   return completionStats({
     slotDates: regularSlotDates(
-      workoutsRes.data.map((w) => ({ kind: w.kind, level: w.level, publishAt: w.publish_at })),
+      workoutsRes.data.map((w) => ({
+        kind: w.kind,
+        level: w.level,
+        publishAt: w.publish_at,
+        minMemberLevel: w.min_member_level,
+      })),
       level,
       timezone,
     ),

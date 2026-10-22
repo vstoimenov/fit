@@ -143,6 +143,33 @@ describe("profile services", () => {
     ]);
   });
 
+  it("exports her points ledger and the rewards handed out to her, and nobody else's", async () => {
+    const { db: boss } = await createAdminUser(admin, "export-pts-boss");
+    const user = await createUser(admin, "export-pts");
+    const other = await createUser(admin, "export-pts-other");
+    await boss.rpc("admin_adjust_points", { p_user_id: user.id, p_points: 40, p_reason: "Бонус" });
+    await boss.rpc("admin_adjust_points", { p_user_id: other.id, p_points: 7, p_reason: "Чужда" });
+    await boss.from("rewards_given").insert([
+      { user_id: user.id, level: 4, note: "Пратено" },
+      { user_id: other.id, level: 4 },
+    ]);
+    const data = await exportMyData(await signedInClient(user), user.id, admin);
+    const ledger = data.points_ledger as Record<string, unknown>[];
+    expect(ledger).toHaveLength(1);
+    expect(ledger[0]).toMatchObject({ source: "admin", points: 40, reason: "Бонус" });
+    expect(Object.keys(ledger[0]).sort()).toEqual([
+      "created_at",
+      "points",
+      "reason",
+      "ref",
+      "source",
+    ]);
+    const rewards = data.rewards_given as Record<string, unknown>[];
+    expect(rewards).toHaveLength(1);
+    expect(rewards[0]).toMatchObject({ level: 4, note: "Пратено" });
+    expect(Object.keys(rewards[0]).sort()).toEqual(["given_at", "level", "note"]);
+  });
+
   it("exports the notes written about her (kind, text, time) but nobody else's and no author ids", async () => {
     const { db: boss } = await createAdminUser(admin, "export-boss");
     const user = await createUser(admin, "export-notes");

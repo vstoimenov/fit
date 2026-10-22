@@ -71,3 +71,33 @@ describe("workoutInputSchema minMemberLevel", () => {
     expect(workoutInputSchema.safeParse({ ...base, minMemberLevel: value }).success).toBe(false);
   });
 });
+
+describe("workoutInputSchema exclusive workouts are regular only", () => {
+  const base = {
+    title: "Стартова",
+    description: "",
+    kind: "starter",
+    level: null,
+    durationMin: 20,
+    focus: [],
+    videoUrl: "https://youtu.be/ml6cT4AZdqI",
+    publishAt: null,
+    notify: false,
+  };
+
+  it.each(["free", "starter"])("rejects a min level on a %s workout", (kind) => {
+    const res = workoutInputSchema.safeParse({ ...base, kind, minMemberLevel: 3 });
+    expect(res.success).toBe(false);
+    expect(res.error?.issues.map((i) => i.message)).toContain(
+      "„Само от ниво“ е възможно само за обикновени тренировки.",
+    );
+  });
+
+  it("accepts it on a regular workout and no level on the others", () => {
+    expect(
+      workoutInputSchema.safeParse({ ...base, kind: "regular", level: "pro", minMemberLevel: 3 })
+        .success,
+    ).toBe(true);
+    expect(workoutInputSchema.safeParse({ ...base, minMemberLevel: null }).success).toBe(true);
+  });
+});

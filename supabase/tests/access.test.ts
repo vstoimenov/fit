@@ -171,6 +171,7 @@ describe("content access", () => {
       .select("publish_at")
       .eq("kind", "regular")
       .eq("level", "beginner")
+      .is("min_member_level", null)
       .gt("publish_at", new Date().toISOString())
       .order("publish_at", { ascending: true })
       .limit(1)

@@ -165,6 +165,17 @@ describe("adjustPoints", () => {
     expect((await rejection(adjustPoints(boss, user.id, 1.5, "дробно"))).code).toBe("INVALID");
   });
 
+  it("refuses a correction that would leave a negative total, with a clear message", async () => {
+    const user = await member("rw-neg", 0);
+    await adjustPoints(boss, user.id, 20, "Бонус");
+    const err = await rejection(adjustPoints(boss, user.id, -21, "Прекалено"));
+    expect(err.code).toBe("INVALID");
+    expect(err.message).toBe("Точките не могат да станат отрицателни.");
+    await adjustPoints(boss, user.id, -20, "Точно нула");
+    const { data } = await boss.rpc("member_points", { uid: user.id });
+    expect(data?.[0]).toEqual({ points: 0, level: 1 });
+  });
+
   it("is refused for a member and for an unknown member", async () => {
     const user = await member("rw-forb", 0);
     const db = await signedInClient(user);

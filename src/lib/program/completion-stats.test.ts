@@ -45,6 +45,28 @@ describe("regularSlotDates", () => {
     // 21:30Z on the 12th is already the 13th in Sofia (UTC+3 in October).
     expect(regularSlotDates(workouts, "beginner", "Europe/Sofia")).toEqual(["2026-10-13"]);
   });
+
+  it("does not count exclusive (bonus library) workouts as slots", () => {
+    const workouts = [
+      { kind: "regular" as const, level: "beginner" as const, publishAt: "2026-10-13T08:00:00Z" },
+      {
+        kind: "regular" as const,
+        level: "beginner" as const,
+        publishAt: "2026-10-14T08:00:00Z",
+        minMemberLevel: 4,
+      },
+      {
+        kind: "regular" as const,
+        level: "beginner" as const,
+        publishAt: "2026-10-15T08:00:00Z",
+        minMemberLevel: null,
+      },
+    ];
+    expect(regularSlotDates(workouts, "beginner", "Europe/Sofia")).toEqual([
+      "2026-10-13",
+      "2026-10-15",
+    ]);
+  });
 });
 
 describe("seriesText", () => {

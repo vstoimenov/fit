@@ -200,7 +200,14 @@ export async function adjustPoints(
     p_reason: parsed.data.reason,
   });
   if (error?.code === "42501") throw new AppError("FORBIDDEN", FORBIDDEN);
-  if (error?.code === "22023") throw new AppError("INVALID", "Невалидна корекция.");
+  if (error?.code === "22023") {
+    throw new AppError(
+      "INVALID",
+      /negative/.test(error.message)
+        ? "Точките не могат да станат отрицателни."
+        : "Невалидна корекция.",
+    );
+  }
   if (error?.code === "P0002") throw new AppError("NOT_FOUND", "Клиентката не е намерена.");
   if (error) throw new Error(`adjust points failed: ${error.message}`);
 }

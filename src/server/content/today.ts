@@ -107,7 +107,9 @@ export async function getTodayView(
   const workouts = workoutsRes.data.map(toSummary);
   const completions = completionsRes.data;
   const completedIds = new Set(completions.map((c) => c.workout_id));
-  const lite: WorkoutLite[] = workouts.map(({ id, kind, level, starterOrder, publishAt }) => ({
+  // Exclusive workouts are bonus library content: not today's pick, not a week slot.
+  const plan = workouts.filter((w) => w.minMemberLevel === null);
+  const lite: WorkoutLite[] = plan.map(({ id, kind, level, starterOrder, publishAt }) => ({
     id,
     kind,
     level,
@@ -125,7 +127,7 @@ export async function getTodayView(
   });
 
   const today = toLocalDate(now, profile.timezone);
-  const slotDates = regularSlotDates(workouts, profile.level, profile.timezone);
+  const slotDates = regularSlotDates(plan, profile.level, profile.timezone);
   const completionDates = completions.map((c) => c.local_date);
   const stats = completionStats({ slotDates, completionDates, today });
 

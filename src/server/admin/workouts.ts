@@ -36,6 +36,10 @@ export const workoutInputSchema = z
     path: ["level"],
     message: "Обикновената тренировка има ниво; безплатната и стартовите — не.",
   })
+  .refine((w) => w.minMemberLevel === null || w.kind === "regular", {
+    path: ["minMemberLevel"],
+    message: "„Само от ниво“ е възможно само за обикновени тренировки.",
+  })
   .refine((w) => parseVideoUrl(w.videoUrl) !== null, {
     path: ["videoUrl"],
     message: "Не разпознавам линка (YouTube, Vimeo или Bunny).",

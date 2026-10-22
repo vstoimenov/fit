@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { beforeAll, describe, expect, it } from "vitest";
+import { toLocalDate } from "@/lib/program/dates";
 import { getTodayView } from "@/server/content/today";
 import { getLibrary, listPublishedWorkouts } from "@/server/content/workouts";
 import {
@@ -53,6 +54,56 @@ describe("getTodayView", () => {
     const view = await getTodayView(db, user.id);
     expect(view.doneTotal).toBe(1);
     expect(view.pick).toEqual({ kind: "locked" });
+  });
+});
+
+describe("exclusive workouts are bonus library content, not the day's plan", () => {
+  it("is not today's pick, not a week slot and not the next drop for a level-1 member", async () => {
+    const user = await createUser(admin, "today-exclusive");
+    await grantAccess(admin, user.id);
+    await admin
+      .from("profiles")
+      .update({ starter_week_done_at: new Date().toISOString() })
+      .eq("id", user.id);
+    const db = await signedInClient(user);
+    const before = await getTodayView(db, user.id);
+
+    // A published day this week that has no slot yet, so a counted slot would show in the strip.
+    const free = before.week.filter(
+      (d) => !d.slot && d.date <= toLocalDate(new Date(), before.timezone),
+    );
+    const when = free.length
+      ? free[0].isToday
+        ? new Date(Date.now() - 60_000)
+        : new Date(`${free[0].date}T09:00:00Z`)
+      : new Date(Date.now() - 60_000);
+    const exclusiveId = await createWorkout(admin, {
+      title: "Бонус ниво 4",
+      kind: "regular",
+      level: before.level,
+      duration_min: 20,
+      publish_at: when.toISOString(),
+      min_member_level: 4,
+    });
+    const soon = new Date(Date.now() + 30_000).toISOString();
+    await createWorkout(admin, {
+      title: "Бонус скоро",
+      kind: "regular",
+      level: before.level,
+      duration_min: 20,
+      publish_at: soon,
+      min_member_level: 4,
+    });
+
+    const after = await getTodayView(db, user.id);
+    expect(after.pick).toEqual(before.pick);
+    expect("workoutId" in after.pick && after.pick.workoutId).not.toBe(exclusiveId);
+    expect(after.week.map((d) => d.slot)).toEqual(before.week.map((d) => d.slot));
+    expect(after.weekTarget).toBe(before.weekTarget);
+    expect(after.nextDropAt).toBe(before.nextDropAt);
+    expect(after.nextDropAt === null ? null : Date.parse(after.nextDropAt)).not.toBe(
+      Date.parse(soon),
+    );
   });
 });
 

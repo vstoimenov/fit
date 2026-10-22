@@ -59,34 +59,50 @@ export async function exportMyData(
   userId: string,
   admin: TypedClient,
 ): Promise<Record<string, unknown>> {
-  const [profile, completions, checkIns, subscription, visits, notes] = await Promise.all([
-    db.from("profiles").select("*").eq("id", userId).single(),
-    db
-      .from("workout_completions")
-      .select("workout_id, completed_at, local_date, feeling")
-      .eq("user_id", userId),
-    db
-      .from("check_ins")
-      .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
-      .eq("user_id", userId),
-    db
-      .from("subscriptions")
-      .select("status, current_period_end, provider")
-      .eq("user_id", userId)
-      .maybeSingle(),
-    admin
-      .from("visits")
-      .select("path, referrer, utm, device, created_at")
-      .eq("user_id", userId)
-      .order("created_at"),
-    admin
-      .from("client_notes")
-      .select("kind, body, created_at")
-      .eq("user_id", userId)
-      .order("created_at"),
-  ]);
+  const [profile, completions, checkIns, subscription, visits, notes, ledger, rewards] =
+    await Promise.all([
+      db.from("profiles").select("*").eq("id", userId).single(),
+      db
+        .from("workout_completions")
+        .select("workout_id, completed_at, local_date, feeling")
+        .eq("user_id", userId),
+      db
+        .from("check_ins")
+        .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
+        .eq("user_id", userId),
+      db
+        .from("subscriptions")
+        .select("status, current_period_end, provider")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      admin
+        .from("visits")
+        .select("path, referrer, utm, device, created_at")
+        .eq("user_id", userId)
+        .order("created_at"),
+      admin
+        .from("client_notes")
+        .select("kind, body, created_at")
+        .eq("user_id", userId)
+        .order("created_at"),
+      db
+        .from("points_ledger")
+        .select("source, ref, points, reason, created_at")
+        .eq("user_id", userId)
+        .order("created_at"),
+      db.from("rewards_given").select("level, given_at, note").eq("user_id", userId).order("level"),
+    ]);
   // A silently partial export would misstate what is stored about the user.
-  const failed = [profile, completions, checkIns, subscription, visits, notes].find((r) => r.error);
+  const failed = [
+    profile,
+    completions,
+    checkIns,
+    subscription,
+    visits,
+    notes,
+    ledger,
+    rewards,
+  ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
     exported_at: new Date().toISOString(),
@@ -96,6 +112,8 @@ export async function exportMyData(
     subscription: subscription.data,
     visits: visits.data ?? [],
     client_notes: notes.data ?? [],
+    points_ledger: ledger.data ?? [],
+    rewards_given: rewards.data ?? [],
   };
 }
 

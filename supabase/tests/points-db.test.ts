@@ -258,6 +258,21 @@ describe("admin_adjust_points", () => {
     });
     expect(row!.created_by).not.toBeNull();
 
+    // A correction cannot take the total below zero.
+    const total = (await boss.rpc("member_points", { uid: a.user.id }).single()).data!.points;
+    const tooLow = await boss.rpc("admin_adjust_points", {
+      p_user_id: a.user.id,
+      p_points: -(total + 1),
+      p_reason: "too low",
+    });
+    expect(tooLow.error?.code).toBe("22023");
+    const exact = await boss.rpc("admin_adjust_points", {
+      p_user_id: a.user.id,
+      p_points: -total,
+      p_reason: "to zero",
+    });
+    expect(exact.error).toBeNull();
+
     // The adjustment is audited.
     const audit = await admin.from("audit_log").select("action").eq("target_id", ok.data!);
     expect(audit.data).toEqual([{ action: "insert" }]);
@@ -351,6 +366,43 @@ describe("exclusive workouts", () => {
       min_member_level: 1,
     });
     expect(error?.code).toBe("23514");
+  });
+
+  it("allows a min level only on regular workouts", async () => {
+    for (const kind of ["starter", "free"] as const) {
+      const { error } = await admin.from("workouts").insert({
+        title: `Ексклузивна ${kind}`,
+        kind,
+        level: null,
+        duration_min: 20,
+        min_member_level: 3,
+      });
+      expect(error?.code).toBe("23514");
+    }
+    const ok = await admin.from("workouts").insert({
+      title: "Обикновена с ниво",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      min_member_level: 3,
+    });
+    expect(ok.error).toBeNull();
+  });
+
+  it("next_drop_at ignores exclusive workouts", async () => {
+    const a = await member("pts-exclusive-drop");
+    const soon = new Date(Date.now() + 20_000).toISOString();
+    await createWorkout(admin, {
+      title: "Бонус скоро",
+      kind: "regular",
+      level: "beginner",
+      duration_min: 20,
+      publish_at: soon,
+      min_member_level: 5,
+    });
+    const { data, error } = await a.db.rpc("next_drop_at", { p_level: "beginner" });
+    expect(error).toBeNull();
+    expect(data === null ? null : Date.parse(data)).not.toBe(Date.parse(soon));
   });
 });
 

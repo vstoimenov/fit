@@ -125,6 +125,13 @@ begin
   if not exists (select 1 from public.profiles where id = p_user_id) then
     raise exception 'member not found' using errcode = 'P0002';
   end if;
+  -- A correction cannot take the member's total below zero (serialised per member).
+  perform pg_advisory_xact_lock(hashtextextended(p_user_id::text, 0));
+  if p_points < 0 and (
+    select coalesce(sum(l.points), 0) from public.points_ledger l where l.user_id = p_user_id
+  ) + p_points < 0 then
+    raise exception 'total points cannot become negative' using errcode = '22023';
+  end if;
   insert into public.points_ledger (user_id, source, ref, points, reason, created_by)
   values (p_user_id, 'admin', gen_random_uuid()::text, p_points, v_reason, (select auth.uid()))
   returning id into v_id;
@@ -173,8 +180,11 @@ revoke all on public.rewards_given from anon, authenticated;
 grant select, insert, update, delete on public.rewards_given to authenticated;
 
 -- Exclusive workouts: below min_member_level the workout is listed but its video is not served.
+-- They are bonus library content only: a regular workout, never part of the day's plan (see the
+-- Today pick and next_drop_at, which both skip them).
 alter table public.workouts
-  add column min_member_level smallint check (min_member_level between 2 and 10);
+  add column min_member_level smallint check (min_member_level between 2 and 10),
+  add constraint workouts_min_member_level_regular check (min_member_level is null or kind = 'regular');
 
 -- Same as 20261014100100_content.sql, plus the member-level gate (admins unaffected).
 create or replace function public.can_watch(p_workout_id uuid) returns boolean
@@ -198,3 +208,13 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke execute on function public.can_watch(uuid) from public, anon;
 grant execute on function public.can_watch(uuid) to authenticated;
+
+-- Same as 20261014100100_content.sql, minus exclusive workouts: the countdown on Начало is for the
+-- day's plan, and an exclusive workout is bonus library content.
+create or replace function public.next_drop_at(p_level public.workout_level) returns timestamptz
+language sql stable security definer set search_path = '' as $$
+  select min(publish_at) from public.workouts
+  where kind = 'regular' and level = p_level and publish_at > now() and min_member_level is null;
+$$;
+revoke execute on function public.next_drop_at(public.workout_level) from public, anon;
+grant execute on function public.next_drop_at(public.workout_level) to authenticated;

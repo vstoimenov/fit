@@ -115,6 +115,30 @@ describe("markWorkoutComplete", () => {
 });
 
 describe("getCompletionStats", () => {
+  it("does not count an exclusive workout as a week slot", async () => {
+    const user = await createUser(admin, "stats-exclusive");
+    const db = await signedInClient(user);
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("level")
+      .eq("id", user.id)
+      .single();
+    const before = await getCompletionStats(db, user.id);
+    const targets = new Set<number>();
+    for (const n of [1, 2, 3]) {
+      await createWorkout(admin, {
+        title: `Бонус слот ${n}`,
+        kind: "regular",
+        level: profile!.level,
+        duration_min: 20,
+        publish_at: new Date(Date.now() - n * 60_000).toISOString(),
+        min_member_level: 4,
+      });
+      targets.add((await getCompletionStats(db, user.id)).weekTarget);
+    }
+    expect([...targets]).toEqual([before.weekTarget]);
+  });
+
   it("counts the just-saved completion in the week and the streak", async () => {
     const user = await createUser(admin, "stats");
     const db = await signedInClient(user);

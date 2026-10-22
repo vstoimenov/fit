@@ -20,7 +20,10 @@ export function pickToday(input: {
   workouts: WorkoutLite[];
   completedIds: ReadonlySet<string>;
 }): TodayPick {
-  const published = input.workouts.filter((w) => isPublished(w, input.now));
+  // Exclusive workouts are bonus library content, never the day's plan.
+  const published = input.workouts.filter(
+    (w) => isPublished(w, input.now) && (w.minMemberLevel ?? null) === null,
+  );
 
   if (!input.hasAccess) {
     const free = published.find((w) => w.kind === "free");

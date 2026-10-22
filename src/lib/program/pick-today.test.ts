@@ -31,6 +31,20 @@ const base = {
 };
 
 describe("pickToday", () => {
+  it("never leads with an exclusive (bonus library) workout, even when it is the newest", () => {
+    const workouts = [
+      ...catalog,
+      w({ id: "bonus", publishAt: "2026-10-14T08:00:00Z", minMemberLevel: 4 }),
+    ];
+    expect(pickToday({ ...base, workouts, completedIds: new Set() })).toEqual({
+      kind: "regular",
+      workoutId: "new",
+    });
+    expect(pickToday({ ...base, workouts, completedIds: new Set(["new", "old"]) })).toEqual({
+      kind: "rest",
+    });
+  });
+
   it("offers the free workout to a user without access", () => {
     expect(pickToday({ ...base, hasAccess: false, completedIds: new Set() })).toEqual({
       kind: "free",

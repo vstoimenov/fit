@@ -5,14 +5,28 @@ import type { Level, WorkoutKind } from "./types";
 /** Used when no workout is scheduled in the current week. */
 export const DEFAULT_WEEK_TARGET = 5;
 
-/** Local dates on which a regular workout of `level` was published (the member's „слотове“). */
+/**
+ * Local dates on which a regular workout of `level` was published (the member's „слотове“).
+ * Exclusive workouts (`minMemberLevel` set) are bonus library content and never a slot.
+ */
 export function regularSlotDates(
-  workouts: Array<{ kind: WorkoutKind; level: Level | null; publishAt: string | null }>,
+  workouts: Array<{
+    kind: WorkoutKind;
+    level: Level | null;
+    publishAt: string | null;
+    minMemberLevel?: number | null;
+  }>,
   level: Level,
   timeZone: string,
 ): string[] {
   return workouts
-    .filter((w) => w.kind === "regular" && w.level === level && w.publishAt)
+    .filter(
+      (w) =>
+        w.kind === "regular" &&
+        w.level === level &&
+        w.publishAt &&
+        (w.minMemberLevel ?? null) === null,
+    )
     .map((w) => toLocalDate(w.publishAt!, timeZone));
 }
 
