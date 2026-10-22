@@ -1,3 +1,4 @@
+import { ChartLine, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -59,6 +60,15 @@ async function Profile() {
           {profile?.email} · {profile ? LEVEL_LABEL[profile.level] : ""}
         </p>
       </header>
+
+      <Link
+        href="/app/progress"
+        className="flex min-h-14 items-center gap-3 rounded-2xl p-4 ring-[1.5px] ring-inset ring-ink active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        <ChartLine size={24} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+        <span className="min-w-0 flex-1 font-extrabold">Прогрес</span>
+        <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+      </Link>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
         {profile && (

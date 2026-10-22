@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
+import type { CompletionPoints } from "@/lib/points/copy";
 import { requireUser } from "@/server/auth/require-user";
 import {
   getCompletionStats,
@@ -10,17 +11,39 @@ import {
   setCompletionFeeling,
   type CompletionStats,
 } from "@/server/content/completion";
+import { getMemberPoints, type MemberPoints } from "@/server/content/points";
 
-export async function completeWorkout(
-  workoutId: string,
-): Promise<ActionResult<{ completionId: string; stats: CompletionStats | null }>> {
+/** Presentation only: a failed points read must never fail (or hide) a saved completion. */
+async function readPoints(
+  supabase: Parameters<typeof getMemberPoints>[0],
+  userId: string,
+  when: "before" | "after",
+): Promise<MemberPoints | null> {
+  try {
+    return await getMemberPoints(supabase, userId);
+  } catch (error) {
+    console.error(
+      `points read ${when} completion failed`,
+      { userId },
+      error instanceof Error ? error.message : error,
+    );
+    return null;
+  }
+}
+
+export async function completeWorkout(workoutId: string): Promise<
+  ActionResult<{
+    completionId: string;
+    stats: CompletionStats | null;
+    points: CompletionPoints | null;
+  }>
+> {
   try {
     const { user, supabase } = await requireUser();
-    const { completionId } = await markWorkoutComplete(
-      supabase,
-      user.id,
-      z.uuid().parse(workoutId),
-    );
+    const id = z.uuid().parse(workoutId);
+    // The award is made by a database trigger, so "gained" is the difference around the completion.
+    const pointsBefore = await readPoints(supabase, user.id, "before");
+    const { completionId } = await markWorkoutComplete(supabase, user.id, id);
     revalidatePath("/app");
     // Presentation only: the completion is already saved, so a failed stats read must not fail it.
     let stats: CompletionStats | null = null;
@@ -33,7 +56,17 @@ export async function completeWorkout(
         error instanceof Error ? error.message : error,
       );
     }
-    return actionOk({ completionId, stats });
+    const pointsAfter = pointsBefore ? await readPoints(supabase, user.id, "after") : null;
+    const points =
+      pointsBefore && pointsAfter
+        ? {
+            total: pointsAfter.points,
+            level: pointsAfter.level,
+            gained: pointsAfter.points - pointsBefore.points,
+            levelUp: pointsAfter.level > pointsBefore.level,
+          }
+        : null;
+    return actionOk({ completionId, stats, points });
   } catch (error) {
     return actionFail(error);
   }

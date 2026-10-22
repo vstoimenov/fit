@@ -15,6 +15,7 @@ const MAX_LEVEL = LEVEL_THRESHOLDS.length;
 
 /** Level (1–10) for a points total. Zero, negative and non-finite totals are level 1. */
 export function levelForPoints(points: number): number {
+  if (!Number.isFinite(points)) return 1;
   let level = 1;
   for (let i = 1; i < MAX_LEVEL; i++) {
     if (points >= LEVEL_THRESHOLDS[i]) level = i + 1;
@@ -33,7 +34,9 @@ export interface LevelProgress {
   nextReward: string | null;
 }
 
-export function levelProgress(points: number): LevelProgress {
+export function levelProgress(rawPoints: number): LevelProgress {
+  // NaN and ±Infinity can't be placed in a band: they count as no points at all.
+  const points = Number.isFinite(rawPoints) ? rawPoints : 0;
   const level = levelForPoints(points);
   if (level >= MAX_LEVEL) {
     return { level, points, nextLevel: null, toNext: null, percent: 100, nextReward: null };

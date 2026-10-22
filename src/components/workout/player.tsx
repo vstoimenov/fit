@@ -7,6 +7,7 @@ import { completeWorkout, rateWorkout } from "@/app/app/workout/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { LEVEL_LABEL, type FEELING_LABEL } from "@/lib/labels";
+import type { CompletionPoints } from "@/lib/points/copy";
 import type { CompletionStats } from "@/server/content/completion";
 import type { WorkoutSummary } from "@/server/content/today";
 import { AfterWorkout } from "./after-workout";
@@ -14,6 +15,7 @@ import { AfterWorkout } from "./after-workout";
 interface Completed {
   completionId: string;
   stats: CompletionStats | null;
+  points: CompletionPoints | null;
 }
 
 /**
@@ -86,6 +88,7 @@ export function Player({
         name={name}
         workoutTitle={workout.title}
         stats={completed.stats}
+        points={completed.points}
         first={first}
         completionId={completed.completionId}
         onRate={(feeling) => rate(completed.completionId, feeling)}

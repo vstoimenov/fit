@@ -8,6 +8,7 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { FEELING_LABEL } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
+import { afterWorkoutLines, type CompletionPoints } from "@/lib/points/copy";
 import { shareText, streakPhrase, toShareCard } from "@/lib/share/share-card";
 import type { CompletionStats } from "@/server/content/completion";
 import { ShareButton } from "./share-button";
@@ -15,13 +16,14 @@ import { ShareButton } from "./share-button";
 type Feeling = keyof typeof FEELING_LABEL;
 
 /**
- * Shown by the player once „Завърших" is saved: celebration, streak and week progress,
- * „Как беше?" rating, then the way out (Днес, or the plans after the free first workout).
+ * Shown by the player once „Завърших" is saved: celebration, streak and week progress, points,
+ * „Как беше?" rating, then the way out (Начало, or the plans after the free first workout).
  */
 export function AfterWorkout({
   name,
   workoutTitle,
   stats,
+  points,
   first,
   onRate,
   completionId,
@@ -31,6 +33,8 @@ export function AfterWorkout({
   workoutTitle: string;
   /** Null when the numbers could not be read; the line is then hidden. */
   stats: CompletionStats | null;
+  /** Null when the points could not be read; the lines are then hidden. */
+  points: CompletionPoints | null;
   first: boolean;
   /** Fire-and-forget: a lost rating must not trap her on this screen. */
   onRate: (feeling: Feeling) => void;
@@ -52,6 +56,8 @@ export function AfterWorkout({
         .filter(Boolean)
         .join(" · ")
     : null;
+
+  const pointsLines = afterWorkoutLines(points);
 
   // Title and numbers only (see toShareCard); without stats the text is just the title.
   const text = stats
@@ -77,6 +83,18 @@ export function AfterWorkout({
           {name ? `Браво, ${name}!` : "Браво!"}
         </h1>
         {statsLine && <p className="font-semibold text-ink-soft">{statsLine}</p>}
+        {pointsLines.length > 0 && (
+          <div role="status" className="space-y-1">
+            {pointsLines.map((line, i) => (
+              <p
+                key={line}
+                className={i === 0 ? "font-extrabold text-ink" : "font-semibold text-ink-soft"}
+              >
+                {line}
+              </p>
+            ))}
+          </div>
+        )}
       </div>
 
       <section aria-labelledby="feeling-title" className="space-y-3">
@@ -115,7 +133,7 @@ export function AfterWorkout({
         href={first ? "/app/plan?after=first" : "/app"}
         className={cn(buttonClass("primary", "lg"), "w-full")}
       >
-        {first ? "Виж плановете" : "Към днес"}
+        {first ? "Виж плановете" : "Към началото"}
       </Link>
     </main>
   );

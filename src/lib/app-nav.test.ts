@@ -2,11 +2,10 @@ import { describe, expect, it } from "vitest";
 import { APP_NAV, activeNavHref, navHidden } from "./app-nav";
 
 describe("APP_NAV", () => {
-  it("lists the five tabs in order", () => {
+  it("lists the four tabs in order", () => {
     expect(APP_NAV.map((i) => [i.href, i.label])).toEqual([
-      ["/app", "Днес"],
+      ["/app", "Начало"],
       ["/app/library", "Тренировки"],
-      ["/app/progress", "Прогрес"],
       ["/app/learn", "Полезно"],
       ["/app/profile", "Профил"],
     ]);
@@ -18,8 +17,8 @@ describe("activeNavHref", () => {
     ["/app", "/app"],
     ["/app/library", "/app/library"],
     ["/app/library/x", "/app/library"],
-    ["/app/progress", "/app/progress"],
-    ["/app/check-in", "/app/progress"],
+    ["/app/progress", "/app/profile"],
+    ["/app/check-in", "/app/profile"],
     ["/app/learn", "/app/learn"],
     ["/app/learn/some-article", "/app/learn"],
     ["/app/profile", "/app/profile"],

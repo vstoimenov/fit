@@ -19,7 +19,9 @@ export async function getMemberPoints(db: TypedClient, userId: string): Promise<
   const { data, error } = await db.rpc("member_points", { uid: userId });
   if (error) throw new Error(`load member points failed: ${error.message}`);
   const row = data[0];
-  return { points: row?.points ?? 0, level: row?.level ?? 1 };
+  // member_points always yields a row (zero for a member without entries); none means a broken read.
+  if (!row) throw new Error("load points failed: no row");
+  return { points: row.points, level: row.level };
 }
 
 /** A member's ledger, newest first. */

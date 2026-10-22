@@ -55,6 +55,21 @@ describe("levelProgress", () => {
     });
   });
 
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    "treats %s like zero points",
+    (points) => {
+      expect(levelForPoints(points)).toBe(1);
+      expect(levelProgress(points)).toEqual({
+        level: 1,
+        points: 0,
+        nextLevel: 2,
+        toNext: 50,
+        percent: 0,
+        nextReward: REWARDS[4],
+      });
+    },
+  );
+
   it("has no next step at level 10", () => {
     expect(levelProgress(1700)).toEqual({
       level: 10,

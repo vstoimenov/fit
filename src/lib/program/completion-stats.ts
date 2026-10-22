@@ -16,7 +16,7 @@ export function regularSlotDates(
     .map((w) => toLocalDate(w.publishAt!, timeZone));
 }
 
-/** The numbers the after-workout screen shows; same sources as the Днес screen. */
+/** The numbers the after-workout screen shows; same sources as the Начало screen. */
 export function completionStats(input: {
   slotDates: string[];
   completionDates: string[];
@@ -28,13 +28,13 @@ export function completionStats(input: {
   return { streakDays: computeStreak(input), weekDone, weekTarget };
 }
 
-/** „N тренировки“ for the Днес series tile; `computeStreak` counts workouts, not days. */
+/** „N тренировки“ for the Начало series tile; `computeStreak` counts workouts, not days. */
 export function seriesText(n: number): string {
   const { value, unit } = seriesParts(n);
   return unit ? `${value} ${unit}` : value;
 }
 
-/** The same text split into numeral and unit; the Днес tile sets the unit small so it fits. */
+/** The same text split into numeral and unit; the Начало tile sets the unit small so it fits. */
 export function seriesParts(n: number): { value: string; unit: string | null } {
   if (n <= 0) return { value: "0", unit: null };
   return { value: String(n), unit: n === 1 ? "тренировка" : "тренировки" };

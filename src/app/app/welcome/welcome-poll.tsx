@@ -70,7 +70,7 @@ export function WelcomePoll() {
             Ще получиш имейл, а достъпът ще се отвори автоматично до минута.
           </p>
           <Link href="/app" className={buttonClass("secondary") + " w-full"}>
-            Към „Днес“
+            Към началото
           </Link>
         </>
       )}
