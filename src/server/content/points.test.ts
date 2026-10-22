@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TypedClient } from "@/server/db/types";
-import { getMemberPoints } from "./points";
+import { getMemberPoints, getMemberPointsOrNull } from "./points";
 
 const rpcReturning = (result: { data: unknown; error: { message: string } | null }) =>
   ({ rpc: async () => result }) as unknown as TypedClient;
@@ -21,5 +21,20 @@ describe("getMemberPoints", () => {
     await expect(
       getMemberPoints(rpcReturning({ data: null, error: { message: "boom" } }), "u"),
     ).rejects.toThrow("load member points failed: boom");
+  });
+});
+
+describe("getMemberPointsOrNull", () => {
+  it("returns the points when the read works", async () => {
+    const db = rpcReturning({ data: [{ points: 5, level: 1 }], error: null });
+    expect(await getMemberPointsOrNull(db, "u")).toEqual({ points: 5, level: 1 });
+  });
+
+  it("logs and returns null when the read fails, so a page can still render", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const db = rpcReturning({ data: null, error: { message: "boom" } });
+    expect(await getMemberPointsOrNull(db, "u")).toBeNull();
+    expect(log).toHaveBeenCalledOnce();
+    log.mockRestore();
   });
 });

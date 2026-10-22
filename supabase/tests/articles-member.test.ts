@@ -56,6 +56,18 @@ describe("listArticlesFor", () => {
   });
 });
 
+describe("listArticlesFor limit", () => {
+  it("returns only the newest article when asked for one", async () => {
+    const older = await insertArticle("lim-old", { published_at: iso(-5 * day) });
+    const newest = await insertArticle("lim-new", { published_at: iso(-1) });
+    const db = await signedInClient(await createUser(admin, "mem-limit"));
+    const rows = await listArticlesFor(db, "beginner", 1);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].id).toBe(newest.id);
+    expect(rows[0].id).not.toBe(older.id);
+  });
+});
+
 describe("getArticleBySlug", () => {
   it("returns the full row for a published article and null for a draft or unknown slug", async () => {
     const pub = await insertArticle("pub", { published_at: iso(-day), body: "## Здравей" });

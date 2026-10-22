@@ -21,6 +21,8 @@ export function ActionForm({
   successMessage = "Запазено ✓",
   resetOnSuccess = false,
   submitVariant = "primary",
+  submitAriaLabel,
+  confirmMessage,
   className,
   children,
 }: {
@@ -30,6 +32,10 @@ export function ActionForm({
   resetOnSuccess?: boolean;
   /** `secondary` for a form that sits beside the screen's main save button. */
   submitVariant?: "primary" | "secondary";
+  /** Accessible name for a button whose visible label repeats across a list. */
+  submitAriaLabel?: string;
+  /** Ask the browser to confirm before submitting. */
+  confirmMessage?: string;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -40,6 +46,7 @@ export function ActionForm({
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (inFlight.current) return;
+    if (confirmMessage && !confirm(confirmMessage)) return;
     inFlight.current = true;
     const form = event.currentTarget;
     const data = new FormData(form);
@@ -66,7 +73,13 @@ export function ActionForm({
     <form onSubmit={onSubmit} className={className ?? "space-y-3"}>
       {children}
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" variant={submitVariant} size="md" disabled={pending}>
+        <Button
+          type="submit"
+          variant={submitVariant}
+          size="md"
+          disabled={pending}
+          aria-label={submitAriaLabel}
+        >
           {pending ? "Запазване…" : submitLabel}
         </Button>
         {state?.ok && (

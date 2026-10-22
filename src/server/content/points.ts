@@ -24,6 +24,22 @@ export async function getMemberPoints(db: TypedClient, userId: string): Promise<
   return { points: row.points, level: row.level };
 }
 
+/**
+ * For pages where points are a nicety (lock pills, the explanation on a locked workout): a failed
+ * read is logged and treated as unknown instead of breaking the page.
+ */
+export async function getMemberPointsOrNull(
+  db: TypedClient,
+  userId: string,
+): Promise<MemberPoints | null> {
+  try {
+    return await getMemberPoints(db, userId);
+  } catch (error) {
+    console.error("member points unavailable", error instanceof Error ? error.message : error);
+    return null;
+  }
+}
+
 /** A member's ledger, newest first. */
 export async function listPointsLedger(
   db: TypedClient,

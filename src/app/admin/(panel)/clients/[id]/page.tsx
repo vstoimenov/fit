@@ -216,7 +216,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
               />
             </Field>
             <div className="min-w-[14rem] flex-1">
-              <Field label="Причина">
+              <Field label="Причина" hint="Клиентката вижда причината.">
                 <input name="reason" required maxLength={200} className={inputClass + " h-11"} />
               </Field>
             </div>

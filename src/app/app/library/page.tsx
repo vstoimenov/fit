@@ -12,7 +12,7 @@ import {
   type LibraryFilter,
 } from "@/lib/program/library-filter";
 import { requireUser } from "@/server/auth/require-user";
-import { getMemberPoints } from "@/server/content/points";
+import { getMemberPointsOrNull } from "@/server/content/points";
 import { getLibrary } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировки" };
@@ -81,7 +81,7 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   const [{ level, workouts }, { data: hasAccess, error: accessError }, points] = await Promise.all([
     getLibrary(supabase, user.id),
     supabase.rpc("my_access"),
-    getMemberPoints(supabase, user.id),
+    getMemberPointsOrNull(supabase, user.id),
   ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
   const shown = filterLibrary(workouts, filter);
@@ -117,7 +117,7 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
               key={w.id}
               workout={w}
               locked={!hasAccess && w.kind !== "free"}
-              unlockLevel={exclusiveLockLevel(w.minMemberLevel, points.level)}
+              unlockLevel={points ? exclusiveLockLevel(w.minMemberLevel, points.level) : null}
             />
           ))}
         </div>

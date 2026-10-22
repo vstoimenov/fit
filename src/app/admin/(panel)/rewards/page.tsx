@@ -100,6 +100,10 @@ function Row({ row }: { row: RewardCandidate }) {
                   key={`${r.level}-${r.given}`}
                   action={setRewardGivenAction.bind(null, row.userId, r.level, !r.given)}
                   submitLabel={r.given ? "Не е дадено" : "Дадено"}
+                  submitAriaLabel={`${r.given ? "Не е дадено" : "Дадено"}: ${row.name}, ниво ${r.level}`}
+                  confirmMessage={
+                    r.given ? `Да махна отметката „Дадено“ за ниво ${r.level}?` : undefined
+                  }
                   submitVariant="secondary"
                   successMessage="Готово ✓"
                   className="inline-flex items-center"

@@ -40,7 +40,7 @@ async function Home() {
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
     ),
-    listArticlesFor(supabase, view.level).then(
+    listArticlesFor(supabase, view.level, 1).then(
       (list): ArticleSummary | null => list[0] ?? null,
       (error: unknown) => logSkipped("article", user.id, error, null),
     ),

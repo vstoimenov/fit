@@ -18,6 +18,8 @@ const TYPE: Record<string, string> = {
   settings: "Настройка",
   profiles: "Роля",
   articles: "Статия",
+  points_ledger: "Точки",
+  rewards_given: "Награда",
 };
 const ACTION: Record<string, string> = { insert: "създаде", update: "промени", delete: "изтри" };
 

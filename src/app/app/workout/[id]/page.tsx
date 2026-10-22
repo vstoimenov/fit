@@ -10,7 +10,7 @@ import { WorkoutCover } from "@/components/workout/workout-cover";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { exclusiveLockLevel } from "@/lib/points/levels";
 import { requireUser } from "@/server/auth/require-user";
-import { getMemberPoints } from "@/server/content/points";
+import { getMemberPointsOrNull } from "@/server/content/points";
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировка" };
@@ -64,10 +64,10 @@ async function WorkoutScreen({
 
   if (result.state === "locked") {
     const { workout } = result;
-    const points = await getMemberPoints(supabase, user.id);
+    const points = await getMemberPointsOrNull(supabase, user.id);
     // The server withholds the video below the exclusive level whatever the subscription, so that
     // is the reason to show first: subscribing would not open it.
-    const unlockLevel = exclusiveLockLevel(workout.minMemberLevel, points.level);
+    const unlockLevel = points ? exclusiveLockLevel(workout.minMemberLevel, points.level) : null;
     return (
       <main className="pb-6 lg:px-8 lg:pt-6">
         <BackLink />
@@ -96,9 +96,10 @@ async function WorkoutScreen({
               ) : (
                 <p className="text-ink-soft">Тази тренировка се отключва с абонамента.</p>
               )}
-              {unlockLevel !== null && (
+              {unlockLevel !== null && points && (
                 <p className="text-ink-soft">
-                  Ти си на ниво {points.level}. Точки печелиш с всяка тренировка и отбелязване.
+                  Ти си на ниво {points.level}. Точки печелиш с тренировка всеки ден и с отбелязване
+                  всяка седмица.
                 </p>
               )}
             </div>

@@ -16,14 +16,20 @@ export type ArticleSummary = Pick<
  * newest first. RLS already hides drafts, scheduled and members-only articles she can't open;
  * the publish filter is explicit because RLS also lets admins read drafts.
  */
-export async function listArticlesFor(db: TypedClient, level: Level): Promise<ArticleSummary[]> {
-  const { data, error } = await db
+export async function listArticlesFor(
+  db: TypedClient,
+  level: Level,
+  limit?: number,
+): Promise<ArticleSummary[]> {
+  let query = db
     .from("articles")
     .select(LIST_COLUMNS)
     .not("published_at", "is", null)
     .lte("published_at", new Date().toISOString())
     .or(`level.is.null,level.eq.${level}`)
     .order("published_at", { ascending: false });
+  if (limit !== undefined) query = query.limit(limit);
+  const { data, error } = await query;
   if (error) throw new Error(`list articles failed: ${error.message}`);
   return data;
 }
