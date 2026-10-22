@@ -45,33 +45,70 @@ async function addCheckIn(userId: string, createdAt: string): Promise<void> {
   if (error) throw error;
 }
 
+async function publishedWorkout(title: string): Promise<string> {
+  return createWorkout(admin, {
+    title,
+    kind: "regular",
+    level: "beginner",
+    duration_min: 15,
+    publish_at: new Date(Date.now() - 60_000).toISOString(),
+  });
+}
+
+async function addCompletion(userId: string, workoutId: string, completedAt: string) {
+  const { error } = await admin
+    .from("workout_completions")
+    .insert({ user_id: userId, workout_id: workoutId, completed_at: completedAt });
+  if (error) throw error;
+}
+
+function sofiaDate(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Sofia" }).format(d);
+}
+
 describe("workout points", () => {
-  it("awards 10 points once per completion", async () => {
+  it("awards 10 points for a completed workout, keyed by the Sofia day", async () => {
     const { user, db } = await member("pts-workout");
     const done = await markWorkoutComplete(db, user.id, freeId);
     expect(done.status).toBe("done");
     await markWorkoutComplete(db, user.id, freeId);
 
     const rows = await ledger(user.id);
-    expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ source: "workout", points: 10, created_by: null });
+    expect(rows).toEqual([
+      { source: "workout", ref: sofiaDate(new Date()), points: 10, created_by: null },
+    ]);
 
-    const { data: completion } = await admin
-      .from("workout_completions")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
-    expect(rows[0]!.ref).toBe(completion!.id);
-
-    // A second award for the same completion is a no-op.
+    // A second award for the same day is a no-op.
     const again = await admin
       .from("points_ledger")
       .upsert(
-        { user_id: user.id, source: "workout", ref: completion!.id, points: 10 },
+        { user_id: user.id, source: "workout", ref: rows[0]!.ref, points: 10 },
         { onConflict: "user_id,source,ref", ignoreDuplicates: true },
       );
     expect(again.error).toBeNull();
     expect(await ledger(user.id)).toHaveLength(1);
+  });
+
+  it("awards at most once per Sofia day across different workouts", async () => {
+    const { user } = await member("pts-workout-day");
+    const w1 = await publishedWorkout("Точки 1");
+    const w2 = await publishedWorkout("Точки 2");
+    await addCompletion(user.id, w1, "2026-10-20T07:00:00Z");
+    await addCompletion(user.id, w2, "2026-10-20T18:00:00Z");
+    expect(await ledger(user.id)).toEqual([
+      { source: "workout", ref: "2026-10-20", points: 10, created_by: null },
+    ]);
+  });
+
+  it("splits days at Sofia midnight (23:30 vs 00:30)", async () => {
+    const { user } = await member("pts-workout-midnight");
+    const w1 = await publishedWorkout("Точки 3");
+    const w2 = await publishedWorkout("Точки 4");
+    await addCompletion(user.id, w1, "2026-10-25T21:30:00Z");
+    await addCompletion(user.id, w2, "2026-10-25T22:30:00Z");
+    const rows = await ledger(user.id);
+    expect(rows.map((r) => r.ref).sort()).toEqual(["2026-10-25", "2026-10-26"]);
+    expect(rows.every((r) => r.points === 10 && r.source === "workout")).toBe(true);
   });
 });
 

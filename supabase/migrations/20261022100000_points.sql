@@ -52,13 +52,15 @@ end $$;
 revoke execute on function public.member_points(uuid) from public, anon;
 grant execute on function public.member_points(uuid) to authenticated;
 
--- Awards. A completion earns 10 once (ref = completion id); a check-in earns 5 once per ISO week in
--- Europe/Sofia (ref = 'YYYY-Www'). Deleting the source row never claws points back.
+-- Awards. Completed workouts earn 10 once per day (ref = 'YYYY-MM-DD' of completed_at in Europe/Sofia,
+-- server time — not the member's profile timezone — so extra workouts in a day cannot farm points); a
+-- check-in earns 5 once per ISO week in Europe/Sofia (ref = 'YYYY-Www'). Deleting the source row never
+-- claws points back.
 create function public.award_workout_points() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   insert into public.points_ledger (user_id, source, ref, points)
-  values (new.user_id, 'workout', new.id::text, 10)
+  values (new.user_id, 'workout', to_char(new.completed_at at time zone 'Europe/Sofia', 'YYYY-MM-DD'), 10)
   on conflict (user_id, source, ref) do nothing;
   return new;
 end $$;
@@ -83,8 +85,14 @@ revoke execute on function public.award_checkin_points() from public, anon, auth
 
 -- Backfill: existing completions and check-ins earn their points once (same rules as the triggers).
 insert into public.points_ledger (user_id, source, ref, points, created_at)
-select c.user_id, 'workout', c.id::text, 10, c.completed_at
-from public.workout_completions c
+select d.user_id, 'workout', d.day, 10, d.first_at
+from (
+  select c.user_id,
+         to_char(c.completed_at at time zone 'Europe/Sofia', 'YYYY-MM-DD') as day,
+         min(c.completed_at) as first_at
+  from public.workout_completions c
+  group by 1, 2
+) d
 on conflict (user_id, source, ref) do nothing;
 
 insert into public.points_ledger (user_id, source, ref, points, created_at)
@@ -136,8 +144,7 @@ alter table public.points_ledger enable row level security;
 create policy points_ledger_select on public.points_ledger for select to authenticated
   using (user_id = (select auth.uid()) or (select public.is_admin()));
 -- No insert/update/delete policies: the ledger is written only by security-definer code.
-revoke all on public.points_ledger from anon;
-revoke insert, update, delete on public.points_ledger from authenticated;
+revoke all on public.points_ledger from anon, authenticated;
 grant select on public.points_ledger to authenticated;
 
 -- Manual rewards (levels 4, 8, 10) handed out by the owner.
@@ -145,7 +152,7 @@ create table public.rewards_given (
   user_id uuid not null references public.profiles (id) on delete cascade,
   level smallint not null check (level in (4, 8, 10)),
   given_at timestamptz not null default now(),
-  given_by uuid,
+  given_by uuid default auth.uid(),
   note text check (char_length(note) <= 300),
   primary key (user_id, level)
 );
@@ -162,8 +169,7 @@ create policy rewards_given_admin_update on public.rewards_given for update to a
   using ((select public.is_admin())) with check ((select public.is_admin()));
 create policy rewards_given_admin_delete on public.rewards_given for delete to authenticated
   using ((select public.is_admin()));
-revoke all on public.rewards_given from anon;
-revoke insert, update, delete on public.rewards_given from authenticated;
+revoke all on public.rewards_given from anon, authenticated;
 grant select, insert, update, delete on public.rewards_given to authenticated;
 
 -- Exclusive workouts: below min_member_level the workout is listed but its video is not served.
