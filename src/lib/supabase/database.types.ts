@@ -259,6 +259,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      points_ledger: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          points: number;
+          reason: string | null;
+          ref: string;
+          source: Database["public"]["Enums"]["points_source"];
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          points: number;
+          reason?: string | null;
+          ref: string;
+          source: Database["public"]["Enums"]["points_source"];
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          points?: number;
+          reason?: string | null;
+          ref?: string;
+          source?: Database["public"]["Enums"]["points_source"];
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "points_ledger_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           email: string;
@@ -340,6 +382,39 @@ export type Database = {
           weight_kg?: number | null;
         };
         Relationships: [];
+      };
+      rewards_given: {
+        Row: {
+          given_at: string;
+          given_by: string | null;
+          level: number;
+          note: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          given_at?: string;
+          given_by?: string | null;
+          level: number;
+          note?: string | null;
+          user_id: string;
+        };
+        Update: {
+          given_at?: string;
+          given_by?: string | null;
+          level?: number;
+          note?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "rewards_given_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       security_flags: {
         Row: {
@@ -571,6 +646,7 @@ export type Database = {
           id: string;
           kind: Database["public"]["Enums"]["workout_kind"];
           level: Database["public"]["Enums"]["workout_level"] | null;
+          min_member_level: number | null;
           notified_at: string | null;
           notify: boolean;
           publish_at: string | null;
@@ -589,6 +665,7 @@ export type Database = {
           id?: string;
           kind?: Database["public"]["Enums"]["workout_kind"];
           level?: Database["public"]["Enums"]["workout_level"] | null;
+          min_member_level?: number | null;
           notified_at?: string | null;
           notify?: boolean;
           publish_at?: string | null;
@@ -606,6 +683,7 @@ export type Database = {
           id?: string;
           kind?: Database["public"]["Enums"]["workout_kind"];
           level?: Database["public"]["Enums"]["workout_level"] | null;
+          min_member_level?: number | null;
           notified_at?: string | null;
           notify?: boolean;
           publish_at?: string | null;
@@ -630,6 +708,10 @@ export type Database = {
     };
     Functions: {
       active_payment_provider: { Args: Record<PropertyKey, never>; Returns: string };
+      admin_adjust_points: {
+        Args: { p_points: number; p_reason: string; p_user_id: string };
+        Returns: string;
+      };
       admin_client_stats: {
         Args: { p_limit?: number; p_offset?: number; p_search?: string };
         Returns: {
@@ -684,6 +766,14 @@ export type Database = {
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      level_for_points: { Args: { p: number }; Returns: number };
+      member_points: {
+        Args: { uid: string };
+        Returns: {
+          level: number;
+          points: number;
+        }[];
+      };
       my_access: { Args: Record<PropertyKey, never>; Returns: boolean };
       next_drop_at: {
         Args: { p_level: Database["public"]["Enums"]["workout_level"] };
@@ -695,6 +785,7 @@ export type Database = {
       note_kind: "call" | "message" | "note" | "snooze";
       payment_provider: "stripe" | "revolut" | "manual";
       plan_interval: "month" | "year";
+      points_source: "workout" | "checkin" | "challenge" | "live" | "post" | "comment" | "admin";
       subscription_status: "active" | "trialing" | "past_due" | "canceled" | "none";
       user_role: "client" | "admin";
       video_provider: "youtube" | "vimeo" | "bunny";
@@ -818,6 +909,7 @@ export const Constants = {
       note_kind: ["call", "message", "note", "snooze"],
       payment_provider: ["stripe", "revolut", "manual"],
       plan_interval: ["month", "year"],
+      points_source: ["workout", "checkin", "challenge", "live", "post", "comment", "admin"],
       subscription_status: ["active", "trialing", "past_due", "canceled", "none"],
       user_role: ["client", "admin"],
       video_provider: ["youtube", "vimeo", "bunny"],

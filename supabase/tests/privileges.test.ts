@@ -19,6 +19,8 @@ const TABLES = [
   "payment_events",
   "security_flags",
   "articles",
+  "points_ledger",
+  "rewards_given",
 ];
 const ROLES = ["anon", "authenticated"];
 // MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).
