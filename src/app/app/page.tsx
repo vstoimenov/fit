@@ -1,4 +1,4 @@
-import { ChartLine, ChevronRight, Clock } from "lucide-react";
+import { Apple, ChartLine, ChevronRight, Clock } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -13,11 +13,15 @@ import { WorkoutCover } from "@/components/workout/workout-cover";
 import { formatTodayDate } from "@/lib/format";
 import { seriesParts } from "@/lib/program/completion-stats";
 import { LEVEL_LABEL } from "@/lib/labels";
+import { formatNumber } from "@/lib/nutrition/format";
 import { levelProgress } from "@/lib/points/levels";
+import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { listArticlesFor, type ArticleSummary } from "@/server/content/articles";
 import { getMemberPoints } from "@/server/content/points";
 import { getTodayView } from "@/server/content/today";
+import type { TypedClient } from "@/server/db/types";
+import { getDiaryDay, getNutritionProfile } from "@/server/nutrition/diary";
 
 export const metadata = { title: "Начало" };
 
@@ -35,7 +39,7 @@ async function Home() {
   const { user, supabase } = await requireUser();
   const view = await getTodayView(supabase, user.id);
   // Level and article are extras: if their reads fail the day's workout must still show.
-  const [progress, article] = await Promise.all([
+  const [progress, article, nutrition] = await Promise.all([
     getMemberPoints(supabase, user.id).then(
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
@@ -43,6 +47,9 @@ async function Home() {
     listArticlesFor(supabase, view.level, 1).then(
       (list): ArticleSummary | null => list[0] ?? null,
       (error: unknown) => logSkipped("article", user.id, error, null),
+    ),
+    nutritionToday(supabase, user.id).catch((error: unknown) =>
+      logSkipped("nutrition", user.id, error, null),
     ),
   ]);
   const firstName = view.name.split(" ")[0];
@@ -160,6 +167,26 @@ async function Home() {
             <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
           </Link>
 
+          {nutrition && (
+            <Link
+              href="/app/nutrition"
+              className="flex min-h-14 items-center gap-3 rounded-2xl bg-sand p-4 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <Apple size={24} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-extrabold">Хранене</span>
+                <span className="block text-sm text-ink-soft">
+                  {nutrition.answered
+                    ? `Хранене днес: ${formatNumber(nutrition.kcal)}${
+                        nutrition.target ? ` / ${formatNumber(nutrition.target)}` : ""
+                      } ккал`
+                    : "Няколко въпроса и започваме"}
+                </span>
+              </span>
+              <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+            </Link>
+          )}
+
           {article && (
             <section aria-labelledby="home-article-heading" className="space-y-3">
               <h2 id="home-article-heading" className="text-xl font-extrabold tracking-tight">
@@ -172,6 +199,20 @@ async function Home() {
       </div>
     </main>
   );
+}
+
+/** Today's calories for the Начало card; null without access (the card is for members who can log). */
+async function nutritionToday(supabase: TypedClient, userId: string) {
+  const [profile, diary] = await Promise.all([
+    getNutritionProfile(supabase, userId),
+    getDiaryDay(supabase, userId, sofiaToday()),
+  ]);
+  if (!profile.hasAccess) return null;
+  return {
+    kcal: diary.totals.kcal,
+    target: profile.target?.kcal ?? null,
+    answered: profile.answers !== null,
+  };
 }
 
 function logSkipped<T>(what: string, userId: string, error: unknown, fallback: T): T {

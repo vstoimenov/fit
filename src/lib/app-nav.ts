@@ -1,7 +1,8 @@
-/** The four tabs („Общност“ joins later) of the member app (bottom bar on mobile, sidebar on desktop). */
+/** The five tabs („Общност“ joins later) of the member app (bottom bar on mobile, sidebar on desktop). */
 export const APP_NAV = [
   { href: "/app", label: "Начало" },
   { href: "/app/library", label: "Тренировки" },
+  { href: "/app/nutrition", label: "Хранене" },
   { href: "/app/learn", label: "Полезно" },
   { href: "/app/profile", label: "Профил" },
 ] as const;
@@ -16,6 +17,7 @@ function under(pathname: string, base: string) {
 export function activeNavHref(pathname: string): AppNavHref | null {
   if (pathname === "/app") return "/app";
   if (under(pathname, "/app/library")) return "/app/library";
+  if (under(pathname, "/app/nutrition")) return "/app/nutrition";
   if (under(pathname, "/app/learn")) return "/app/learn";
   // Прогрес is reached from Начало and Профил, so it (and the check-in) belong to Профил.
   if (

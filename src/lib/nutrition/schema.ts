@@ -2,6 +2,11 @@ import { z } from "zod";
 import { ACTIVITY_LEVELS, ALLERGENS, DIETS } from "./labels";
 
 const macroG = z.number().min(0).max(1000);
+const manualMacro = z
+  .number("Въведи число")
+  .min(0, "Между 0 и 1000 г")
+  .max(1000, "Между 0 и 1000 г")
+  .optional();
 
 /** One food inside an AI estimate; kcal is rounded to a whole number. */
 export const estimateItemSchema = z.object({
@@ -26,11 +31,19 @@ export const estimateSchema = z.object({
 
 /** Manual diary entry; kcal is a whole number and macros are optional. */
 export const manualEntrySchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  kcal: z.number().int().min(0).max(5000),
-  proteinG: macroG.optional(),
-  carbsG: macroG.optional(),
-  fatG: macroG.optional(),
+  name: z
+    .string("Напиши какво си яла")
+    .trim()
+    .min(1, "Напиши какво си яла")
+    .max(120, "До 120 знака"),
+  kcal: z
+    .number("Въведи калориите")
+    .int("Калориите са цяло число")
+    .min(0, "Калориите са между 0 и 5000")
+    .max(5000, "Калориите са между 0 и 5000"),
+  proteinG: manualMacro,
+  carbsG: manualMacro,
+  fatG: manualMacro,
 });
 
 /** Free-text food description sent for estimation. */
