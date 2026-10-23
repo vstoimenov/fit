@@ -7,7 +7,7 @@ const SHARE_QUALITY = 0.9;
 const INK = "#111111";
 const POWDER = "#E5A9AE";
 const WHITE = "#ffffff";
-const MARGIN = 56;
+const MARGIN = 48;
 const FAMILY = 'Manrope, "Helvetica Neue", Arial, sans-serif';
 
 type Dated = { url: string; takenOn: string };
@@ -52,7 +52,7 @@ function roundedRect(ctx: Context, x: number, y: number, w: number, h: number, r
 
 /** Ink fading in over the lower part of the picture, so white text stays legible on any photo. */
 function drawBottomGradient(ctx: Context) {
-  const top = SHARE_H - 560;
+  const top = SHARE_H - 600;
   const gradient = ctx.createLinearGradient(0, top, 0, SHARE_H);
   gradient.addColorStop(0, "rgba(17, 17, 17, 0)");
   gradient.addColorStop(1, "rgba(17, 17, 17, 0.88)");
@@ -60,18 +60,23 @@ function drawBottomGradient(ctx: Context) {
   ctx.fillRect(0, top, SHARE_W, SHARE_H - top);
 }
 
-const PILL_H = 72;
-const HOST_SIZE = 26;
-const HOST_GAP = 14;
+const PILL_H = 120;
+const NAME_SIZE = 56;
+const DOT_RADIUS = 15;
+const DOT_INSET = 52;
+const DOT_GAP = 24;
+const PILL_PAD_RIGHT = 40;
+const HOST_SIZE = 30;
+const HOST_GAP = 20;
 
 /** Size of the badge (pill with the host under it) for the given host. */
 function badgeSize(
   ctx: Context,
   host: string,
 ): { width: number; height: number; pillWidth: number } {
-  ctx.font = `800 32px ${FAMILY}`;
-  // Dot (30 px in from the edge, 9 px radius), a 14 px gap, the name, then 21 px of padding.
-  const pillWidth = Math.ceil(ctx.measureText("I AM STRONG").width) + 74;
+  ctx.font = `800 ${NAME_SIZE}px ${FAMILY}`;
+  const nameWidth = Math.ceil(ctx.measureText("I AM STRONG").width);
+  const pillWidth = DOT_INSET + DOT_RADIUS + DOT_GAP + nameWidth + PILL_PAD_RIGHT;
   ctx.font = `400 ${HOST_SIZE}px ${FAMILY}`;
   const hostWidth = host ? Math.ceil(ctx.measureText(host).width) : 0;
   return {
@@ -88,28 +93,29 @@ function badgeSize(
 function drawBadge(ctx: Context, host: string, centerX: number, bottom: number) {
   const size = badgeSize(ctx, host);
   const { pillWidth } = size;
+  const left = centerX - pillWidth / 2;
   const top = bottom - size.height;
 
   ctx.fillStyle = INK;
-  roundedRect(ctx, centerX - pillWidth / 2, top, pillWidth, PILL_H, PILL_H / 2);
+  roundedRect(ctx, left, top, pillWidth, PILL_H, PILL_H / 2);
   ctx.fill();
 
   ctx.fillStyle = POWDER;
   ctx.beginPath();
-  ctx.arc(centerX - pillWidth / 2 + 30, top + PILL_H / 2, 9, 0, Math.PI * 2);
+  ctx.arc(left + DOT_INSET, top + PILL_H / 2, DOT_RADIUS, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.fillStyle = WHITE;
   ctx.textBaseline = "middle";
   ctx.textAlign = "left";
-  ctx.font = `800 32px ${FAMILY}`;
-  ctx.fillText("I AM STRONG", centerX - pillWidth / 2 + 30 + 9 + 14, top + PILL_H / 2 + 1);
+  ctx.font = `800 ${NAME_SIZE}px ${FAMILY}`;
+  ctx.fillText("I AM STRONG", left + DOT_INSET + DOT_RADIUS + DOT_GAP, top + PILL_H / 2 + 2);
 
   if (host) {
     ctx.font = `400 ${HOST_SIZE}px ${FAMILY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
-    ctx.fillText(host, centerX, bottom - 3);
+    ctx.fillText(host, centerX, bottom - 4);
   }
 }
 
@@ -163,19 +169,22 @@ function drawSingle(ctx: Context, after: ImageBitmap, takenOn: string, host: str
   const badgeCenter = SHARE_W - MARGIN - badge.width / 2;
   drawBadge(ctx, host, badgeCenter, bottom);
 
-  // The date sits level with the pill, to the left of the badge; shrink it rather than overlap.
+  // The date sits level with the pill, to the left of the badge. If even a smaller date does not fit
+  // beside the badge, it moves to its own line above the badge row.
   const date = formatLongDate(takenOn);
   const room = badgeCenter - badge.width / 2 - MARGIN - 24;
+  const badgeTop = bottom - badge.height;
   let size = 46;
   ctx.font = `800 ${size}px ${FAMILY}`;
-  while (ctx.measureText(date).width > room && size > 24) {
+  while (ctx.measureText(date).width > room && size > 36) {
     size -= 2;
     ctx.font = `800 ${size}px ${FAMILY}`;
   }
+  const beside = ctx.measureText(date).width <= room;
   ctx.fillStyle = WHITE;
   ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(date, MARGIN, bottom - badge.height + PILL_H / 2 + 1);
+  ctx.textBaseline = beside ? "middle" : "alphabetic";
+  ctx.fillText(date, MARGIN, beside ? badgeTop + PILL_H / 2 + 2 : badgeTop - 32);
 }
 
 function drawPair(
@@ -189,8 +198,10 @@ function drawPair(
   drawCover(ctx, after.bitmap, half, 0, half, SHARE_H);
   drawBottomGradient(ctx);
 
+  // The divider stops where the badge starts, so the badge (and its white host line) sits on the photos.
+  const badgeTop = SHARE_H - MARGIN - badgeSize(ctx, host).height;
   ctx.fillStyle = WHITE;
-  ctx.fillRect(half - DIVIDER / 2, 0, DIVIDER, SHARE_H);
+  ctx.fillRect(half - DIVIDER / 2, 0, DIVIDER, badgeTop);
 
   const chipRoom = half - 2 * 30 - DIVIDER / 2;
   drawChip(ctx, "ПРЕДИ", formatLongDate(before.takenOn), 30, 36, chipRoom);

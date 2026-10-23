@@ -4,14 +4,11 @@ import { Check, LoaderCircle, Share2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
+import { copyText, downloadFile, isAbort } from "@/lib/share/browser";
 import { pickShareMode } from "@/lib/share/share-mode";
 
 const FILE_NAME = "trenirovka.png";
 const FAILED = "Не успяхме да споделим. Опитай пак.";
-
-function isAbort(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
-}
 
 async function loadImage(completionId: string): Promise<File> {
   const res = await fetch(`/api/share/${encodeURIComponent(completionId)}?format=story`, {
@@ -20,27 +17,6 @@ async function loadImage(completionId: string): Promise<File> {
   });
   if (!res.ok) throw new Error(`share image ${res.status}`);
   return new File([await res.blob()], FILE_NAME, { type: "image/png" });
-}
-
-function download(file: File) {
-  const href = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = FILE_NAME;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  // Generous delay: some browsers start reading the blob for the download only later.
-  setTimeout(() => URL.revokeObjectURL(href), 30_000);
-}
-
-async function copyText(value: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -101,7 +77,7 @@ export function ShareButton({ completionId, text }: { completionId: string; text
       } else {
         // Started before the download so it still runs inside the tap's activation.
         const copied = copyText(`${text} ${url}`);
-        download(file);
+        downloadFile(file);
         // The image is saved either way; a blocked clipboard is not worth an error.
         if (await copied) next = "copied";
       }

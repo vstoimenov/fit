@@ -6,8 +6,9 @@ import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatLongDate } from "@/lib/progress-photos/format-date";
 import { defaultBefore } from "@/lib/progress-photos/pair";
-import { drawShareImage, SHARE_FILE_NAME } from "@/lib/progress-photos/share-image";
+import { drawShareImage } from "@/lib/progress-photos/share-image";
 import { progressShareText } from "@/lib/progress-photos/share-text";
+import { copyText, downloadFile, isAbort } from "@/lib/share/browser";
 import { pickShareMode } from "@/lib/share/share-mode";
 
 type Candidate = { id: string; url: string; takenOn: string };
@@ -15,31 +16,6 @@ type Prepared = { key: string; file: File; src: string };
 
 const SHARE_FAILED = "Не успяхме да споделим. Опитай пак.";
 const PREPARE_FAILED = "Не успяхме да подготвим картинката.";
-
-function isAbort(error: unknown): boolean {
-  return error instanceof DOMException && error.name === "AbortError";
-}
-
-function download(file: File) {
-  const href = URL.createObjectURL(file);
-  const a = document.createElement("a");
-  a.href = href;
-  a.download = SHARE_FILE_NAME;
-  document.body.append(a);
-  a.click();
-  a.remove();
-  // Generous delay: some browsers start reading the blob for the download only later.
-  setTimeout(() => URL.revokeObjectURL(href), 30_000);
-}
-
-async function copyText(value: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(value);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 const FRAME = "mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl bg-sand";
 
@@ -70,6 +46,10 @@ export function PhotoShare({
   const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const hasPair = candidates.length > 0;
+  // Oldest first, so the default pick (the earliest) is the first thumbnail.
+  const stripOrder = [...candidates].sort((a, b) =>
+    a.takenOn < b.takenOn ? -1 : a.takenOn > b.takenOn ? 1 : 0,
+  );
   const selectedId =
     pickedId && candidates.some((c) => c.id === pickedId) ? pickedId : defaultBefore(candidates);
   const before =
@@ -130,12 +110,11 @@ export function PhotoShare({
       const shareMode = pickShareMode(navigator, file);
       if (shareMode === "files") {
         await navigator.share({ files: [file], text });
-      } else if (shareMode === "text") {
-        await navigator.share({ text });
       } else {
+        // No file sharing here (text-only share sheets would drop the picture): save it and copy the text.
         // Started before the download so it still runs inside the tap's activation.
         const copied = copyText(text);
-        download(file);
+        downloadFile(file);
         // The image is saved either way; a blocked clipboard is not worth an error.
         if (await copied) next = "copied";
       }
@@ -219,7 +198,7 @@ export function PhotoShare({
         <div className="space-y-2">
           <p className="text-sm font-semibold">Избери снимка за „ПРЕДИ“</p>
           <ul className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:px-0">
-            {candidates.map((candidate) => {
+            {stripOrder.map((candidate) => {
               const day = formatLongDate(candidate.takenOn);
               const selected = candidate.id === selectedId;
               return (

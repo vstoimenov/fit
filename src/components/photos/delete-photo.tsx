@@ -1,6 +1,7 @@
 "use client";
 
 import { LoaderCircle, Trash2 } from "lucide-react";
+import { unstable_rethrow } from "next/navigation";
 import { useState, useTransition } from "react";
 import { removeProgressPhoto } from "@/app/app/progress/photos/actions";
 import { buttonClass } from "@/components/ui/button";
@@ -21,7 +22,9 @@ export function DeletePhoto({ id }: { id: string }) {
         const result = await removeProgressPhoto(id);
         // Only a failure returns; success redirects.
         if (!result.ok) setError(result.message);
-      } catch {
+      } catch (caught) {
+        // The success path redirects; let Next's redirect/notFound control flow through.
+        unstable_rethrow(caught);
         setError(FAILED);
       }
     });
