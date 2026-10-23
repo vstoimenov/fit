@@ -198,6 +198,40 @@ describe("deleteProgressPhoto", () => {
     expect(data).toEqual([]);
   });
 
+  it("throws when the storage remove fails and leaves both the row and the object", async () => {
+    const m = await member("ppsvc-del-storage-fail");
+    const p = await addPhoto(m, "2026-10-01");
+    const failing = new Proxy(m.db, {
+      get(target, prop) {
+        if (prop === "storage") {
+          return {
+            from: (bucket: string) =>
+              new Proxy(target.storage.from(bucket), {
+                get(bucketApi, method) {
+                  if (method === "remove") {
+                    return async () => ({ data: null, error: new Error("storage down") });
+                  }
+                  const v = Reflect.get(bucketApi, method, bucketApi);
+                  return typeof v === "function" ? v.bind(bucketApi) : v;
+                },
+              }),
+          };
+        }
+        const v = Reflect.get(target, prop, target);
+        return typeof v === "function" ? v.bind(target) : v;
+      },
+    });
+    await expect(deleteProgressPhoto(failing, p.id)).rejects.toThrow(
+      "remove progress photo failed",
+    );
+    const { data } = await admin.from("progress_photos").select("id").eq("id", p.id);
+    expect(data).toHaveLength(1);
+    expect(await objectNames(m.user.id)).toEqual([p.path.split("/")[1]]);
+    // A retry once storage works again succeeds.
+    await deleteProgressPhoto(m.db, p.id);
+    expect(await objectNames(m.user.id)).toEqual([]);
+  });
+
   it("is NOT_FOUND for another member's photo and leaves her object and row alone", async () => {
     const a = await member("ppsvc-del-a");
     const b = await member("ppsvc-del-b");

@@ -8,8 +8,13 @@ on conflict (id) do nothing;
 -- Objects live at {user_id}/{uuid}.jpg. No update policy: a photo is replaced by uploading a new one.
 create policy progress_photos_own_select on storage.objects for select to authenticated
   using (bucket_id = 'progress-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+-- Inserts must match the exact {user_id}/{uuid}.jpg shape (no nested folders: account deletion lists only
+-- the top level of her folder), the same pattern add_progress_photo checks.
 create policy progress_photos_own_insert on storage.objects for insert to authenticated
-  with check (bucket_id = 'progress-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
+  with check (
+    bucket_id = 'progress-photos'
+    and name ~ ('^' || (select auth.uid())::text || '/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.jpg$')
+  );
 create policy progress_photos_own_delete on storage.objects for delete to authenticated
   using (bucket_id = 'progress-photos' and (storage.foldername(name))[1] = (select auth.uid())::text);
 

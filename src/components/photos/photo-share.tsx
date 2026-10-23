@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, LoaderCircle, Share2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatLongDate } from "@/lib/progress-photos/format-date";
@@ -42,6 +43,9 @@ export function PhotoShare({
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<"idle" | "busy" | "copied">("idle");
   const [error, setError] = useState("");
+  const router = useRouter();
+  const [refreshing, startRefresh] = useTransition();
+  const [wasRefreshing, setWasRefreshing] = useState(false);
   const busy = useRef(false);
   const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -60,6 +64,15 @@ export function PhotoShare({
   const beforeUrl = before?.url ?? null;
   const beforeDay = before?.takenOn ?? null;
   const key = `${afterUrl}|${beforeUrl ?? ""}`;
+
+  // When a refresh (new signed links from the server) has finished, draw again.
+  if (refreshing !== wasRefreshing) {
+    setWasRefreshing(refreshing);
+    if (!refreshing) {
+      setFailedKey(null);
+      setAttempt((n) => n + 1);
+    }
+  }
 
   useEffect(() => {
     if (!afterUrl) return;
@@ -81,7 +94,12 @@ export function PhotoShare({
     );
     return () => {
       cancelled = true;
-      if (src) URL.revokeObjectURL(src);
+      if (src) {
+        URL.revokeObjectURL(src);
+        // Never keep a revoked URL in state: toggling back to this choice would render it.
+        const revoked = src;
+        setPrepared((p) => (p?.src === revoked ? null : p));
+      }
     };
   }, [afterUrl, afterDay, beforeUrl, beforeDay, host, key, attempt]);
 
@@ -96,7 +114,7 @@ export function PhotoShare({
   }
 
   const ready = prepared?.key === key ? prepared : null;
-  const failed = !ready && failedKey === key;
+  const failed = !ready && !refreshing && failedKey === key;
 
   async function share() {
     if (!ready || busy.current) return;
@@ -131,9 +149,10 @@ export function PhotoShare({
     }
   }
 
+  // The signed links last an hour; an old page's links may be dead. Re-fetch them from the server (which
+  // signs again) and draw once the new page props have arrived.
   function retry() {
-    setFailedKey(null);
-    setAttempt((n) => n + 1);
+    startRefresh(() => router.refresh());
   }
 
   return (

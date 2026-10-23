@@ -93,6 +93,20 @@ describe("progress-photos bucket", () => {
     expect(error).not.toBeNull();
   });
 
+  it("refuses names that are not {uid}/{uuid}.jpg (nested folder, non-uuid, wrong extension)", async () => {
+    const m = await member("pp-names");
+    const uid = m.user.id;
+    expect((await upload(m.db, `${uid}/sub/${randomUUID()}.jpg`)).error).not.toBeNull();
+    expect((await upload(m.db, `${uid}/sub/x.jpg`)).error).not.toBeNull();
+    expect((await upload(m.db, `${uid}/x.jpg`)).error).not.toBeNull();
+    // A jpeg body under a .png name: the mime type passes the bucket, the name must not pass the policy.
+    expect((await upload(m.db, `${uid}/x.png`, "image/jpeg")).error).not.toBeNull();
+    expect((await upload(m.db, `${uid}/${randomUUID()}.png`, "image/jpeg")).error).not.toBeNull();
+    const { data, error } = await admin.storage.from(BUCKET).list(uid, { limit: 100 });
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
   it("bucket is private with a 5 MB jpeg-only limit", async () => {
     const { data, error } = await admin.storage.getBucket(BUCKET);
     expect(error).toBeNull();

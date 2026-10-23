@@ -2,7 +2,7 @@
 
 import { LoaderCircle, Trash2 } from "lucide-react";
 import { unstable_rethrow } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { removeProgressPhoto } from "@/app/app/progress/photos/actions";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -14,6 +14,12 @@ export function DeletePhoto({ id }: { id: string }) {
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // The button that opened the confirm step disappears; put focus on the safe choice.
+  useEffect(() => {
+    if (confirming) cancelRef.current?.focus();
+  }, [confirming]);
 
   function remove() {
     setError("");
@@ -58,6 +64,7 @@ export function DeletePhoto({ id }: { id: string }) {
           Изтрий
         </button>
         <button
+          ref={cancelRef}
           type="button"
           onClick={() => {
             setConfirming(false);

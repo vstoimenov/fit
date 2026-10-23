@@ -42,7 +42,11 @@ async function Progress({ searchParams }: { searchParams: SearchParams }) {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30),
-      listProgressPhotos(supabase, { limit: 6 }),
+      // A photo failure (e.g. signing) must not take down the weight and waist charts.
+      listProgressPhotos(supabase, { limit: 6 }).catch((error: unknown) => {
+        console.error("progress photos failed to load", error);
+        return null;
+      }),
     ]);
   const loadError = profileError ?? checkInsError;
   if (loadError) throw new Error(`load progress failed: ${loadError.message}`);
@@ -89,13 +93,17 @@ async function Progress({ searchParams }: { searchParams: SearchParams }) {
       <section className="space-y-3">
         <div className="flex items-baseline justify-between gap-3">
           <h2 className="font-semibold">Снимки</h2>
-          {photos.length > 0 && (
+          {photos && photos.length > 0 && (
             <Link href="/app/progress/photos" className={buttonClass("link")}>
               Всички снимки
             </Link>
           )}
         </div>
-        {photos.length > 0 ? (
+        {photos === null ? (
+          <p role="alert" className="text-ink-soft">
+            Снимките не се заредиха. Опитай пак по-късно.
+          </p>
+        ) : photos.length > 0 ? (
           <PhotoGrid photos={photos} />
         ) : (
           <p className="text-ink-soft">

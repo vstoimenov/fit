@@ -1,3 +1,4 @@
+import { decodeImage, type DecodedImage } from "./decode-image";
 import { formatLongDate } from "./format-date";
 import { coverCrop, DIVIDER, SHARE_H, SHARE_W } from "./geometry";
 
@@ -31,23 +32,34 @@ function loadFonts(): Promise<void> {
   return fonts;
 }
 
-/** The signed URL's body as a bitmap. A blob (not an <img>) so the canvas is never tainted. */
-async function loadBitmap(url: string): Promise<ImageBitmap> {
+/** The signed URL's body, decoded from a blob (not an <img src=url>) so the canvas is never tainted. */
+async function loadImage(url: string): Promise<DecodedImage> {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`photo ${response.status}`);
-  return createImageBitmap(await response.blob(), { imageOrientation: "from-image" });
+  return decodeImage(await response.blob());
 }
 
 type Context = CanvasRenderingContext2D;
 
-function drawCover(ctx: Context, bitmap: ImageBitmap, x: number, y: number, w: number, h: number) {
-  const { sx, sy, sw, sh } = coverCrop(bitmap.width, bitmap.height, w, h);
-  ctx.drawImage(bitmap, sx, sy, sw, sh, x, y, w, h);
+function drawCover(ctx: Context, image: DecodedImage, x: number, y: number, w: number, h: number) {
+  const { sx, sy, sw, sh } = coverCrop(image.width, image.height, w, h);
+  ctx.drawImage(image.source, sx, sy, sw, sh, x, y, w, h);
 }
 
+/** A rounded-rectangle path. Older Safari has no `roundRect`, so it falls back to four arcs. */
 function roundedRect(ctx: Context, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
+  if (typeof ctx.roundRect === "function") {
+    ctx.roundRect(x, y, w, h, r);
+    return;
+  }
+  const radius = Math.min(r, w / 2, h / 2);
+  ctx.moveTo(x + radius, y);
+  ctx.arcTo(x + w, y, x + w, y + h, radius);
+  ctx.arcTo(x + w, y + h, x, y + h, radius);
+  ctx.arcTo(x, y + h, x, y, radius);
+  ctx.arcTo(x, y, x + w, y, radius);
+  ctx.closePath();
 }
 
 /** Ink fading in over the lower part of the picture, so white text stays legible on any photo. */
@@ -160,7 +172,7 @@ function drawChip(
   ctx.fillText(date, x + padX + w.l + gap, y + height / 2 + 1);
 }
 
-function drawSingle(ctx: Context, after: ImageBitmap, takenOn: string, host: string) {
+function drawSingle(ctx: Context, after: DecodedImage, takenOn: string, host: string) {
   drawCover(ctx, after, 0, 0, SHARE_W, SHARE_H);
   drawBottomGradient(ctx);
 
@@ -189,13 +201,13 @@ function drawSingle(ctx: Context, after: ImageBitmap, takenOn: string, host: str
 
 function drawPair(
   ctx: Context,
-  before: { bitmap: ImageBitmap; takenOn: string },
-  after: { bitmap: ImageBitmap; takenOn: string },
+  before: { image: DecodedImage; takenOn: string },
+  after: { image: DecodedImage; takenOn: string },
   host: string,
 ) {
   const half = SHARE_W / 2;
-  drawCover(ctx, before.bitmap, 0, 0, half, SHARE_H);
-  drawCover(ctx, after.bitmap, half, 0, half, SHARE_H);
+  drawCover(ctx, before.image, 0, 0, half, SHARE_H);
+  drawCover(ctx, after.image, half, 0, half, SHARE_H);
   drawBottomGradient(ctx);
 
   // The divider stops where the badge starts, so the badge (and its white host line) sits on the photos.
@@ -221,8 +233,8 @@ export async function drawShareImage(input: {
 }): Promise<File> {
   const [, after, before] = await Promise.all([
     loadFonts(),
-    loadBitmap(input.after.url),
-    input.before ? loadBitmap(input.before.url) : Promise.resolve(null),
+    loadImage(input.after.url),
+    input.before ? loadImage(input.before.url) : Promise.resolve(null),
   ]);
   try {
     const canvas = document.createElement("canvas");
@@ -236,8 +248,8 @@ export async function drawShareImage(input: {
     if (before && input.before) {
       drawPair(
         ctx,
-        { bitmap: before, takenOn: input.before.takenOn },
-        { bitmap: after, takenOn: input.after.takenOn },
+        { image: before, takenOn: input.before.takenOn },
+        { image: after, takenOn: input.after.takenOn },
         input.host,
       );
     } else {

@@ -44,6 +44,10 @@ async function PhotoScreen({ params }: { params: Promise<{ id: string }> }) {
     .filter((p) => p.id !== photo.id && p.takenOn <= photo.takenOn)
     .flatMap((p) => (p.url ? [{ id: p.id, url: p.url, takenOn: p.takenOn }] : []));
 
+  // On her oldest photo there is nothing to compare with; say so instead of hiding „Преди / След" silently.
+  const isOldest =
+    all.length > 1 && !all.some((p) => p.id !== photo.id && p.takenOn <= photo.takenOn);
+
   return (
     <main className="space-y-6 px-5 pb-8 pt-4 lg:px-8">
       <div className="space-y-1">
@@ -56,6 +60,19 @@ async function PhotoScreen({ params }: { params: Promise<{ id: string }> }) {
         </Link>
         <h1 className="font-display text-3xl">{formatLongDate(photo.takenOn)}</h1>
       </div>
+
+      {photo.url ? (
+        // eslint-disable-next-line @next/next/no-img-element -- short-lived signed storage URL
+        <img
+          src={photo.url}
+          alt={`Снимка от ${formatLongDate(photo.takenOn)}`}
+          className="mx-auto max-h-[70dvh] w-auto max-w-full rounded-2xl object-contain"
+        />
+      ) : null}
+
+      {isOldest && (
+        <p className="text-sm text-ink-soft">За „Преди / След“ отвори по-нова снимка.</p>
+      )}
 
       <PhotoShare
         after={{ url: photo.url, takenOn: photo.takenOn }}
