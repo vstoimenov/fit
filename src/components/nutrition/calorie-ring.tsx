@@ -2,6 +2,7 @@
 
 import { motion, useReducedMotion } from "motion/react";
 import { formatNumber } from "@/lib/nutrition/format";
+import { ringDash } from "@/lib/nutrition/ring";
 import type { Totals } from "@/lib/nutrition/day";
 
 const SIZE = 168;
@@ -33,7 +34,7 @@ export function CalorieRing({
   macroTargets?: Macros | null;
 }) {
   const reduced = useReducedMotion() ?? false;
-  const fill = target ? Math.min(1, total / target) : 0;
+  const { circumference, offset } = ringDash(total, target, RADIUS);
   const diff = target ? Math.round(target - total) : 0;
   const over = target !== null && diff < 0;
   const label = target
@@ -68,8 +69,9 @@ export function CalorieRing({
               strokeWidth={STROKE}
               strokeLinecap="round"
               className={over ? "stroke-rose-deep" : "stroke-powder"}
-              initial={reduced ? false : { pathLength: 0 }}
-              animate={{ pathLength: fill }}
+              strokeDasharray={circumference}
+              initial={reduced ? false : { strokeDashoffset: circumference }}
+              animate={{ strokeDashoffset: offset }}
               transition={reduced ? { duration: 0 } : { duration: 0.7, ease: "easeOut" }}
             />
           </svg>

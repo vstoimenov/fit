@@ -37,13 +37,8 @@ export function MealGroup({
           {count > 0 && <p className="text-xs text-ink-soft">≈ {formatNumber(kcal)} ккал</p>}
         </div>
         {onAdd && !addOpen && (
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={onAdd}
-            aria-label={`Добави към ${MEAL_LABEL[meal].toLowerCase()}`}
-          >
-            + Добави
+          <Button variant="secondary" size="md" onClick={onAdd}>
+            + Добави<span className="sr-only"> към {MEAL_LABEL[meal].toLowerCase()}</span>
           </Button>
         )}
       </header>

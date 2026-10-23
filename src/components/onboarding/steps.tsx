@@ -53,6 +53,7 @@ export function ChoiceList<T extends string>({
               type={multiple ? "checkbox" : "radio"}
               name={name}
               value={option}
+              aria-label={labels[option]}
               checked={on}
               onChange={() => toggle(option)}
               className="sr-only"

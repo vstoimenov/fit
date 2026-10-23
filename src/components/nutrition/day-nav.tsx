@@ -54,8 +54,10 @@ export function DayNav({
     const touch = event.touches[0];
     // A swipe that starts in a field is the member selecting or scrolling text, not changing the day.
     const inField = (event.target as HTMLElement).closest("input, textarea, select");
+    // An open add panel or amount edit is a <form>: changing the day would throw away what she typed.
+    const formOpen = event.currentTarget.querySelector("form") !== null;
     start.current =
-      touch && !inField && event.touches.length === 1
+      touch && !inField && !formOpen && event.touches.length === 1
         ? { x: touch.clientX, y: touch.clientY }
         : null;
   }
