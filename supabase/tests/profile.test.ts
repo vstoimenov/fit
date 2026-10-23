@@ -158,7 +158,8 @@ describe("profile services", () => {
     ]);
     expect(seedError).toBeNull();
     const data = await exportMyData(db, user.id, admin);
-    expect(data.profile).toMatchObject({ id: user.id });
+    expect(data.profile).toMatchObject({ id: user.id, diet: null, allergens: [] });
+    expect(data.food_entries).toEqual([]);
     expect(data.check_ins).toHaveLength(1);
     expect(data.workout_completions).toHaveLength(1);
     expect(data.visits).toEqual([

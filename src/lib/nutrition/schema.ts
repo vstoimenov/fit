@@ -51,3 +51,5 @@ export function nutritionAnswersSchema(todayYear: number) {
     mealsPerDay: z.union([z.literal(3), z.literal(4), z.literal(5)]),
   });
 }
+
+export type NutritionAnswers = z.infer<ReturnType<typeof nutritionAnswersSchema>>;

@@ -50,6 +50,35 @@ export async function addCheckIn(db: TypedClient, input: CheckInInput): Promise<
   if (error) throw new Error(`check-in failed: ${error.message}`);
 }
 
+const FOOD_EXPORT_PAGE = 1000;
+
+/**
+ * All of her diary rows, oldest first, without her id. A year of full days is far past one response
+ * page, so this reads page by page; a failed page fails the whole read rather than exporting a part.
+ */
+async function listAllFoodEntries(
+  db: TypedClient,
+  userId: string,
+): Promise<{ data: Record<string, unknown>[] | null; error: Error | null }> {
+  const rows: Record<string, unknown>[] = [];
+  for (let from = 0; ; from += FOOD_EXPORT_PAGE) {
+    const { data, error } = await db
+      .from("food_entries")
+      .select(
+        "id, batch_id, position, eaten_on, meal, name, grams, kcal, protein_g, carbs_g, fat_g, source, created_at",
+      )
+      .eq("user_id", userId)
+      .order("eaten_on")
+      .order("created_at")
+      .order("position")
+      .order("id")
+      .range(from, from + FOOD_EXPORT_PAGE - 1);
+    if (error) return { data: null, error: new Error(error.message) };
+    rows.push(...data);
+    if (data.length < FOOD_EXPORT_PAGE) return { data: rows, error: null };
+  }
+}
+
 /**
  * Everything stored about the signed-in user (GDPR access right). Own rows are read through the
  * user's RLS-scoped client; `visits` and `client_notes` are admin-only under RLS, so those use `admin`.
@@ -60,44 +89,55 @@ export async function exportMyData(
   userId: string,
   admin: TypedClient,
 ): Promise<Record<string, unknown>> {
-  const [profile, completions, checkIns, subscription, visits, notes, ledger, rewards, photos] =
-    await Promise.all([
-      db.from("profiles").select("*").eq("id", userId).single(),
-      db
-        .from("workout_completions")
-        .select("workout_id, completed_at, local_date, feeling")
-        .eq("user_id", userId),
-      db
-        .from("check_ins")
-        .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
-        .eq("user_id", userId),
-      db
-        .from("subscriptions")
-        .select("status, current_period_end, provider")
-        .eq("user_id", userId)
-        .maybeSingle(),
-      admin
-        .from("visits")
-        .select("path, referrer, utm, device, created_at")
-        .eq("user_id", userId)
-        .order("created_at"),
-      admin
-        .from("client_notes")
-        .select("kind, body, created_at")
-        .eq("user_id", userId)
-        .order("created_at"),
-      db
-        .from("points_ledger")
-        .select("source, ref, points, reason, created_at")
-        .eq("user_id", userId)
-        .order("created_at"),
-      db.from("rewards_given").select("level, given_at, note").eq("user_id", userId).order("level"),
-      // Signed with her own client; each link works for an hour.
-      listProgressPhotos(db).then(
-        (data) => ({ data, error: null }),
-        (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
-      ),
-    ]);
+  const [
+    profile,
+    completions,
+    checkIns,
+    subscription,
+    visits,
+    notes,
+    ledger,
+    rewards,
+    photos,
+    foodEntries,
+  ] = await Promise.all([
+    db.from("profiles").select("*").eq("id", userId).single(),
+    db
+      .from("workout_completions")
+      .select("workout_id, completed_at, local_date, feeling")
+      .eq("user_id", userId),
+    db
+      .from("check_ins")
+      .select("created_at, weight_kg, waist_cm, hips_cm, energy, mood, note")
+      .eq("user_id", userId),
+    db
+      .from("subscriptions")
+      .select("status, current_period_end, provider")
+      .eq("user_id", userId)
+      .maybeSingle(),
+    admin
+      .from("visits")
+      .select("path, referrer, utm, device, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    admin
+      .from("client_notes")
+      .select("kind, body, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    db
+      .from("points_ledger")
+      .select("source, ref, points, reason, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    db.from("rewards_given").select("level, given_at, note").eq("user_id", userId).order("level"),
+    // Signed with her own client; each link works for an hour.
+    listProgressPhotos(db).then(
+      (data) => ({ data, error: null }),
+      (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+    ),
+    listAllFoodEntries(db, userId),
+  ]);
   // A silently partial export would misstate what is stored about the user.
   const failed = [
     profile,
@@ -109,6 +149,7 @@ export async function exportMyData(
     ledger,
     rewards,
     photos,
+    foodEntries,
   ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
@@ -127,6 +168,7 @@ export async function exportMyData(
       url: p.url,
       url_expires_in_seconds: 3600,
     })),
+    food_entries: foodEntries.data ?? [],
   };
 }
 
