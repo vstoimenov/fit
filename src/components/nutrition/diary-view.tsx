@@ -9,10 +9,10 @@ import { DAY_RESULT_LABEL, dayResult, rescale, sumEntries } from "@/lib/nutritio
 import { formatGrams, formatNumber } from "@/lib/nutrition/format";
 import { MEAL_SLOTS, type MealSlot } from "@/lib/nutrition/labels";
 import type { Target } from "@/lib/nutrition/target";
-import type { FoodEntry } from "@/server/nutrition/diary";
+import type { FoodEntry, FoodItem } from "@/server/nutrition/diary";
+import { AddFoodSheet } from "./add-food-sheet";
 import { CalorieRing } from "./calorie-ring";
 import { EntryRow } from "./entry-row";
-import { ManualEntry } from "./manual-entry";
 import { MealGroup } from "./meal-group";
 
 type Change = { type: "delete"; id: string } | { type: "grams"; id: string; grams: number };
@@ -67,6 +67,8 @@ export function DiaryView({
   target,
   canWrite,
   showResult,
+  aiEnabled,
+  recent,
 }: {
   day: string;
   entries: FoodEntry[];
@@ -74,6 +76,10 @@ export function DiaryView({
   canWrite: boolean;
   /** Past day, or today after 20:00 Sofia. */
   showResult: boolean;
+  /** The describe-in-words estimate is available (an API key is set on the server). */
+  aiEnabled: boolean;
+  /** Her latest distinct foods, for one-tap adding. */
+  recent: FoodItem[];
 }) {
   const [shown, change] = useOptimistic(entries, applyChange);
   const [openMeal, setOpenMeal] = useState<MealSlot | null>(null);
@@ -161,7 +167,15 @@ export function DiaryView({
               count={rows.length}
               onAdd={canWrite ? () => setOpenMeal(meal) : undefined}
               addOpen={openMeal === meal}
-              addPanel={<ManualEntry day={day} meal={meal} onDone={() => setOpenMeal(null)} />}
+              addPanel={
+                <AddFoodSheet
+                  day={day}
+                  meal={meal}
+                  aiEnabled={aiEnabled}
+                  recent={recent}
+                  onClose={() => setOpenMeal(null)}
+                />
+              }
             >
               {rows.map((entry) => (
                 <EntryRow

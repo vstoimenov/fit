@@ -149,6 +149,56 @@ export async function addManualEntry(input: {
   }
 }
 
+/** One row of an estimate or a quick-add food, held to the same bounds the database enforces. */
+const savedFoodSchema = z.object({
+  name: z.string().trim().min(1).max(120),
+  grams: z.number().min(1).max(2000).nullable(),
+  kcal: z.number().int().min(0).max(5000),
+  proteinG: z.number().min(0).max(1000),
+  carbsG: z.number().min(0).max(1000),
+  fatG: z.number().min(0).max(1000),
+});
+
+const saveEstimateSchema = z.object({
+  meal: z.enum(MEAL_SLOTS),
+  batchId: z.guid(),
+  source: z.enum(["ai", "recent"]),
+  items: z.array(savedFoodSchema).min(1).max(12),
+});
+
+/**
+ * Saves the rows of an add flow as one batch: the AI breakdown (after she changed amounts or removed
+ * rows) or a single quick-add food. The rows come from the client, so each one is checked against the
+ * database bounds here. The batch id makes a retried request a no-op.
+ */
+export async function saveEstimate(input: {
+  day: string;
+  meal: (typeof MEAL_SLOTS)[number];
+  batchId: string;
+  source: "ai" | "recent";
+  items: {
+    name: string;
+    grams: number | null;
+    kcal: number;
+    proteinG: number;
+    carbsG: number;
+    fatG: number;
+  }[];
+}): Promise<ActionResult<null>> {
+  try {
+    const { user, supabase } = await requireUser();
+    const day = assertDiaryDay(input?.day);
+    const parsed = saveEstimateSchema.safeParse(input);
+    if (!parsed.success) throw new AppError("INVALID", "Невалидни данни за записа.");
+    await requireDiaryAccess(supabase);
+    await addEntries(supabase, user.id, { day, ...parsed.data });
+    revalidateDiary();
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
 const updateInputSchema = z.object({
   id: z.guid("Записът не е намерен."),
   grams: z.number("Въведи количество").finite("Въведи количество"),

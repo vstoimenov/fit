@@ -39,6 +39,7 @@ import {
   addManualEntry,
   deleteEntryAction,
   estimateFood,
+  saveEstimate,
   saveNutritionAnswersAction,
   updateEntry,
 } from "./actions";
@@ -356,5 +357,141 @@ describe("deleteEntryAction", () => {
     mocks.rpc.mockResolvedValue({ data: false, error: null });
     expect(await deleteEntryAction({ id: ENTRY })).toEqual({ ok: false, message: NO_ACCESS });
     expect(mocks.deleteEntry).not.toHaveBeenCalled();
+  });
+});
+
+function estimateInput(patch: Record<string, unknown> = {}) {
+  return {
+    day: sofiaToday(),
+    meal: "dinner",
+    batchId: BATCH,
+    source: "ai",
+    items: [
+      item,
+      { name: " Салата ", grams: 250, kcal: 300, proteinG: 30, carbsG: 10.5, fatG: 15 },
+    ],
+    ...patch,
+  } as Parameters<typeof saveEstimate>[0];
+}
+
+describe("saveEstimate", () => {
+  it("saves all rows in order as one batch and refreshes the diary and Начало", async () => {
+    expect(await saveEstimate(estimateInput())).toEqual({ ok: true, data: null });
+    expect(mocks.rpc).toHaveBeenCalledWith("my_access");
+    expect(mocks.addEntries).toHaveBeenCalledWith(
+      expect.objectContaining({ rpc: mocks.rpc }),
+      "u1",
+      {
+        day: sofiaToday(),
+        meal: "dinner",
+        batchId: BATCH,
+        source: "ai",
+        items: [
+          item,
+          { name: "Салата", grams: 250, kcal: 300, proteinG: 30, carbsG: 10.5, fatG: 15 },
+        ],
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/app/nutrition");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/app");
+  });
+
+  it("accepts a quick-add (recent) entry without an amount", async () => {
+    const recent = { name: "Баница", grams: null, kcal: 320, proteinG: 7, carbsG: 30, fatG: 18 };
+    expect((await saveEstimate(estimateInput({ source: "recent", items: [recent] }))).ok).toBe(
+      true,
+    );
+    expect(mocks.addEntries).toHaveBeenCalledWith(expect.anything(), "u1", {
+      day: sofiaToday(),
+      meal: "dinner",
+      batchId: BATCH,
+      source: "recent",
+      items: [recent],
+    });
+  });
+
+  it("accepts values on the database bounds", async () => {
+    const edge = {
+      name: "а".repeat(120),
+      grams: 2000,
+      kcal: 5000,
+      proteinG: 1000,
+      carbsG: 0,
+      fatG: 1000,
+    };
+    const low = { name: "x", grams: 1, kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 };
+    expect((await saveEstimate(estimateInput({ items: [edge, low] }))).ok).toBe(true);
+    const twelve = Array.from({ length: 12 }, () => item);
+    expect((await saveEstimate(estimateInput({ items: twelve }))).ok).toBe(true);
+  });
+
+  it("accepts the oldest allowed day and rejects invalid, future and older days", async () => {
+    const today = sofiaToday();
+    expect((await saveEstimate(estimateInput({ day: shiftDay(today, -365) }))).ok).toBe(true);
+    mocks.addEntries.mockClear();
+    for (const day of [shiftDay(today, 1), shiftDay(today, -366), "bad", "2026-02-30", undefined]) {
+      expect(await saveEstimate(estimateInput({ day }))).toEqual({
+        ok: false,
+        message: "Невалиден ден.",
+      });
+    }
+    expect(mocks.addEntries).not.toHaveBeenCalled();
+  });
+
+  it("answers with the plan message and writes nothing without access", async () => {
+    mocks.rpc.mockResolvedValue({ data: false, error: null });
+    expect(await saveEstimate(estimateInput())).toEqual({ ok: false, message: NO_ACCESS });
+    expect(mocks.addEntries).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("rejects bad rows and writes nothing", async () => {
+    const bad: Record<string, unknown>[] = [
+      { name: "   " },
+      { name: "а".repeat(121) },
+      { grams: 0 },
+      { grams: 0.5 },
+      { grams: 2001 },
+      { grams: "100" },
+      { kcal: 5001 },
+      { kcal: -1 },
+      { kcal: 80.5 },
+      { kcal: Number.NaN },
+      { proteinG: 1001 },
+      { carbsG: -0.1 },
+      { fatG: Number.POSITIVE_INFINITY },
+      { fatG: undefined },
+    ];
+    for (const patch of bad) {
+      const result = await saveEstimate(estimateInput({ items: [{ ...item, ...patch }] }));
+      expect(result.ok, JSON.stringify(patch)).toBe(false);
+    }
+    expect(mocks.addEntries).not.toHaveBeenCalled();
+  });
+
+  it("rejects no rows, more than 12 rows and rows that are not a list", async () => {
+    expect((await saveEstimate(estimateInput({ items: [] }))).ok).toBe(false);
+    expect(
+      (await saveEstimate(estimateInput({ items: Array.from({ length: 13 }, () => item) }))).ok,
+    ).toBe(false);
+    expect((await saveEstimate(estimateInput({ items: null }))).ok).toBe(false);
+    expect(mocks.addEntries).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown meal or source and a batch id that is not a uuid", async () => {
+    expect((await saveEstimate(estimateInput({ meal: "brunch" }))).ok).toBe(false);
+    expect((await saveEstimate(estimateInput({ source: "manual" }))).ok).toBe(false);
+    expect((await saveEstimate(estimateInput({ source: "menu" }))).ok).toBe(false);
+    expect((await saveEstimate(estimateInput({ batchId: "x" }))).ok).toBe(false);
+    expect(mocks.addEntries).not.toHaveBeenCalled();
+  });
+
+  it("passes on the service's own message (date window, 100 per day)", async () => {
+    mocks.addEntries.mockRejectedValue(new AppError("INVALID", "Най-много 100 записа на ден."));
+    expect(await saveEstimate(estimateInput())).toEqual({
+      ok: false,
+      message: "Най-много 100 записа на ден.",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

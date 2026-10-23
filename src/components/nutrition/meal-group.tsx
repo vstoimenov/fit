@@ -1,12 +1,14 @@
-import type { ReactNode } from "react";
-import { Button } from "@/components/ui/button";
+"use client";
+
+import { useEffect, useRef, type ReactNode } from "react";
+import { buttonClass } from "@/components/ui/button";
 import { formatNumber } from "@/lib/nutrition/format";
 import { MEAL_LABEL, type MealSlot } from "@/lib/nutrition/labels";
 
 /**
  * One meal of the day: title, its kcal, the entries (as children) and „+ Добави“. Which meal's add
- * panel is open is decided by the diary (one at a time); `addPanel` is what opens there, so the manual
- * form can be replaced by the full add sheet without touching this component.
+ * panel is open is decided by the diary (one at a time); `addPanel` is what opens there (the add
+ * sheet, a modal). The button stays in place behind the sheet and takes focus back when it closes.
  */
 export function MealGroup({
   meal,
@@ -27,6 +29,16 @@ export function MealGroup({
   children: ReactNode;
 }) {
   const headingId = `meal-${meal}`;
+  const addButton = useRef<HTMLButtonElement>(null);
+  const wasOpen = useRef(false);
+
+  // Closing the sheet puts focus back on the button that opened it (not every browser does this itself,
+  // e.g. Safari does not focus a button on tap).
+  useEffect(() => {
+    if (wasOpen.current && !addOpen) addButton.current?.focus();
+    wasOpen.current = addOpen;
+  }, [addOpen]);
+
   return (
     <section aria-labelledby={headingId} className="space-y-1 rounded-2xl p-4 ring-1 ring-line">
       <header className="flex min-h-11 items-center justify-between gap-3">
@@ -36,10 +48,15 @@ export function MealGroup({
           </h3>
           {count > 0 && <p className="text-xs text-ink-soft">≈ {formatNumber(kcal)} ккал</p>}
         </div>
-        {onAdd && !addOpen && (
-          <Button variant="secondary" size="md" onClick={onAdd}>
+        {onAdd && (
+          <button
+            ref={addButton}
+            type="button"
+            onClick={onAdd}
+            className={buttonClass("secondary", "md")}
+          >
             + Добави<span className="sr-only"> към {MEAL_LABEL[meal].toLowerCase()}</span>
-          </Button>
+          </button>
         )}
       </header>
       {count > 0 && <ul className="divide-y divide-line">{children}</ul>}
