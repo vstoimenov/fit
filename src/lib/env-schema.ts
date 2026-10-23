@@ -24,6 +24,10 @@ export const serverEnvSchema = z.object({
     z.string().regex(/^(sk|rk)_(test|live)_/, "Stripe secret key"),
   ),
   STRIPE_WEBHOOK_SECRET: trimmedOptional(z.string().startsWith("whsec_")),
+  // Optional: without a key the nutrition diary has manual entry only (no estimate from words).
+  ANTHROPIC_API_KEY: trimmedOptional(z.string().startsWith("sk-ant-")),
+  // Optional: overrides the default model (claude-opus-5-5), e.g. a cheaper one.
+  NUTRITION_AI_MODEL: optionalFromEnv(z.string().min(1)),
 });
 
 export const clientEnvSchema = z.object({

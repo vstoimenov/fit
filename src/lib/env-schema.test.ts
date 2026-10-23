@@ -71,4 +71,25 @@ describe("parseEnv", () => {
     const blank = parseEnv(serverEnvSchema, { ...base, STRIPE_SECRET_KEY: "  " }, "server");
     expect(blank.STRIPE_SECRET_KEY).toBeUndefined();
   });
+
+  it("treats empty Anthropic variables as unset and rejects a key without the sk-ant- prefix", () => {
+    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, ANTHROPIC_API_KEY: " \n", NUTRITION_AI_MODEL: "" },
+      "server",
+    );
+    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(env.NUTRITION_AI_MODEL).toBeUndefined();
+    expect(() =>
+      parseEnv(serverEnvSchema, { ...base, ANTHROPIC_API_KEY: "abc" }, "server"),
+    ).toThrow(/ANTHROPIC_API_KEY/);
+    const ok = parseEnv(
+      serverEnvSchema,
+      { ...base, ANTHROPIC_API_KEY: "sk-ant-abc\n", NUTRITION_AI_MODEL: "claude-haiku-5-5" },
+      "server",
+    );
+    expect(ok.ANTHROPIC_API_KEY).toBe("sk-ant-abc");
+    expect(ok.NUTRITION_AI_MODEL).toBe("claude-haiku-5-5");
+  });
 });
