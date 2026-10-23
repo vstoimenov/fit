@@ -86,7 +86,7 @@ These count as health data: covered by the existing health-data consent; include
 - Nav gets a tab „Хранене“ *(controller's call; the planned Общност tab will need a nav decision in its phase)*.
 
 ### AI estimate *(controller's call: AI free-text, owner chose „направи го както трябва“)*
-- Server-side only (server action / route under `src/app/**`), Claude **Haiku 5.5** (`claude-haiku-5-5`), structured
+- Server-side only (server action / route under `src/app/**`), Claude **Opus 5.5** (`claude-opus-5-5`, effort `low`), structured
   JSON output validated with zod: up to 12 items `{ name, grams, kcal, protein_g, carbs_g, fat_g }`; per item kcal
   0…3 000, grams 1…2 000. Implementation loads the `claude-api` skill first.
 - Her text (≤ 300 chars) goes into the user message as data; the system prompt tells the model to treat it only as a
@@ -144,7 +144,7 @@ These count as health data: covered by the existing health-data consent; include
 - **Audience:** the product is for women (brand, landing, copy); the female formula and feminine copy stand.
 - **Under 18** (from `birth_year`): maintenance target only, never a deficit *(controller's call)*.
 - **Day boundaries:** Europe/Sofia for everyone, like the rest of the app *(controller's call)*.
-- **Model:** `claude-haiku-5-5` as the default, overridable by env `NUTRITION_AI_MODEL`; `@anthropic-ai/sdk` is added.
+- **Model:** `claude-opus-5-5` (effort `low`) as the default, overridable by env `NUTRITION_AI_MODEL` (e.g. `claude-haiku-5-5`, much cheaper, if the owner chooses); `@anthropic-ai/sdk` is added; refusal fallbacks (`fallbacks: "default"`) on.
   Admin „Попълни с AI“ has its own limit of 200 drafts per day for all admins *(controller's call)*.
 - **Third-party processing:** the add sheet says „Текстът се изпраща за изчисление на калориите. Не пиши лични данни.“;
   the go-live checklist gets „privacy policy: list Anthropic as a processor for the nutrition estimate“ *(controller's
