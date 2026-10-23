@@ -188,6 +188,93 @@ export type Database = {
           },
         ];
       };
+      food_entries: {
+        Row: {
+          batch_id: string;
+          carbs_g: number;
+          created_at: string;
+          eaten_on: string;
+          fat_g: number;
+          grams: number | null;
+          id: string;
+          kcal: number;
+          meal: Database["public"]["Enums"]["meal_slot"];
+          name: string;
+          position: number;
+          protein_g: number;
+          source: Database["public"]["Enums"]["food_source"];
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          batch_id: string;
+          carbs_g: number;
+          created_at?: string;
+          eaten_on: string;
+          fat_g: number;
+          grams?: number | null;
+          id?: string;
+          kcal: number;
+          meal: Database["public"]["Enums"]["meal_slot"];
+          name: string;
+          position: number;
+          protein_g: number;
+          source: Database["public"]["Enums"]["food_source"];
+          user_id: string;
+        };
+        Update: {
+          batch_id?: string;
+          carbs_g?: number;
+          created_at?: string;
+          eaten_on?: string;
+          fat_g?: number;
+          grams?: number | null;
+          id?: string;
+          kcal?: number;
+          meal?: Database["public"]["Enums"]["meal_slot"];
+          name?: string;
+          position?: number;
+          protein_g?: number;
+          source?: Database["public"]["Enums"]["food_source"];
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "food_entries_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      nutrition_ai_calls: {
+        Row: {
+          called_at: string;
+          id: number;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          called_at?: string;
+          id?: number;
+          user_id: string;
+        };
+        Update: {
+          called_at?: string;
+          id?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "nutrition_ai_calls_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       payment_events: {
         Row: {
           error: string | null;
@@ -303,6 +390,11 @@ export type Database = {
       };
       profiles: {
         Row: {
+          activity_level: Database["public"]["Enums"]["activity_level"] | null;
+          allergens: string[];
+          avoid_foods: string | null;
+          birth_year: number | null;
+          diet: Database["public"]["Enums"]["diet_type"] | null;
           email: string;
           fbclid: string | null;
           first_utm: Json | null;
@@ -315,7 +407,9 @@ export type Database = {
           last_seen_at: string | null;
           level: Database["public"]["Enums"]["workout_level"];
           marketing_consent: boolean;
+          meals_per_day: number | null;
           name: string;
+          nutrition_answered_at: string | null;
           onboarding_done: boolean;
           phone: string | null;
           phone_call_consent: boolean;
@@ -330,6 +424,11 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          activity_level?: Database["public"]["Enums"]["activity_level"] | null;
+          allergens?: string[];
+          avoid_foods?: string | null;
+          birth_year?: number | null;
+          diet?: Database["public"]["Enums"]["diet_type"] | null;
           email: string;
           fbclid?: string | null;
           first_utm?: Json | null;
@@ -342,7 +441,9 @@ export type Database = {
           last_seen_at?: string | null;
           level?: Database["public"]["Enums"]["workout_level"];
           marketing_consent?: boolean;
+          meals_per_day?: number | null;
           name?: string;
+          nutrition_answered_at?: string | null;
           onboarding_done?: boolean;
           phone?: string | null;
           phone_call_consent?: boolean;
@@ -356,6 +457,11 @@ export type Database = {
           weight_kg?: number | null;
         };
         Update: {
+          activity_level?: Database["public"]["Enums"]["activity_level"] | null;
+          allergens?: string[];
+          avoid_foods?: string | null;
+          birth_year?: number | null;
+          diet?: Database["public"]["Enums"]["diet_type"] | null;
           email?: string;
           fbclid?: string | null;
           first_utm?: Json | null;
@@ -368,7 +474,9 @@ export type Database = {
           last_seen_at?: string | null;
           level?: Database["public"]["Enums"]["workout_level"];
           marketing_consent?: boolean;
+          meals_per_day?: number | null;
           name?: string;
+          nutrition_answered_at?: string | null;
           onboarding_done?: boolean;
           phone?: string | null;
           phone_call_consent?: boolean;
@@ -797,6 +905,7 @@ export type Database = {
         Returns: string;
       };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
+      claim_nutrition_ai_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       has_active_access: { Args: { uid: string }; Returns: boolean };
@@ -816,7 +925,11 @@ export type Database = {
       };
     };
     Enums: {
+      activity_level: "sedentary" | "light" | "moderate" | "active";
+      diet_type: "omnivore" | "vegetarian" | "vegan" | "pescatarian";
       feeling: "easy" | "right" | "hard";
+      food_source: "ai" | "manual" | "recent" | "menu";
+      meal_slot: "breakfast" | "lunch" | "dinner" | "snack";
       note_kind: "call" | "message" | "note" | "snooze";
       payment_provider: "stripe" | "revolut" | "manual";
       plan_interval: "month" | "year";
@@ -940,7 +1053,11 @@ export const Constants = {
   },
   public: {
     Enums: {
+      activity_level: ["sedentary", "light", "moderate", "active"],
+      diet_type: ["omnivore", "vegetarian", "vegan", "pescatarian"],
       feeling: ["easy", "right", "hard"],
+      food_source: ["ai", "manual", "recent", "menu"],
+      meal_slot: ["breakfast", "lunch", "dinner", "snack"],
       note_kind: ["call", "message", "note", "snooze"],
       payment_provider: ["stripe", "revolut", "manual"],
       plan_interval: ["month", "year"],
