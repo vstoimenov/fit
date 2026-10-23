@@ -8,6 +8,15 @@ describe("question steps", () => {
   });
 });
 
+describe("nutrition step", () => {
+  it("is the sixth question: after the time screen, before the contact screen", () => {
+    expect(QUESTION_STEPS.indexOf("nutrition")).toBe(5);
+    expect(QUESTION_STEPS[4]).toBe("time");
+    expect(QUESTION_STEPS[6]).toBe("contact");
+    expect(QUESTION_COUNT).toBe(7);
+  });
+});
+
 describe("stepCounter", () => {
   it("shows n/N over the questions only", () => {
     expect(stepCounter("goal", 0)).toBe(`1/${QUESTION_COUNT}`);

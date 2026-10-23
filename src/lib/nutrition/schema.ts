@@ -40,14 +40,14 @@ export const foodTextSchema = z.string().trim().min(2).max(300);
 export function nutritionAnswersSchema(todayYear: number) {
   return z.object({
     birthYear: z
-      .number()
-      .int()
-      .min(1940)
-      .max(todayYear - 16),
-    activity: z.enum(ACTIVITY_LEVELS),
-    diet: z.enum(DIETS),
+      .number("Въведи годината на раждане")
+      .int("Годината на раждане е цяло число")
+      .min(1940, `Годината на раждане е между 1940 и ${todayYear - 16}`)
+      .max(todayYear - 16, `Годината на раждане е между 1940 и ${todayYear - 16}`),
+    activity: z.enum(ACTIVITY_LEVELS, "Избери един отговор"),
+    diet: z.enum(DIETS, "Избери един отговор"),
     allergens: z.array(z.enum(ALLERGENS)),
-    avoidFoods: z.string().trim().max(200),
+    avoidFoods: z.string().trim().max(200, "До 200 знака"),
     mealsPerDay: z.union([z.literal(3), z.literal(4), z.literal(5)]),
   });
 }

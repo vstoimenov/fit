@@ -1,10 +1,14 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { serverEnv } from "@/env";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
-import { foodTextSchema, type EstimateItem } from "@/lib/nutrition/schema";
+import { nutritionFormToAnswers } from "@/lib/nutrition/answers-form";
+import { foodTextSchema, nutritionAnswersSchema, type EstimateItem } from "@/lib/nutrition/schema";
+import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
+import { saveNutritionAnswers } from "@/server/nutrition/diary";
 import { createClaudeEstimator, EstimateFailed } from "@/server/nutrition/estimator";
 
 const DEFAULT_MODEL = "claude-opus-5-5";
@@ -44,6 +48,25 @@ export async function estimateFood(input: {
       );
       throw new AppError("INVALID", "Не успяхме да изчислим. Опитай пак или въведи ръчно.");
     }
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/**
+ * Saves her nutrition answers (the profile card and the first visit to the diary). No access check on
+ * purpose: correcting answers is harmless for a lapsed member, and writing the diary stays gated.
+ */
+export async function saveNutritionAnswersAction(form: FormData): Promise<ActionResult<null>> {
+  try {
+    const { user, supabase } = await requireUser();
+    const answers = nutritionAnswersSchema(Number(sofiaToday().slice(0, 4))).parse(
+      nutritionFormToAnswers(form),
+    );
+    await saveNutritionAnswers(supabase, user.id, answers);
+    revalidatePath("/app/profile");
+    revalidatePath("/app/nutrition");
+    return actionOk(null);
   } catch (error) {
     return actionFail(error);
   }

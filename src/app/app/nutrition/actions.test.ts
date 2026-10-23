@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
+  saveNutritionAnswers: vi.fn(),
+  revalidatePath: vi.fn(),
   estimate: vi.fn(),
   createClaudeEstimator: vi.fn(),
   env: {
@@ -11,6 +13,8 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/env", () => ({ serverEnv: mocks.env }));
+vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
+vi.mock("@/server/nutrition/diary", () => ({ saveNutritionAnswers: mocks.saveNutritionAnswers }));
 vi.mock("@/server/auth/require-user", () => ({
   requireUser: async () => ({ supabase: { rpc: mocks.rpc }, user: { id: "u1" } }),
 }));
@@ -20,7 +24,8 @@ vi.mock("@/server/nutrition/estimator", async (importOriginal) => ({
 }));
 
 import { EstimateFailed } from "@/server/nutrition/estimator";
-import { estimateFood } from "./actions";
+import { AppError } from "@/lib/app-error";
+import { estimateFood, saveNutritionAnswersAction } from "./actions";
 
 const item = { name: "Хляб", grams: 60, kcal: 150, proteinG: 5, carbsG: 28, fatG: 2 };
 
@@ -29,6 +34,7 @@ beforeEach(() => {
   mocks.env.ANTHROPIC_API_KEY = "sk-ant-test";
   mocks.env.NUTRITION_AI_MODEL = undefined;
   mocks.rpc.mockResolvedValue({ data: true, error: null });
+  mocks.saveNutritionAnswers.mockResolvedValue(undefined);
   mocks.estimate.mockResolvedValue([item]);
   mocks.createClaudeEstimator.mockReturnValue({ estimate: mocks.estimate });
 });
@@ -105,5 +111,70 @@ describe("estimateFood", () => {
     expect(await estimateFood({ text: "хляб" })).toEqual(generic);
     mocks.rpc.mockResolvedValue({ data: null, error: { message: "db down" } });
     expect(await estimateFood({ text: "хляб" })).toEqual(generic);
+  });
+});
+
+function answersForm(patch: Record<string, string | string[]> = {}): FormData {
+  const fields: Record<string, string | string[]> = {
+    birthYear: "1990",
+    activity: "light",
+    diet: "vegetarian",
+    allergens: ["milk", "nuts"],
+    avoidFoods: " сьомга ",
+    mealsPerDay: "4",
+    ...patch,
+  };
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields))
+    for (const v of Array.isArray(value) ? value : [value]) form.append(key, v);
+  return form;
+}
+
+describe("saveNutritionAnswersAction", () => {
+  it("saves the parsed answers for the signed-in member and refreshes profile and diary", async () => {
+    expect(await saveNutritionAnswersAction(answersForm())).toEqual({ ok: true, data: null });
+    expect(mocks.saveNutritionAnswers).toHaveBeenCalledWith(
+      expect.objectContaining({ rpc: mocks.rpc }),
+      "u1",
+      {
+        birthYear: 1990,
+        activity: "light",
+        diet: "vegetarian",
+        allergens: ["milk", "nuts"],
+        avoidFoods: "сьомга",
+        mealsPerDay: 4,
+      },
+    );
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/app/profile");
+    expect(mocks.revalidatePath).toHaveBeenCalledWith("/app/nutrition");
+  });
+
+  it("does not check access: lapsed members may correct their answers", async () => {
+    mocks.rpc.mockResolvedValue({ data: false, error: null });
+    expect((await saveNutritionAnswersAction(answersForm())).ok).toBe(true);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects invalid answers with a message on the field and writes nothing", async () => {
+    const result = await saveNutritionAnswersAction(answersForm({ birthYear: "1939" }));
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.fieldErrors?.birthYear).toMatch(/1940/);
+    expect((await saveNutritionAnswersAction(answersForm({ allergens: ["pollen"] }))).ok).toBe(
+      false,
+    );
+    expect((await saveNutritionAnswersAction(answersForm({ activity: "" }))).ok).toBe(false);
+    expect(mocks.saveNutritionAnswers).not.toHaveBeenCalled();
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("passes on the service's own message", async () => {
+    mocks.saveNutritionAnswers.mockRejectedValue(
+      new AppError("NOT_FOUND", "Профилът не е намерен."),
+    );
+    expect(await saveNutritionAnswersAction(answersForm())).toEqual({
+      ok: false,
+      message: "Профилът не е намерен.",
+    });
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

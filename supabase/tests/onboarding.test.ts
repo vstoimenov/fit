@@ -21,6 +21,12 @@ const answers = {
   phoneCallConsent: true,
   healthConsent: true,
   marketingConsent: true,
+  birthYear: 1988,
+  activity: "moderate",
+  diet: "pescatarian",
+  allergens: ["milk", "nuts", "milk"],
+  avoidFoods: "черен дроб",
+  mealsPerDay: 4,
 };
 
 let admin: TypedClient;
@@ -49,8 +55,15 @@ describe("saveOnboarding", () => {
       phone_call_consent: true,
       marketing_consent: true,
       onboarding_done: true,
+      birth_year: 1988,
+      activity_level: "moderate",
+      diet: "pescatarian",
+      allergens: ["milk", "nuts"],
+      avoid_foods: "черен дроб",
+      meals_per_day: 4,
     });
     expect(data?.health_data_consent_at).not.toBeNull();
+    expect(data?.nutrition_answered_at).not.toBeNull();
   });
 
   it("rejects answers without health consent and leaves the profile untouched", async () => {
@@ -64,6 +77,35 @@ describe("saveOnboarding", () => {
       .eq("id", user.id)
       .single();
     expect(data?.onboarding_done).toBe(false);
+  });
+
+  it("stores empty avoid-foods as null and rejects an unknown allergen without writing", async () => {
+    const user = await createUser(admin, "onb-nutri");
+    await expect(
+      saveOnboarding(await signedInClient(user), user.id, { ...answers, allergens: ["pollen"] }),
+    ).rejects.toThrow();
+    const untouched = await admin
+      .from("profiles")
+      .select("onboarding_done, birth_year, nutrition_answered_at")
+      .eq("id", user.id)
+      .single();
+    expect(untouched.data).toEqual({
+      onboarding_done: false,
+      birth_year: null,
+      nutrition_answered_at: null,
+    });
+
+    await saveOnboarding(await signedInClient(user), user.id, {
+      ...answers,
+      allergens: [],
+      avoidFoods: "   ",
+    });
+    const { data } = await admin
+      .from("profiles")
+      .select("allergens, avoid_foods")
+      .eq("id", user.id)
+      .single();
+    expect(data).toEqual({ allergens: [], avoid_foods: null });
   });
 
   it("stores an empty phone as null", async () => {

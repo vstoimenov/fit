@@ -2,12 +2,14 @@ import { Camera, ChartLine, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
 import { HealthSyncCard } from "@/components/profile/health-sync-card";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GOALS, LEVEL_LABEL, PROBLEMS } from "@/lib/labels";
 import { endNotice, subscriptionText } from "@/lib/subscription-text";
 import { requireUser } from "@/server/auth/require-user";
+import { getNutritionProfile } from "@/server/nutrition/diary";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
 import { DeleteAccount, PersonalData } from "./profile-forms";
 import { SignOutButton } from "./sign-out-button";
@@ -30,6 +32,7 @@ async function Profile() {
     { data: profile, error: profileError },
     { data: sub, error: subError },
     { data: hasAccess, error: accessError },
+    nutrition,
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -44,6 +47,7 @@ async function Profile() {
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.rpc("my_access"),
+    getNutritionProfile(supabase, user.id),
   ]);
   const loadError = profileError ?? subError ?? accessError;
   if (loadError) throw new Error(`load profile failed: ${loadError.message}`);
@@ -111,6 +115,11 @@ async function Profile() {
                 Виж плановете
               </Link>
             )}
+          </Card>
+
+          <Card className="space-y-4 p-5">
+            <h2 className="font-semibold">Хранене</h2>
+            <NutritionAnswersForm initial={nutrition.answers} variant="secondary" />
           </Card>
 
           <HealthSyncCard />

@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { completeOnboarding } from "@/app/start/actions";
 import { Button, buttonClass } from "@/components/ui/button";
+import { NutritionFields } from "@/components/nutrition/nutrition-fields";
 import { Consent } from "@/components/ui/consent";
 import { Field, inputClass } from "@/components/ui/field";
 import { clientEnv } from "@/env";
@@ -23,7 +24,7 @@ import {
 } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
 import { QUESTION_STEPS, stepCounter, type QuestionStepId } from "@/lib/onboarding/question-steps";
-import { onboardingSchema } from "@/lib/onboarding/schema";
+import { nutritionStepSchema, onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { browserTimezone } from "@/lib/timezone";
 import { ChoiceList, NumberSlider } from "./steps";
@@ -34,6 +35,9 @@ const DEFAULTS: Draft = {
   heightCm: 165,
   weightKg: 68,
   targetWeightKg: 62,
+  allergens: [],
+  avoidFoods: "",
+  mealsPerDay: 3,
   phone: "",
   phoneCallConsent: false,
   healthConsent: undefined,
@@ -52,6 +56,12 @@ const STEP_OF_FIELD: Record<string, StepId> = {
   weightKg: "body",
   targetWeightKg: "body",
   time: "time",
+  birthYear: "nutrition",
+  activity: "nutrition",
+  diet: "nutrition",
+  allergens: "nutrition",
+  avoidFoods: "nutrition",
+  mealsPerDay: "nutrition",
   name: "contact",
   phone: "contact",
   phoneCallConsent: "contact",
@@ -67,6 +77,7 @@ const TITLE: Record<StepId, string> = {
   experience: "Колко тренираш досега?",
   body: "Отправна точка",
   time: "Колко време имаш за тренировка?",
+  nutrition: "Малко за храната",
   contact: "Почти готово",
   account: "Създай профила си и започни",
 };
@@ -74,6 +85,7 @@ const TITLE: Record<StepId, string> = {
 const HINT: Partial<Record<StepId, string>> = {
   problems: "Избери всичко, което важи.",
   body: "Само ти и треньорът ти виждате тези числа.",
+  nutrition: "Така ще изчислим дневната ти цел. Ориентир, не медицински съвет.",
 };
 
 /** Inputs are sand; on the sand desktop card they turn white so they stay visible. */
@@ -127,6 +139,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     experience: Boolean(draft.experience),
     body: true,
     time: Boolean(draft.time),
+    nutrition: draft.birthYear !== undefined && Boolean(draft.activity) && Boolean(draft.diet),
     contact:
       Boolean(draft.name?.trim()) &&
       draft.healthConsent === true &&
@@ -224,6 +237,16 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
   }
 
   function next() {
+    if (step === "nutrition") {
+      // Only this screen: the later ones are not answered yet, so the full schema would send her ahead.
+      const result = nutritionStepSchema.safeParse(draft);
+      if (!result.success) {
+        const errors: Record<string, string> = {};
+        for (const issue of result.error.issues) errors[issue.path.join(".")] ??= issue.message;
+        setFieldErrors(errors);
+        return;
+      }
+    }
     if (step === "contact") {
       if (signedIn) return void finish();
       if (!validate()) return;
@@ -368,6 +391,20 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                 labels={TIME_LABEL}
                 value={draft.time}
                 onChange={(v) => set({ time: v as Draft["time"] })}
+              />
+            )}
+            {step === "nutrition" && (
+              <NutritionFields
+                value={{
+                  birthYear: draft.birthYear,
+                  activity: draft.activity,
+                  diet: draft.diet,
+                  allergens: draft.allergens ?? [],
+                  avoidFoods: draft.avoidFoods ?? "",
+                  mealsPerDay: draft.mealsPerDay ?? 3,
+                }}
+                onChange={set}
+                errors={fieldErrors}
               />
             )}
             {step === "contact" && (

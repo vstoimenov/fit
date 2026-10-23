@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { levelFromExperience, onboardingSchema, profileAnswersSchema } from "./schema";
+import { sofiaToday } from "@/lib/progress-photos/today";
+import {
+  levelFromExperience,
+  nutritionStepSchema,
+  onboardingSchema,
+  profileAnswersSchema,
+} from "./schema";
+
+const currentYear = Number(sofiaToday().slice(0, 4));
 
 const valid = {
   name: "Мария",
@@ -14,6 +22,12 @@ const valid = {
   phoneCallConsent: false,
   healthConsent: true,
   marketingConsent: false,
+  birthYear: 1990,
+  activity: "light",
+  diet: "omnivore",
+  allergens: ["milk", "nuts"],
+  avoidFoods: "черен дроб",
+  mealsPerDay: 4,
 };
 
 describe("onboardingSchema", () => {
@@ -68,6 +82,87 @@ describe("onboardingSchema", () => {
       "America/New_York",
     );
     expect(onboardingSchema.safeParse({ ...valid, timezone: "x".repeat(65) }).success).toBe(false);
+  });
+});
+
+describe("onboardingSchema nutrition answers", () => {
+  const parse = (patch: Record<string, unknown>) =>
+    onboardingSchema.safeParse({ ...valid, ...patch });
+
+  it("keeps the nutrition answers", () => {
+    expect(onboardingSchema.parse(valid)).toMatchObject({
+      birthYear: 1990,
+      activity: "light",
+      diet: "omnivore",
+      allergens: ["milk", "nuts"],
+      avoidFoods: "черен дроб",
+      mealsPerDay: 4,
+    });
+  });
+
+  it("requires them", () => {
+    for (const field of [
+      "birthYear",
+      "activity",
+      "diet",
+      "allergens",
+      "avoidFoods",
+      "mealsPerDay",
+    ]) {
+      const rest: Record<string, unknown> = { ...valid };
+      delete rest[field];
+      expect(onboardingSchema.safeParse(rest).success, field).toBe(false);
+    }
+  });
+
+  it("rejects an unknown allergen, activity, diet or meal count", () => {
+    expect(parse({ allergens: ["milk", "pollen"] }).success).toBe(false);
+    expect(parse({ activity: "extreme" }).success).toBe(false);
+    expect(parse({ diet: "carnivore" }).success).toBe(false);
+    expect(parse({ mealsPerDay: 2 }).success).toBe(false);
+    expect(parse({ mealsPerDay: 6 }).success).toBe(false);
+  });
+
+  it("accepts no allergens and an empty avoid list", () => {
+    expect(parse({ allergens: [], avoidFoods: "" }).success).toBe(true);
+  });
+
+  it("limits birth year to 1940 and sixteen years before this year", () => {
+    expect(parse({ birthYear: 1939 }).success).toBe(false);
+    expect(parse({ birthYear: 1940 }).success).toBe(true);
+    expect(parse({ birthYear: currentYear - 16 }).success).toBe(true);
+    expect(parse({ birthYear: currentYear - 15 }).success).toBe(false);
+    expect(parse({ birthYear: 1990.5 }).success).toBe(false);
+  });
+
+  it("limits what she avoids to 200 characters", () => {
+    expect(parse({ avoidFoods: "а".repeat(200) }).success).toBe(true);
+    expect(parse({ avoidFoods: "а".repeat(201) }).success).toBe(false);
+  });
+});
+
+describe("nutritionStepSchema", () => {
+  it("validates only the nutrition screen, with the error on the field", () => {
+    expect(
+      nutritionStepSchema.safeParse({
+        birthYear: 1990,
+        activity: "light",
+        diet: "vegan",
+        allergens: [],
+        avoidFoods: "",
+        mealsPerDay: 3,
+      }).success,
+    ).toBe(true);
+    const bad = nutritionStepSchema.safeParse({
+      birthYear: 2030,
+      activity: "light",
+      diet: "vegan",
+      allergens: [],
+      avoidFoods: "",
+      mealsPerDay: 3,
+    });
+    expect(bad.success).toBe(false);
+    expect(!bad.success && bad.error.issues[0]?.path).toEqual(["birthYear"]);
   });
 });
 

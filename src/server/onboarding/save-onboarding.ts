@@ -39,6 +39,13 @@ export async function saveOnboarding(
     phone: a.phone === "" ? null : a.phone,
     phone_call_consent: a.phoneCallConsent,
     marketing_consent: a.marketingConsent,
+    birth_year: a.birthYear,
+    activity_level: a.activity,
+    diet: a.diet,
+    allergens: [...new Set(a.allergens)],
+    avoid_foods: a.avoidFoods === "" ? null : a.avoidFoods,
+    meals_per_day: a.mealsPerDay,
+    nutrition_answered_at: new Date().toISOString(),
     health_data_consent_at: new Date().toISOString(),
     onboarding_done: true,
   };
