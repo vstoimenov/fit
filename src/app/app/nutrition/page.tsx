@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { serverEnv } from "@/env";
@@ -55,7 +56,15 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
 
   return (
     <main className="space-y-6 px-5 pt-8 lg:px-8">
-      <h1 className="font-display text-3xl">Хранене</h1>
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="font-display text-3xl">Хранене</h1>
+        <Link
+          href="/app/nutrition/history"
+          className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+        >
+          Последните 30 дни
+        </Link>
+      </div>
       <DayNav day={day} today={today}>
         <DiaryView
           key={day}
