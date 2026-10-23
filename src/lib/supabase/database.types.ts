@@ -383,6 +383,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      progress_photos: {
+        Row: {
+          created_at: string;
+          id: string;
+          path: string;
+          taken_on: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          path: string;
+          taken_on: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          path?: string;
+          taken_on?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "progress_photos_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       rewards_given: {
         Row: {
           given_at: string;
@@ -708,6 +741,7 @@ export type Database = {
     };
     Functions: {
       active_payment_provider: { Args: Record<PropertyKey, never>; Returns: string };
+      add_progress_photo: { Args: { p_path: string; p_taken_on: string }; Returns: string };
       admin_adjust_points: {
         Args: { p_points: number; p_reason: string; p_user_id: string };
         Returns: string;
@@ -764,6 +798,7 @@ export type Database = {
       };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
+      delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       level_for_points: { Args: { p: number }; Returns: number };
