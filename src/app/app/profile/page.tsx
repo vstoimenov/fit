@@ -1,4 +1,4 @@
-import { ChartLine, ChevronRight } from "lucide-react";
+import { Camera, ChartLine, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -67,6 +67,15 @@ async function Profile() {
       >
         <ChartLine size={24} strokeWidth={2} aria-hidden="true" className="shrink-0" />
         <span className="min-w-0 flex-1 font-extrabold">Прогрес</span>
+        <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+      </Link>
+
+      <Link
+        href="/app/progress/photos"
+        className="flex min-h-14 items-center gap-3 rounded-2xl p-4 ring-[1.5px] ring-inset ring-ink active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        <Camera size={24} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+        <span className="min-w-0 flex-1 font-extrabold">Снимки на прогреса</span>
         <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
       </Link>
 

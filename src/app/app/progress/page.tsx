@@ -1,10 +1,14 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { PhotoGrid } from "@/components/photos/photo-grid";
+import { PhotoUpload } from "@/components/photos/photo-upload";
 import { Sparkline } from "@/components/progress/sparkline";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
+import { listProgressPhotos } from "@/server/progress/photos";
 
 export const metadata = { title: "Прогрес" };
 
@@ -29,7 +33,7 @@ async function Progress({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const { saved } = await searchParams;
   const { user, supabase } = await requireUser();
-  const [{ data: profile, error: profileError }, { data: checkIns, error: checkInsError }] =
+  const [{ data: profile, error: profileError }, { data: checkIns, error: checkInsError }, photos] =
     await Promise.all([
       supabase.from("profiles").select("weight_kg, target_weight_kg").eq("id", user.id).single(),
       supabase
@@ -38,6 +42,7 @@ async function Progress({ searchParams }: { searchParams: SearchParams }) {
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .limit(30),
+      listProgressPhotos(supabase, { limit: 6 }),
     ]);
   const loadError = profileError ?? checkInsError;
   if (loadError) throw new Error(`load progress failed: ${loadError.message}`);
@@ -80,6 +85,25 @@ async function Progress({ searchParams }: { searchParams: SearchParams }) {
           <Sparkline points={waists} label="Талия във времето" />
         </Card>
       </div>
+
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 className="font-semibold">Снимки</h2>
+          {photos.length > 0 && (
+            <Link href="/app/progress/photos" className={buttonClass("link")}>
+              Всички снимки
+            </Link>
+          )}
+        </div>
+        {photos.length > 0 ? (
+          <PhotoGrid photos={photos} />
+        ) : (
+          <p className="text-ink-soft">
+            Първата снимка е най-важната — след месец ще се радваш, че я имаш.
+          </p>
+        )}
+        <PhotoUpload userId={user.id} today={sofiaToday()} variant="secondary" />
+      </section>
 
       <section className="space-y-3">
         <h2 className="font-semibold">Последни отчети</h2>
