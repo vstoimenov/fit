@@ -19,6 +19,10 @@ describe("estimateItemSchema", () => {
     expect(estimateItemSchema.safeParse({ ...item, kcal: 3000 }).success).toBe(true);
   });
 
+  it("rounds a fractional kcal to a whole number", () => {
+    expect(estimateItemSchema.parse({ ...item, kcal: 80.5 }).kcal).toBe(81);
+  });
+
   it("rejects grams outside 1–2000", () => {
     expect(estimateItemSchema.safeParse({ ...item, grams: 0 }).success).toBe(false);
     expect(estimateItemSchema.safeParse({ ...item, grams: 2001 }).success).toBe(false);
@@ -26,6 +30,12 @@ describe("estimateItemSchema", () => {
 
   it("rejects negative macros", () => {
     expect(estimateItemSchema.safeParse({ ...item, proteinG: -1 }).success).toBe(false);
+  });
+
+  it("rejects a macro above 1000 g", () => {
+    expect(estimateItemSchema.safeParse({ ...item, proteinG: 1001 }).success).toBe(false);
+    expect(estimateItemSchema.safeParse({ ...item, carbsG: 1001 }).success).toBe(false);
+    expect(estimateItemSchema.safeParse({ ...item, fatG: 1001 }).success).toBe(false);
   });
 });
 
@@ -53,6 +63,20 @@ describe("manualEntrySchema", () => {
     expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 5000 }).success).toBe(true);
     expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 5001 }).success).toBe(false);
   });
+
+  it("rejects a fractional kcal", () => {
+    expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 80.5 }).success).toBe(false);
+  });
+
+  it("rejects a macro above 1000 g", () => {
+    expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 80, proteinG: 1001 }).success).toBe(
+      false,
+    );
+    expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 80, carbsG: 1001 }).success).toBe(
+      false,
+    );
+    expect(manualEntrySchema.safeParse({ name: "Обяд", kcal: 80, fatG: 1001 }).success).toBe(false);
+  });
 });
 
 describe("foodTextSchema", () => {
@@ -79,40 +103,42 @@ describe("nutritionAnswersSchema", () => {
     avoidFoods: "кориандър",
     mealsPerDay: 4,
   };
+  const schema = nutritionAnswersSchema(2026);
 
   it("accepts a complete set of answers", () => {
-    expect(nutritionAnswersSchema.safeParse(answers).success).toBe(true);
+    expect(schema.safeParse(answers).success).toBe(true);
   });
 
   it("rejects a birth year before 1940", () => {
-    expect(nutritionAnswersSchema.safeParse({ ...answers, birthYear: 1939 }).success).toBe(false);
+    expect(schema.safeParse({ ...answers, birthYear: 1939 }).success).toBe(false);
   });
 
-  it("rejects a birth year under 16 years ago", () => {
-    expect(nutritionAnswersSchema.safeParse({ ...answers, birthYear: 2020 }).success).toBe(false);
+  it("accepts a birth year exactly 16 years before the given year and rejects one year later", () => {
+    expect(schema.safeParse({ ...answers, birthYear: 2010 }).success).toBe(true);
+    expect(schema.safeParse({ ...answers, birthYear: 2011 }).success).toBe(false);
+  });
+
+  it("moves the ceiling with the year it is built for", () => {
+    expect(nutritionAnswersSchema(2030).safeParse({ ...answers, birthYear: 2011 }).success).toBe(
+      true,
+    );
   });
 
   it("accepts only 3, 4 or 5 meals per day", () => {
-    expect(nutritionAnswersSchema.safeParse({ ...answers, mealsPerDay: 2 }).success).toBe(false);
-    expect(nutritionAnswersSchema.safeParse({ ...answers, mealsPerDay: 5 }).success).toBe(true);
+    expect(schema.safeParse({ ...answers, mealsPerDay: 2 }).success).toBe(false);
+    expect(schema.safeParse({ ...answers, mealsPerDay: 5 }).success).toBe(true);
   });
 
   it("rejects an allergen code outside the 14 known codes", () => {
-    expect(
-      nutritionAnswersSchema.safeParse({ ...answers, allergens: ["peanuts", "bogus"] }).success,
-    ).toBe(false);
+    expect(schema.safeParse({ ...answers, allergens: ["peanuts", "bogus"] }).success).toBe(false);
   });
 
   it("rejects avoidFoods over 200 characters", () => {
-    expect(
-      nutritionAnswersSchema.safeParse({ ...answers, avoidFoods: "а".repeat(201) }).success,
-    ).toBe(false);
+    expect(schema.safeParse({ ...answers, avoidFoods: "а".repeat(201) }).success).toBe(false);
   });
 
   it("rejects unknown diet and activity codes", () => {
-    expect(nutritionAnswersSchema.safeParse({ ...answers, diet: "keto" }).success).toBe(false);
-    expect(nutritionAnswersSchema.safeParse({ ...answers, activity: "athlete" }).success).toBe(
-      false,
-    );
+    expect(schema.safeParse({ ...answers, diet: "keto" }).success).toBe(false);
+    expect(schema.safeParse({ ...answers, activity: "athlete" }).success).toBe(false);
   });
 });

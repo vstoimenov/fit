@@ -39,6 +39,15 @@ describe("calorieTarget", () => {
     expect(calorieTarget({ ...under18, goal: "lose_weight" })?.kcal).toBe(2050);
   });
 
+  it("keeps maintenance at ages 17 and 18 and applies the deficit from 19", () => {
+    const at = (birthYear: number, goal: TargetInput["goal"]) =>
+      calorieTarget({ ...base, birthYear, goal })?.kcal;
+    expect(at(2009, "lose_weight")).toBe(at(2009, "tone"));
+    expect(at(2008, "lose_weight")).toBe(at(2008, "tone"));
+    expect(at(2007, "lose_weight")).toBe(1720);
+    expect(at(2007, "tone")).toBe(2030);
+  });
+
   it("treats a missing goal as maintenance", () => {
     expect(calorieTarget({ ...base, goal: null })?.kcal).toBe(1940);
   });

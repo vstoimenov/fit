@@ -68,13 +68,32 @@ describe("rescale", () => {
   };
 
   it("scales kcal linearly to the new grams, rounding kcal to an integer", () => {
-    expect(rescale(item, 150).kcal).toBe(248);
+    expect(rescale(item, 150)?.kcal).toBe(248);
   });
 
   it("scales macros linearly, rounded to 0.1 g", () => {
     const scaled = rescale(item, 150);
-    expect(scaled.grams).toBe(150);
-    expect(scaled.proteinG).toBe(46.5);
-    expect(scaled.fatG).toBe(5.4);
+    expect(scaled?.grams).toBe(150);
+    expect(scaled?.proteinG).toBe(46.5);
+    expect(scaled?.fatG).toBe(5.4);
+  });
+
+  it("returns null when the scaled kcal would exceed 5000", () => {
+    const dense: EstimateItem = { ...item, kcal: 300 };
+    expect(rescale(dense, 2000)).toBeNull();
+  });
+
+  it("returns null when a scaled macro would exceed 1000 g", () => {
+    const protein: EstimateItem = { ...item, proteinG: 60 };
+    expect(rescale(protein, 2000)).toBeNull();
+  });
+
+  it("returns null when the target grams are 0 or above 2000", () => {
+    expect(rescale(item, 0)).toBeNull();
+    expect(rescale(item, 2001)).toBeNull();
+  });
+
+  it("returns null when the item has no weight", () => {
+    expect(rescale({ ...item, grams: 0 }, 150)).toBeNull();
   });
 });

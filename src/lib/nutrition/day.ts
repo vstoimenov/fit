@@ -43,17 +43,20 @@ export function showDayResult(day: string, today: string, sofiaHour: number): bo
   return false;
 }
 
-/** Scales an estimated item linearly to a new gram amount. */
-export function rescale(item: EstimateItem, grams: number): EstimateItem {
-  const factor = grams / item.grams;
-  return {
-    ...item,
-    grams,
-    kcal: Math.round(item.kcal * factor),
-    proteinG: roundTenth(item.proteinG * factor),
-    carbsG: roundTenth(item.carbsG * factor),
-    fatG: roundTenth(item.fatG * factor),
-  };
+/**
+ * Scales an estimated item linearly to a new gram amount.
+ * Returns null when the amount is outside 1–2000 g, the item has no weight,
+ * or the scaled kcal (> 5000) or a macro (> 1000) would not fit the diary.
+ */
+export function rescale(item: EstimateItem, grams: number): EstimateItem | null {
+  if (!(grams >= 1 && grams <= 2000) || !(item.grams > 0)) return null;
+  const scale = (value: number) => (value * grams) / item.grams;
+  const kcal = Math.round(scale(item.kcal));
+  const proteinG = roundTenth(scale(item.proteinG));
+  const carbsG = roundTenth(scale(item.carbsG));
+  const fatG = roundTenth(scale(item.fatG));
+  if (kcal > 5000 || proteinG > 1000 || carbsG > 1000 || fatG > 1000) return null;
+  return { ...item, grams, kcal, proteinG, carbsG, fatG };
 }
 
 function roundTenth(value: number): number {

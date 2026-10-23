@@ -33,7 +33,8 @@ export function calorieTarget(input: TargetInput): Target | null {
   const age = Number(today.slice(0, 4)) - birthYear;
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
   const maintenance = bmr * ACTIVITY_FACTOR[activity];
-  const deficit = goal === "lose_weight" && age >= 18 ? 0.85 : 1;
+  // Deficit only from age 19, so someone born late in the year who may still be 17 gets maintenance.
+  const deficit = goal === "lose_weight" && age >= 19 ? 0.85 : 1;
   const kcal = Math.max(MIN_KCAL, roundTo10(maintenance * deficit));
 
   const proteinG = Math.round(Math.min(1.6 * weightKg, (kcal * 0.3) / 4));
