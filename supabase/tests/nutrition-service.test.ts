@@ -115,6 +115,39 @@ describe("diary entries", () => {
     expect(day.totals.kcal).toBe(180);
   });
 
+  it("a retried batch that filled the day to 100 is still a success", async () => {
+    const { user, db } = await member("nut-idem-full");
+    const day = sofiaDay(-1);
+    const filler = Array.from({ length: 97 }, (_, i) => ({
+      user_id: user.id,
+      batch_id: randomUUID(),
+      position: 0,
+      eaten_on: day,
+      meal: "snack" as const,
+      name: `x${i}`,
+      kcal: 1,
+      protein_g: 0,
+      carbs_g: 0,
+      fat_g: 0,
+      source: "manual" as const,
+    }));
+    expect((await admin.from("food_entries").insert(filler)).error).toBeNull();
+    const input = {
+      day,
+      meal: "lunch" as const,
+      batchId: randomUUID(),
+      source: "ai" as const,
+      items: [egg, oats, egg],
+    };
+    await addEntries(db, user.id, input);
+    await addEntries(db, user.id, input);
+    expect((await getDiaryDay(db, user.id, day)).entries).toHaveLength(100);
+
+    // A different batch on the full day is still refused.
+    const other = await failure(addEntries(db, user.id, { ...input, batchId: randomUUID() }));
+    expect(isAppError(other) && other.code).toBe("INVALID");
+  });
+
   it("explains the date window and the daily cap with the database message", async () => {
     const { user, db } = await member("nut-limits");
     const future = await failure(
@@ -386,22 +419,30 @@ describe("nutrition profile", () => {
     expect(profile).toEqual({ answers: null, target: null, hasAccess: false });
   });
 
-  it("rejects invalid answers and answers without access", async () => {
+  it("rejects invalid answers", async () => {
     const { user, db } = await member("nut-bad");
     const young = await failure(
       saveNutritionAnswers(db, user.id, { ...ANSWERS, birthYear: new Date().getFullYear() - 10 }),
     );
     expect(isAppError(young) && young.code).toBe("INVALID");
+  });
 
-    const none = await member("nut-bad-noaccess", { access: false });
-    const denied = await failure(saveNutritionAnswers(none.db, none.user.id, ANSWERS));
-    expect(isAppError(denied) && denied.code).toBe("FORBIDDEN");
+  it("saves answers without access (onboarding comes before payment)", async () => {
+    const none = await member("nut-answers-noaccess", { access: false });
+    await saveNutritionAnswers(none.db, none.user.id, ANSWERS);
     const { data } = await admin
       .from("profiles")
-      .select("nutrition_answered_at")
+      .select("nutrition_answered_at, diet")
       .eq("id", none.user.id)
       .single();
-    expect(data?.nutrition_answered_at).toBeNull();
+    expect(data?.nutrition_answered_at).not.toBeNull();
+    expect(data?.diet).toBe("vegetarian");
+  });
+
+  it("answers for an unknown member are NOT_FOUND", async () => {
+    const { db } = await member("nut-answers-unknown");
+    const error = await failure(saveNutritionAnswers(db, randomUUID(), ANSWERS));
+    expect(isAppError(error) && error.code).toBe("NOT_FOUND");
   });
 });
 

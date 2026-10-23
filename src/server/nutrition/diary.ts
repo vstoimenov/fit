@@ -31,6 +31,7 @@ export type FoodItem = {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const BATCH_KEY = /food_entries_user_id_batch_id_position_key/;
 const PAGE = 1000;
 const MAX_ITEMS = 100;
 const RECENT_SCAN = 300;
@@ -127,11 +128,21 @@ export async function addEntries(
   }));
   const { error } = await db.from("food_entries").insert(rows);
   if (!error) return;
-  // Same batch sent twice (double tap, retry after a lost response): already saved.
-  if (error.code === "23505") return;
-  // Date window (22023) and daily cap (P0001): the trigger's Bulgarian message is meant for her.
-  if (error.code === "22023" || error.code === "P0001")
+  // Same batch sent twice (double tap, retry after a lost response): already saved. Only that unique key
+  // counts; any other unique violation is a real failure.
+  if (error.code === "23505" && BATCH_KEY.test(`${error.message} ${error.details ?? ""}`)) return;
+  // Date window (22023) and daily cap (P0001): the trigger's Bulgarian message is meant for her. A retry
+  // of a batch that is already saved can hit these too (the first attempt filled the day to 100, or the
+  // retry crossed midnight at the 365-day edge), so a fully saved batch is still a success.
+  if (error.code === "22023" || error.code === "P0001") {
+    const saved = await db
+      .from("food_entries")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("batch_id", input.batchId);
+    if (!saved.error && saved.count === rows.length) return;
     throw new AppError("INVALID", error.message);
+  }
   if (error.code === "42501") {
     throw new AppError("FORBIDDEN", "Записването е достъпно с активен план.");
   }
@@ -322,7 +333,10 @@ export async function getNutritionProfile(
   return { answers, target, hasAccess: access.data === true };
 }
 
-/** Stores her answers and marks them answered. Needs access like every other nutrition write. */
+/**
+ * Stores her answers and marks them answered. No access needed: onboarding saves them before payment;
+ * the app actions decide who may reach the nutrition screen.
+ */
 export async function saveNutritionAnswers(
   db: TypedClient,
   userId: string,
@@ -332,13 +346,7 @@ export async function saveNutritionAnswers(
   if (!parsed.success) throw new AppError("INVALID", "Провери отговорите.");
   const a = parsed.data;
 
-  const access = await db.rpc("my_access");
-  if (access.error) throw new Error(`check access failed: ${access.error.message}`);
-  if (access.data !== true) {
-    throw new AppError("FORBIDDEN", "Записването е достъпно с активен план.");
-  }
-
-  const { error } = await db
+  const { data, error } = await db
     .from("profiles")
     .update({
       birth_year: a.birthYear,
@@ -349,6 +357,8 @@ export async function saveNutritionAnswers(
       meals_per_day: a.mealsPerDay,
       nutrition_answered_at: new Date().toISOString(),
     })
-    .eq("id", userId);
+    .eq("id", userId)
+    .select("id");
   if (error) throw new Error(`save nutrition answers failed: ${error.message}`);
+  if (data.length === 0) throw new AppError("NOT_FOUND", "Профилът не е намерен.");
 }
