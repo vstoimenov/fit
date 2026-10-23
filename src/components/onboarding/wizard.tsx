@@ -442,7 +442,8 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                     onChange={(v) => set({ healthConsent: v ? true : undefined })}
                   >
                     <strong>Задължително:</strong> съгласна съм да се обработват данните ми за
-                    тегло, мерки и здравословни проблеми, за да получа персонален план.
+                    тегло, мерки, здравословни проблеми, алергии и хранене, за да получа персонален
+                    план.
                   </Consent>
                   {fieldErrors.healthConsent && (
                     <p className="text-sm text-brick">{fieldErrors.healthConsent}</p>

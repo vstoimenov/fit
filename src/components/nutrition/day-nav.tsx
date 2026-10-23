@@ -6,24 +6,9 @@ import { useRouter } from "next/navigation";
 import { useRef, type ReactNode, type TouchEvent } from "react";
 import { cn } from "@/lib/cn";
 import { dayParamBounds, shiftDay } from "@/lib/nutrition/day-param";
+import { dayHref, historyDayLabel } from "@/lib/nutrition/history-format";
 
 const SWIPE_MIN_PX = 64;
-
-const dateFormat = new Intl.DateTimeFormat("bg-BG", {
-  weekday: "short",
-  day: "numeric",
-  month: "short",
-  timeZone: "UTC",
-});
-
-/** „чт, 22 окт“ for a YYYY-MM-DD day. */
-function dayLabel(day: string): string {
-  return dateFormat.format(new Date(`${day}T12:00:00Z`)).replace(/\.$/, "");
-}
-
-function hrefFor(day: string, today: string): string {
-  return day === today ? "/app/nutrition" : `/app/nutrition?day=${day}`;
-}
 
 const arrowClass =
   "flex size-11 items-center justify-center rounded-full ring-[1.5px] ring-inset ring-ink active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink";
@@ -47,8 +32,9 @@ export function DayNav({
   const prev = day > min ? shiftDay(day, -1) : null;
   const next = day < max ? shiftDay(day, 1) : null;
 
-  const main = day === today ? "Днес" : day === shiftDay(today, -1) ? "Вчера" : dayLabel(day);
-  const sub = day === today || day === shiftDay(today, -1) ? dayLabel(day) : null;
+  const main =
+    day === today ? "Днес" : day === shiftDay(today, -1) ? "Вчера" : historyDayLabel(day);
+  const sub = day === today || day === shiftDay(today, -1) ? historyDayLabel(day) : null;
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
     const touch = event.touches[0];
@@ -72,7 +58,7 @@ export function DayNav({
     // Mostly horizontal and long enough; vertical scrolling must never change the day.
     if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < Math.abs(dy) * 1.5) return;
     const target = dx > 0 ? prev : next; // drag right = earlier day
-    if (target) router.push(hrefFor(target, today));
+    if (target) router.push(dayHref(target, today));
   }
 
   return (
@@ -80,7 +66,7 @@ export function DayNav({
       <nav aria-label="Ден" className="flex items-center justify-between gap-3">
         {prev ? (
           <Link
-            href={hrefFor(prev, today)}
+            href={dayHref(prev, today)}
             aria-label="Предишен ден"
             className={arrowClass}
             scroll={false}
@@ -98,7 +84,7 @@ export function DayNav({
         </div>
         {next ? (
           <Link
-            href={hrefFor(next, today)}
+            href={dayHref(next, today)}
             aria-label="Следващ ден"
             className={arrowClass}
             scroll={false}

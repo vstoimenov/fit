@@ -2,22 +2,15 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { cn } from "@/lib/cn";
-import { DAY_RESULT_LABEL, dayResult, showDayResult, type DayResult } from "@/lib/nutrition/day";
+import { DAY_RESULT_LABEL, DAY_RESULT_STYLE, dayResult, showDayResult } from "@/lib/nutrition/day";
 import { formatNumber } from "@/lib/nutrition/format";
-import { historyDayLabel } from "@/lib/nutrition/history-format";
+import { dayHref, historyDayLabel } from "@/lib/nutrition/history-format";
 import { sofiaHour, sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { getNutritionProfile, historyDays } from "@/server/nutrition/diary";
-import { HistoryChart, dayHref } from "@/components/nutrition/history-chart";
+import { HistoryChart } from "@/components/nutrition/history-chart";
 
 export const metadata = { title: "Последните 30 дни" };
-
-// Powder / sand / ink only, never red (same family as the day result card on the diary).
-const RESULT_STYLE: Record<DayResult, string> = {
-  in: "bg-powder-chip text-rose-deep",
-  under: "bg-sand text-ink",
-  over: "bg-white text-ink ring-[1.5px] ring-inset ring-ink",
-};
 
 export default function NutritionHistoryPage() {
   return (
@@ -94,7 +87,7 @@ async function History() {
                     <span
                       className={cn(
                         "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                        RESULT_STYLE[result],
+                        DAY_RESULT_STYLE[result],
                       )}
                     >
                       {DAY_RESULT_LABEL[result]}

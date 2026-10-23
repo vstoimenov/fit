@@ -56,7 +56,7 @@ export function EstimateRows({
                 aria-label={`Количество в грамове: ${row.name}`}
                 aria-invalid={problem !== null}
                 aria-describedby={problem ? `grams-problem-${index}` : undefined}
-                className={cn(inputClass, "h-11 w-24 px-3 text-sm", problem && "border-brick")}
+                className={cn(inputClass, "h-11 w-24 px-3", problem && "border-brick")}
               />
               <span className="text-sm text-ink-soft">г</span>
               <span className="ml-auto text-sm font-semibold">≈ {formatNumber(row.kcal)} ккал</span>

@@ -68,7 +68,7 @@ export function EntryRow({
               autoFocus
               aria-label={`Количество в грамове: ${entry.name}`}
               aria-invalid={invalid}
-              className={cn(inputClass, "h-11 w-24 px-3 text-sm", invalid && "border-brick")}
+              className={cn(inputClass, "h-11 w-24 px-3", invalid && "border-brick")}
             />
             <span className="text-sm text-ink-soft">г</span>
             <button type="submit" aria-label="Запази количеството" className={iconButton}>

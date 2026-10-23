@@ -47,7 +47,15 @@ async function Profile() {
       .eq("user_id", user.id)
       .maybeSingle(),
     supabase.rpc("my_access"),
-    getNutritionProfile(supabase, user.id),
+    // The nutrition card must not take down Профил (account, subscription, data export).
+    getNutritionProfile(supabase, user.id).catch((error: unknown) => {
+      console.error(
+        "profile nutrition skipped",
+        { userId: user.id },
+        error instanceof Error ? error.message : error,
+      );
+      return null;
+    }),
   ]);
   const loadError = profileError ?? subError ?? accessError;
   if (loadError) throw new Error(`load profile failed: ${loadError.message}`);
@@ -117,10 +125,12 @@ async function Profile() {
             )}
           </Card>
 
-          <Card className="space-y-4 p-5">
-            <h2 className="font-semibold">Хранене</h2>
-            <NutritionAnswersForm initial={nutrition.answers} variant="secondary" />
-          </Card>
+          {nutrition && (
+            <Card className="space-y-4 p-5">
+              <h2 className="font-semibold">Хранене</h2>
+              <NutritionAnswersForm initial={nutrition.answers} variant="secondary" />
+            </Card>
+          )}
 
           <HealthSyncCard />
 

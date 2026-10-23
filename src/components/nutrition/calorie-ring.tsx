@@ -61,19 +61,22 @@ export function CalorieRing({
               strokeWidth={STROKE}
               className="stroke-sand"
             />
-            <motion.circle
-              cx={SIZE / 2}
-              cy={SIZE / 2}
-              r={RADIUS}
-              fill="none"
-              strokeWidth={STROKE}
-              strokeLinecap="round"
-              className={over ? "stroke-rose-deep" : "stroke-powder"}
-              strokeDasharray={circumference}
-              initial={reduced ? false : { strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset: offset }}
-              transition={reduced ? { duration: 0 } : { duration: 0.7, ease: "easeOut" }}
-            />
+            {/* A zero-length round-capped stroke still draws a dot, so an empty ring has no arc. */}
+            {offset < circumference && (
+              <motion.circle
+                cx={SIZE / 2}
+                cy={SIZE / 2}
+                r={RADIUS}
+                fill="none"
+                strokeWidth={STROKE}
+                strokeLinecap="round"
+                className={over ? "stroke-rose-deep" : "stroke-powder"}
+                strokeDasharray={circumference}
+                initial={reduced ? false : { strokeDashoffset: circumference }}
+                animate={{ strokeDashoffset: offset }}
+                transition={reduced ? { duration: 0 } : { duration: 0.7, ease: "easeOut" }}
+              />
+            )}
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <p className="text-3xl font-extrabold tracking-tight">{formatNumber(total)}</p>

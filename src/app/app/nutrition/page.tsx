@@ -48,6 +48,9 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
         <header className="space-y-2">
           <h1 className="font-display text-3xl">Хранене</h1>
           <p className="text-ink-soft">Няколко въпроса, за да изчислим целта ти.</p>
+          <p className="text-sm text-ink-soft">
+            Отговорите и записите за храна са здравни данни — пазим ги само за твоите изчисления.
+          </p>
         </header>
         <NutritionAnswersForm initial={null} submitLabel="Продължи" />
       </main>

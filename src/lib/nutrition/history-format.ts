@@ -24,6 +24,11 @@ export function historyDayLabel(day: string): string {
   return `${WEEKDAYS[date.getUTCDay()]}, ${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
 }
 
+/** Diary link for a day; today is the bare diary URL, so the back button and the bookmark stay clean. */
+export function dayHref(day: string, today: string): string {
+  return day === today ? "/app/nutrition" : `/app/nutrition?day=${day}`;
+}
+
 /** „чт, 22 окт — 1 580 ккал“, or „… — няма записи“ for a day without entries. */
 export function historyLabel(day: string, kcal: number, count: number): string {
   return `${historyDayLabel(day)} — ${count === 0 ? "няма записи" : `${formatNumber(kcal)} ккал`}`;

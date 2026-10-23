@@ -40,6 +40,8 @@ Collected from the task reviews and the final whole-branch review of plan 1A (br
 
 ## Go-live / design pass
 - Privacy policy page linked from the health-data consent checkbox (needs legal text).
+- Nutrition diary: privacy policy: list Anthropic as a processor for the nutrition estimate.
+- Nutrition diary: set `ANTHROPIC_API_KEY` (and optionally `NUTRITION_AI_MODEL` — an override model must accept the server-side fallback beta) in Vercel.
 - Streak counts scheduled workout slots, not calendar days — label it (e.g. "тренировки подред") or revisit.
 - English zod defaults still reachable on free numeric inputs (profile height decimals → add `step="1"` / BG messages).
 - [x] Covers: decorative ring vs "no icon-in-circle"; long Cyrillic first words get cropped. → done in the redesign (photo covers with a bottom title bar; no ring).

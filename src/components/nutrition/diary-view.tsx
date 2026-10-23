@@ -5,7 +5,13 @@ import { useOptimistic, useState, useTransition } from "react";
 import { deleteEntryAction, updateEntry } from "@/app/app/nutrition/actions";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
-import { DAY_RESULT_LABEL, dayResult, rescale, sumEntries } from "@/lib/nutrition/day";
+import {
+  DAY_RESULT_LABEL,
+  DAY_RESULT_STYLE,
+  dayResult,
+  rescale,
+  sumEntries,
+} from "@/lib/nutrition/day";
 import { formatGrams, formatNumber } from "@/lib/nutrition/format";
 import { MEAL_SLOTS, type MealSlot } from "@/lib/nutrition/labels";
 import type { Target } from "@/lib/nutrition/target";
@@ -46,15 +52,6 @@ function applyChange(entries: FoodEntry[], change: Change): FoodEntry[] {
       : e;
   });
 }
-
-/**
- * Powder/sand/ink only, never red: being over the target is information, not a failure.
- */
-const RESULT_STYLE = {
-  in: "bg-powder-chip text-rose-deep",
-  under: "bg-sand text-ink",
-  over: "bg-white text-ink ring-[1.5px] ring-inset ring-ink",
-} as const;
 
 /**
  * The day: ring, result, four meal groups. Totals follow edits and deletes right away (optimistic) and
@@ -129,7 +126,7 @@ export function DiaryView({
       {result && (
         <section
           aria-label="Резултат за деня"
-          className={cn("space-y-1 rounded-2xl p-4", RESULT_STYLE[result])}
+          className={cn("space-y-1 rounded-2xl p-4", DAY_RESULT_STYLE[result])}
         >
           <p className="font-extrabold">{DAY_RESULT_LABEL[result]}</p>
           <p className="text-sm">

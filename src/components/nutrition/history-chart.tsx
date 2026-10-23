@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { dayResult, showDayResult } from "@/lib/nutrition/day";
-import { historyLabel } from "@/lib/nutrition/history-format";
+import { dayHref, historyLabel } from "@/lib/nutrition/history-format";
 
 export type HistoryDay = { day: string; kcal: number; count: number };
 
@@ -8,11 +8,6 @@ const W = 300;
 const H = 120;
 const TOP = 6;
 const BASE = H - 2;
-
-/** Diary link for a day; today is the bare diary URL, like the day navigation. */
-export function dayHref(day: string, today: string): string {
-  return day === today ? "/app/nutrition" : `/app/nutrition?day=${day}`;
-}
 
 /**
  * 30 bars, oldest to newest, one per day. Sand bars; days that landed within the target powder

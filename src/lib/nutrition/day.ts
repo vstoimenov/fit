@@ -10,6 +10,13 @@ export const DAY_RESULT_LABEL: Record<DayResult, string> = {
   over: "Над целта",
 };
 
+/** Powder/sand/ink only, never red: being over the target is information, not a failure. */
+export const DAY_RESULT_STYLE: Record<DayResult, string> = {
+  in: "bg-powder-chip text-rose-deep",
+  under: "bg-sand text-ink",
+  over: "bg-white text-ink ring-[1.5px] ring-inset ring-ink",
+};
+
 /** Sum of diary entries; kcal is whole, macros rounded to 0.1 g. */
 export function sumEntries(entries: Totals[]): Totals {
   const sum = entries.reduce(

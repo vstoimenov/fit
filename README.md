@@ -33,6 +33,8 @@ Create `.env.local` from `.env.example`, filling the keys from `pnpm exec supaba
 | `NEXT_PUBLIC_GOOGLE_AUTH`       | `1` shows the Google button (needs the Google provider), else `0` |
 | `STRIPE_SECRET_KEY`             | optional, payments: see "Payments (Stripe)"                       |
 | `STRIPE_WEBHOOK_SECRET`         | optional, payments: see "Payments (Stripe)"                       |
+| `ANTHROPIC_API_KEY`             | optional, nutrition diary: calories from words                    |
+| `NUTRITION_AI_MODEL`            | optional, model override; must accept the fallback beta           |
 
 ```bash
 pnpm dev             # http://localhost:3120
@@ -145,7 +147,10 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
    videos are demo data.
 4. **Environment variables** (hosting provider): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
    `SUPABASE_SERVICE_ROLE_KEY`, `APP_URL`, `NEXT_PUBLIC_GOOGLE_AUTH`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
-   (see "Payments (Stripe)"; without the Stripe keys the plan picker is disabled and the webhook answers 503).
+   (see "Payments (Stripe)"; without the Stripe keys the plan picker is disabled and the webhook answers 503),
+   optionally `ANTHROPIC_API_KEY` and `NUTRITION_AI_MODEL` (nutrition diary: without a key the "describe in words"
+   estimate says it is coming soon and only manual entry works; an override model must accept the
+   server-side fallback beta; list Anthropic as a processor in the privacy policy).
 5. **Admin user:** after signing up, promote the owner account with the service role
    (`update public.profiles set role = 'admin' where email = '...'`).
    **Admin TOTP:** `/admin` requires a TOTP second factor, controlled by the database flag
