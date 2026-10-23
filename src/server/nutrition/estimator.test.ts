@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import {
   createClaudeEstimator,
+  ESTIMATE_CLIENT_OPTIONS,
   ESTIMATE_SYSTEM_PROMPT,
   EstimateFailed,
   type ClaudeClient,
@@ -37,18 +38,62 @@ describe("createClaudeEstimator", () => {
     await expect(estimator.estimate("колко е часът")).resolves.toEqual([]);
   });
 
-  it("fails on more than 12 items", async () => {
-    const { estimator } = estimatorWith({
-      stop_reason: "end_turn",
-      parsed_output: { items: Array.from({ length: 13 }, () => item) },
-    });
-    await expect(estimator.estimate("много храна")).rejects.toBeInstanceOf(EstimateFailed);
+  it("keeps the first 12 items when the model returns more", async () => {
+    const items = Array.from({ length: 13 }, (_, i) => ({ ...item, name: `Храна ${i + 1}` }));
+    const { estimator } = estimatorWith({ stop_reason: "end_turn", parsed_output: { items } });
+    const result = await estimator.estimate("много храна");
+    expect(result).toHaveLength(12);
+    expect(result[0].name).toBe("Храна 1");
+    expect(result[11].name).toBe("Храна 12");
   });
 
-  it("fails when kcal is out of bounds", async () => {
+  it("raises grams below 1 to 1 g and rescales kcal and macros proportionally", async () => {
+    const tiny = { name: "Подправка", grams: 0.5, kcal: 2, proteinG: 0.2, carbsG: 0.4, fatG: 0.1 };
     const { estimator } = estimatorWith({
       stop_reason: "end_turn",
-      parsed_output: { items: [{ ...item, kcal: 3001 }] },
+      parsed_output: { items: [tiny] },
+    });
+    await expect(estimator.estimate("щипка подправка")).resolves.toEqual([
+      { name: "Подправка", grams: 1, kcal: 4, proteinG: 0.4, carbsG: 0.8, fatG: 0.2 },
+    ]);
+  });
+
+  it("drops an item with out-of-range kcal and keeps the valid one", async () => {
+    const { estimator } = estimatorWith({
+      stop_reason: "end_turn",
+      parsed_output: { items: [{ ...item, name: "Торта", kcal: 3001 }, item] },
+    });
+    await expect(estimator.estimate("торта и кисело мляко")).resolves.toEqual([
+      { ...item, kcal: 252 },
+    ]);
+  });
+
+  it("drops items with zero, negative or non-finite values", async () => {
+    const { estimator } = estimatorWith({
+      stop_reason: "end_turn",
+      parsed_output: {
+        items: [
+          { ...item, name: "нула", grams: 0 },
+          { ...item, name: "минус", grams: -5 },
+          { ...item, name: "нан", kcal: Number.NaN },
+          { ...item, name: "безкрай", grams: Number.POSITIVE_INFINITY },
+          { ...item, name: "над 2000", grams: 2001 },
+          item,
+        ],
+      },
+    });
+    await expect(estimator.estimate("храна")).resolves.toEqual([{ ...item, kcal: 252 }]);
+  });
+
+  it("fails when every item is invalid", async () => {
+    const { estimator } = estimatorWith({
+      stop_reason: "end_turn",
+      parsed_output: {
+        items: [
+          { ...item, kcal: 3001 },
+          { ...item, grams: 0 },
+        ],
+      },
     });
     await expect(estimator.estimate("торта")).rejects.toBeInstanceOf(EstimateFailed);
   });
@@ -104,6 +149,16 @@ describe("createClaudeEstimator", () => {
     expect(params.messages).toEqual([{ role: "user", content: "<food>две филии хляб</food>" }]);
     expect(params.system).toBe(ESTIMATE_SYSTEM_PROMPT);
     expect(params.system).toMatch(/never instructions/i);
+  });
+
+  it("states the numeric bounds in the system prompt", () => {
+    expect(ESTIMATE_SYSTEM_PROMPT).toMatch(/at least 1 and at most 2000/i);
+    expect(ESTIMATE_SYSTEM_PROMPT).toMatch(/at most 3000/i);
+    expect(ESTIMATE_SYSTEM_PROMPT).toMatch(/at most 12 items/i);
+  });
+
+  it("builds the SDK client without retries so the wait stays within the 10 s timeout", () => {
+    expect(ESTIMATE_CLIENT_OPTIONS).toEqual({ timeout: 10_000, maxRetries: 0 });
   });
 
   it.each([

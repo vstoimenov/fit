@@ -40,8 +40,10 @@ export async function estimateFood(input: {
     const apiKey = serverEnv.ANTHROPIC_API_KEY;
     if (!apiKey) throw new AppError("INVALID", "Изчисляването с думи скоро ще е включено.");
 
-    // Claimed only now, so invalid input or a missing key never burns the quota.
-    // False also covers "no access"; the page does not show the field then.
+    // Access is checked before the claim so a lapsed member hears the real reason, not "limit reached".
+    await requireDiaryAccess(supabase);
+
+    // Claimed only now, so invalid input, a missing key or a lapsed plan never burns the quota.
     const { data: claimed, error } = await supabase.rpc("claim_nutrition_ai_call");
     if (error) throw error;
     if (!claimed)

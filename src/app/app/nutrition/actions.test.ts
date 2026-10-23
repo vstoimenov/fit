@@ -99,8 +99,31 @@ describe("estimateFood", () => {
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
 
+  it("tells a lapsed member to subscribe, without spending quota", async () => {
+    mocks.rpc.mockImplementation(async (name: string) =>
+      name === "my_access" ? { data: false, error: null } : { data: true, error: null },
+    );
+    expect(await estimateFood({ text: "хляб" })).toEqual({
+      ok: false,
+      message: "Нужен е активен абонамент.",
+    });
+    expect(mocks.rpc).toHaveBeenCalledWith("my_access");
+    expect(mocks.rpc).not.toHaveBeenCalledWith("claim_nutrition_ai_call");
+    expect(mocks.estimate).not.toHaveBeenCalled();
+  });
+
+  it("checks access after validation and the key, and before claiming the quota", async () => {
+    await estimateFood({ text: "хляб" });
+    expect(mocks.rpc.mock.calls.map((call) => call[0])).toEqual([
+      "my_access",
+      "claim_nutrition_ai_call",
+    ]);
+  });
+
   it("shows the limit copy when the quota claim is refused", async () => {
-    mocks.rpc.mockResolvedValue({ data: false, error: null });
+    mocks.rpc.mockImplementation(async (name: string) =>
+      name === "my_access" ? { data: true, error: null } : { data: false, error: null },
+    );
     expect(await estimateFood({ text: "хляб" })).toEqual({
       ok: false,
       message: "Днес достигна лимита за изчисления. Въведи ръчно.",

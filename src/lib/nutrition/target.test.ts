@@ -48,6 +48,22 @@ describe("calorieTarget", () => {
     expect(at(2007, "tone")).toBe(2030);
   });
 
+  it("keeps maintenance when BMI is below 18.5 even for lose_weight", () => {
+    const thin = { ...base, weightKg: 45, heightCm: 165, activity: "light" as const };
+    expect(calorieTarget({ ...thin, goal: "lose_weight" })?.kcal).toBe(
+      calorieTarget({ ...thin, goal: "tone" })?.kcal,
+    );
+  });
+
+  it("applies the deficit from BMI 18.5 upwards", () => {
+    const at = (weightKg: number, goal: TargetInput["goal"]) =>
+      calorieTarget({ ...base, weightKg, heightCm: 165, goal })?.kcal;
+    expect(at(60, "lose_weight")).toBeLessThan(at(60, "tone")!);
+    // 50.4 kg at 165 cm is BMI 18.51, 50.3 kg is 18.47.
+    expect(at(50.4, "lose_weight")).toBeLessThan(at(50.4, "tone")!);
+    expect(at(50.3, "lose_weight")).toBe(at(50.3, "tone"));
+  });
+
   it("treats a missing goal as maintenance", () => {
     expect(calorieTarget({ ...base, goal: null })?.kcal).toBe(1940);
   });

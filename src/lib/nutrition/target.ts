@@ -22,6 +22,8 @@ const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
 };
 
 const MIN_KCAL = 1200;
+/** Below this BMI no deficit is applied, whatever her goal says. */
+const MIN_BMI_FOR_DEFICIT = 18.5;
 
 /** Mifflin-St Jeor (female) daily target with activity, deficit, floor and macro split. Null if data is missing. */
 export function calorieTarget(input: TargetInput): Target | null {
@@ -33,8 +35,10 @@ export function calorieTarget(input: TargetInput): Target | null {
   const age = Number(today.slice(0, 4)) - birthYear;
   const bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 161;
   const maintenance = bmr * ACTIVITY_FACTOR[activity];
-  // Deficit only from age 19, so someone born late in the year who may still be 17 gets maintenance.
-  const deficit = goal === "lose_weight" && age >= 19 ? 0.85 : 1;
+  const bmi = weightKg / (heightCm / 100) ** 2;
+  // Deficit only from age 19, so someone born late in the year who may still be 17 gets maintenance,
+  // and only at a BMI of 18.5 or more, so an underweight member is never pushed lower.
+  const deficit = goal === "lose_weight" && age >= 19 && bmi >= MIN_BMI_FOR_DEFICIT ? 0.85 : 1;
   const kcal = Math.max(MIN_KCAL, roundTo10(maintenance * deficit));
 
   const proteinG = Math.round(Math.min(1.6 * weightKg, (kcal * 0.3) / 4));
