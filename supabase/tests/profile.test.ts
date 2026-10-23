@@ -8,6 +8,7 @@ import {
   updateProfileBasics,
 } from "@/server/profile/profile";
 import { addNote } from "@/server/admin/notes";
+import { recordProgressPhoto } from "@/server/progress/photos";
 import {
   adminClient,
   createAdminUser,
@@ -19,6 +20,28 @@ import {
 } from "./helpers";
 
 let admin: TypedClient;
+
+// Smallest plausible JPEG: SOI, JFIF APP0, EOI.
+const JPEG = Uint8Array.from([
+  0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0x00, 0x01,
+  0x00, 0x01, 0x00, 0x00, 0xff, 0xd9,
+]);
+
+async function addPhoto(db: TypedClient, userId: string, takenOn: string): Promise<string> {
+  const path = `${userId}/${randomUUID()}.jpg`;
+  const up = await db.storage
+    .from("progress-photos")
+    .upload(path, JPEG, { contentType: "image/jpeg" });
+  if (up.error) throw up.error;
+  await recordProgressPhoto(db, { path, takenOn });
+  return path;
+}
+
+const photoNames = async (userId: string) => {
+  const { data, error } = await admin.storage.from("progress-photos").list(userId);
+  if (error) throw error;
+  return data.map((o) => o.name);
+};
 
 beforeAll(() => {
   admin = adminClient();
@@ -143,6 +166,25 @@ describe("profile services", () => {
     ]);
   });
 
+  it("exports her progress photos with a working, time-limited link", async () => {
+    const user = await createUser(admin, "export-photos");
+    const other = await createUser(admin, "export-photos-other");
+    const db = await signedInClient(user);
+    await addPhoto(db, user.id, "2026-09-15");
+    await addPhoto(await signedInClient(other), other.id, "2026-10-01");
+    const data = await exportMyData(db, user.id, admin);
+    const photos = data.progress_photos as Record<string, unknown>[];
+    expect(photos).toHaveLength(1);
+    expect(photos[0]).toMatchObject({ taken_on: "2026-09-15", url_expires_in_seconds: 3600 });
+    expect(Object.keys(photos[0]).sort()).toEqual([
+      "created_at",
+      "taken_on",
+      "url",
+      "url_expires_in_seconds",
+    ]);
+    expect((await fetch(photos[0].url as string)).status).toBe(200);
+  });
+
   it("exports her points ledger and the rewards handed out to her, and nobody else's", async () => {
     const { db: boss } = await createAdminUser(admin, "export-pts-boss");
     const user = await createUser(admin, "export-pts");
@@ -212,6 +254,55 @@ describe("profile services", () => {
       .select("anon_id")
       .in("anon_id", [anonId, strangerAnonId]);
     expect(visits).toEqual([{ anon_id: strangerAnonId }]);
+  });
+
+  describe("deleting an account with progress photos", () => {
+    it("removes her stored photos along with the account", async () => {
+      const user = await createUser(admin, "del-photos");
+      const bystander = await createUser(admin, "del-photos-other");
+      const db = await signedInClient(user);
+      await addPhoto(db, user.id, "2026-09-01");
+      await addPhoto(db, user.id, "2026-10-01");
+      await addPhoto(await signedInClient(bystander), bystander.id, "2026-10-01");
+      expect(await photoNames(user.id)).toHaveLength(2);
+      await deleteAccount(admin, user.id, async () => {});
+      expect(await photoNames(user.id)).toEqual([]);
+      expect(await photoNames(bystander.id)).toHaveLength(1);
+      const { data } = await admin.from("progress_photos").select("id").eq("user_id", user.id);
+      expect(data).toEqual([]);
+    });
+
+    it("aborts and keeps the account when removing the photos fails", async () => {
+      const user = await createUser(admin, "del-photos-fail");
+      await addPhoto(await signedInClient(user), user.id, "2026-10-01");
+      const failing = new Proxy(admin, {
+        get(target, prop) {
+          if (prop === "storage") {
+            return {
+              from: (bucket: string) =>
+                new Proxy(target.storage.from(bucket), {
+                  get(bucketApi, method) {
+                    if (method === "remove") {
+                      return async () => ({ data: null, error: new Error("storage down") });
+                    }
+                    const v = Reflect.get(bucketApi, method, bucketApi);
+                    return typeof v === "function" ? v.bind(bucketApi) : v;
+                  },
+                }),
+            };
+          }
+          const v = Reflect.get(target, prop, target);
+          return typeof v === "function" ? v.bind(target) : v;
+        },
+      });
+      await expect(deleteAccount(failing, user.id, async () => {})).rejects.toThrow();
+      const { data } = await admin.auth.admin.getUserById(user.id);
+      expect(data.user?.id).toBe(user.id);
+      expect(await photoNames(user.id)).toHaveLength(1);
+      // Nothing was deleted, so remove the test user ourselves.
+      await deleteAccount(admin, user.id, async () => {});
+      expect(await photoNames(user.id)).toEqual([]);
+    });
   });
 
   describe("deleting an account with a paid subscription", () => {

@@ -4,6 +4,7 @@ import type { CheckInInput } from "@/lib/progress/check-in-schema";
 import type { Level } from "@/lib/program/types";
 import { paidSubOpen } from "@/lib/subscription-text";
 import type { TypedClient } from "@/server/db/types";
+import { listProgressPhotos, removeAllProgressPhotos } from "@/server/progress/photos";
 
 export async function updateProfileBasics(
   db: TypedClient,
@@ -59,7 +60,7 @@ export async function exportMyData(
   userId: string,
   admin: TypedClient,
 ): Promise<Record<string, unknown>> {
-  const [profile, completions, checkIns, subscription, visits, notes, ledger, rewards] =
+  const [profile, completions, checkIns, subscription, visits, notes, ledger, rewards, photos] =
     await Promise.all([
       db.from("profiles").select("*").eq("id", userId).single(),
       db
@@ -91,6 +92,11 @@ export async function exportMyData(
         .eq("user_id", userId)
         .order("created_at"),
       db.from("rewards_given").select("level, given_at, note").eq("user_id", userId).order("level"),
+      // Signed with her own client; each link works for an hour.
+      listProgressPhotos(db).then(
+        (data) => ({ data, error: null }),
+        (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
+      ),
     ]);
   // A silently partial export would misstate what is stored about the user.
   const failed = [
@@ -102,6 +108,7 @@ export async function exportMyData(
     notes,
     ledger,
     rewards,
+    photos,
   ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
@@ -114,6 +121,12 @@ export async function exportMyData(
     client_notes: notes.data ?? [],
     points_ledger: ledger.data ?? [],
     rewards_given: rewards.data ?? [],
+    progress_photos: (photos.data ?? []).map((p) => ({
+      taken_on: p.takenOn,
+      created_at: p.createdAt,
+      url: p.url,
+      url_expires_in_seconds: 3600,
+    })),
   };
 }
 
@@ -141,6 +154,7 @@ async function anonIdsOf(admin: TypedClient, userId: string): Promise<string[]> 
  * visits.user_id is `on delete set null` and rows keep a persistent anon_id, so the visits that
  * identify the user (by user_id or by a shared anon_id) are deleted first.
  * A live paid subscription is cancelled first via `cancelPaid`; if that fails nothing is deleted.
+ * Her progress-photo objects are removed from Storage next; if that fails nothing else is deleted.
  */
 export async function deleteAccount(
   admin: TypedClient,
@@ -172,6 +186,10 @@ export async function deleteAccount(
       );
     }
   }
+
+  // Her photos live in Storage, which no cascade reaches. They go before anything irreversible; if
+  // removal fails the account stays, so a retry can finish the job.
+  await removeAllProgressPhotos(admin, userId);
 
   const anonIds = await anonIdsOf(admin, userId);
   for (let i = 0; i < anonIds.length; i += IN_CHUNK) {
