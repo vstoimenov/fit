@@ -49,9 +49,9 @@ const modelOutputSchema = z.object({
   ),
 });
 
-/** Removes any <food> tags from the member's text so it cannot close the wrapper early. */
+/** Angle brackets are swapped for look-alikes, so the member's text can never form or close a tag. */
 function wrapFood(text: string): string {
-  return `<food>${text.replace(/<\/?food\s*>/gi, "")}</food>`;
+  return `<food>${text.replaceAll("<", "‹").replaceAll(">", "›")}</food>`;
 }
 
 export function createClaudeEstimator(opts: {

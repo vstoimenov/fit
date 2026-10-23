@@ -97,4 +97,13 @@ describe("estimateFood", () => {
     expect(result.ok).toBe(false);
     expect(mocks.estimate).not.toHaveBeenCalled();
   });
+
+  it("returns the generic message, never raw error text, for unexpected errors", async () => {
+    const generic = { ok: false, message: "Нещо се обърка. Опитай отново." };
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mocks.estimate.mockRejectedValue(new Error("secret internal detail"));
+    expect(await estimateFood({ text: "хляб" })).toEqual(generic);
+    mocks.rpc.mockResolvedValue({ data: null, error: { message: "db down" } });
+    expect(await estimateFood({ text: "хляб" })).toEqual(generic);
+  });
 });
