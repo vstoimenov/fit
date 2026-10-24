@@ -4,12 +4,16 @@ import { Suspense } from "react";
 import { serverEnv } from "@/env";
 import { DayNav } from "@/components/nutrition/day-nav";
 import { DiaryView } from "@/components/nutrition/diary-view";
+import { MenuView } from "@/components/nutrition/menu-view";
 import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
+import { cn } from "@/lib/cn";
 import { showDayResult } from "@/lib/nutrition/day";
 import { parseDayParam } from "@/lib/nutrition/day-param";
+import { historyDayLabel } from "@/lib/nutrition/history-format";
 import { sofiaHour, sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { getDiaryDay, getNutritionProfile, recentFoods } from "@/server/nutrition/diary";
+import { getMenuDay } from "@/server/nutrition/menu";
 
 export const metadata = { title: "Хранене" };
 
@@ -17,7 +21,7 @@ export const metadata = { title: "Хранене" };
 // page's limit.
 export const maxDuration = 30;
 
-type SearchParams = Promise<{ day?: string }>;
+type SearchParams = Promise<{ day?: string; view?: string }>;
 
 export default function NutritionPage({ searchParams }: { searchParams: SearchParams }) {
   return (
@@ -30,14 +34,17 @@ export default function NutritionPage({ searchParams }: { searchParams: SearchPa
 async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
-  const { day: rawDay } = await searchParams;
+  const { day: rawDay, view } = await searchParams;
   const { user, supabase } = await requireUser();
   const today = sofiaToday();
-  const day = parseDayParam(rawDay, today);
+  // The menu is for today only: `day` is ignored there.
+  const menuView = view === "menu";
+  const day = menuView ? today : parseDayParam(rawDay, today);
+  // The diary reads run next to the profile one; the menu has its own service call below.
   const [profile, diary, recent] = await Promise.all([
     getNutritionProfile(supabase, user.id),
-    getDiaryDay(supabase, user.id, day),
-    recentFoods(supabase, user.id, 10),
+    menuView ? null : getDiaryDay(supabase, user.id, day),
+    menuView ? null : recentFoods(supabase, user.id, 10),
   ]);
 
   // First visit: the questions come before the diary. Without access she cannot answer here (the plan
@@ -57,29 +64,76 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
     );
   }
 
+  if (menuView) {
+    const menu = await getMenuDay(supabase, user.id, today);
+    return (
+      <main className="space-y-6 px-5 pt-8 lg:px-8">
+        <Header />
+        <ViewTabs menuView />
+        <div className="space-y-1">
+          <h2 className="text-lg font-extrabold tracking-tight">Днес</h2>
+          <p className="text-xs font-semibold text-ink-soft">{historyDayLabel(today)}</p>
+        </div>
+        <MenuView data={menu} day={today} />
+      </main>
+    );
+  }
+
   return (
     <main className="space-y-6 px-5 pt-8 lg:px-8">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="font-display text-3xl">Хранене</h1>
-        <Link
-          href="/app/nutrition/history"
-          className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-        >
-          Последните 30 дни
-        </Link>
-      </div>
+      <Header />
+      <ViewTabs menuView={false} />
       <DayNav day={day} today={today}>
         <DiaryView
           key={day}
           day={day}
-          entries={diary.entries}
+          entries={diary?.entries ?? []}
           target={profile.target}
           canWrite={profile.hasAccess}
           showResult={showDayResult(day, today, sofiaHour())}
           aiEnabled={Boolean(serverEnv.ANTHROPIC_API_KEY)}
-          recent={profile.hasAccess ? recent : []}
+          recent={profile.hasAccess && recent ? recent : []}
         />
       </DayNav>
     </main>
+  );
+}
+
+function Header() {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <h1 className="font-display text-3xl">Хранене</h1>
+      <Link
+        href="/app/nutrition/history"
+        className="inline-flex min-h-11 items-center text-sm font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+      >
+        Последните 30 дни
+      </Link>
+    </div>
+  );
+}
+
+/** „Дневник“ / „Меню“: plain links, so the view lives in the URL and the back button works. */
+function ViewTabs({ menuView }: { menuView: boolean }) {
+  const tabs = [
+    { label: "Дневник", href: "/app/nutrition", active: !menuView },
+    { label: "Меню", href: "/app/nutrition?view=menu", active: menuView },
+  ];
+  return (
+    <nav aria-label="Изглед" className="flex gap-1 rounded-full bg-sand p-1">
+      {tabs.map((tab) => (
+        <Link
+          key={tab.label}
+          href={tab.href}
+          aria-current={tab.active ? "page" : undefined}
+          className={cn(
+            "inline-flex min-h-11 flex-1 items-center justify-center rounded-full px-5 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
+            tab.active ? "bg-ink text-white" : "text-ink",
+          )}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </nav>
   );
 }
