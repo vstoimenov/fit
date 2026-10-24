@@ -24,6 +24,9 @@ const TABLES = [
   "progress_photos",
   "food_entries",
   "nutrition_ai_calls",
+  "meals",
+  "menu_swaps",
+  "meal_draft_calls",
 ];
 const ROLES = ["anon", "authenticated"];
 // MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).

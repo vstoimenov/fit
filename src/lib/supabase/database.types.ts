@@ -248,6 +248,134 @@ export type Database = {
           },
         ];
       };
+      meal_draft_calls: {
+        Row: {
+          admin_id: string;
+          called_at: string;
+          id: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          admin_id: string;
+          called_at?: string;
+          id?: never;
+        };
+        Update: {
+          admin_id?: string;
+          called_at?: string;
+          id?: never;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "meal_draft_calls_admin_id_fkey";
+            columns: ["admin_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      meals: {
+        Row: {
+          allergens: string[];
+          carbs_g: number;
+          created_at: string;
+          fat_g: number;
+          fits_pescatarian: boolean;
+          fits_vegan: boolean;
+          fits_vegetarian: boolean;
+          id: string;
+          ingredients: NonNullable<Json>;
+          kcal: number;
+          meal_types: Database["public"]["Enums"]["meal_slot"][];
+          photo_url: string | null;
+          protein_g: number;
+          published: boolean;
+          steps: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          allergens?: string[];
+          carbs_g: number;
+          created_at?: string;
+          fat_g: number;
+          fits_pescatarian?: boolean;
+          fits_vegan?: boolean;
+          fits_vegetarian?: boolean;
+          id?: string;
+          ingredients: NonNullable<Json>;
+          kcal: number;
+          meal_types: Database["public"]["Enums"]["meal_slot"][];
+          photo_url?: string | null;
+          protein_g: number;
+          published?: boolean;
+          steps?: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          allergens?: string[];
+          carbs_g?: number;
+          created_at?: string;
+          fat_g?: number;
+          fits_pescatarian?: boolean;
+          fits_vegan?: boolean;
+          fits_vegetarian?: boolean;
+          id?: string;
+          ingredients?: NonNullable<Json>;
+          kcal?: number;
+          meal_types?: Database["public"]["Enums"]["meal_slot"][];
+          photo_url?: string | null;
+          protein_g?: number;
+          published?: boolean;
+          steps?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      menu_swaps: {
+        Row: {
+          created_at: string;
+          meal_id: string;
+          menu_date: string;
+          slot: number;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          meal_id: string;
+          menu_date: string;
+          slot: number;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          meal_id?: string;
+          menu_date?: string;
+          slot?: number;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "menu_swaps_meal_id_fkey";
+            columns: ["meal_id"];
+            isOneToOne: false;
+            referencedRelation: "meals";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "menu_swaps_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       nutrition_ai_calls: {
         Row: {
           called_at: string;
@@ -905,12 +1033,18 @@ export type Database = {
         Returns: string;
       };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
+      claim_meal_draft_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       claim_nutrition_ai_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       level_for_points: { Args: { p: number }; Returns: number };
+      meal_ingredients_valid: { Args: { p_items: Json }; Returns: boolean };
+      meal_types_valid: {
+        Args: { p_types: Database["public"]["Enums"]["meal_slot"][] };
+        Returns: boolean;
+      };
       member_points: {
         Args: { uid: string };
         Returns: {
