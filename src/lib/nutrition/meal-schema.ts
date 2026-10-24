@@ -58,3 +58,20 @@ export type MealInput = z.infer<typeof mealInputSchema>;
 
 /** A stored meal: the input plus its id and publication state. */
 export type Meal = MealInput & { id: string; published: boolean };
+
+/** The fields an AI draft may suggest; the title, steps, photo and publication state stay the admin's. */
+export type MealDraft = Partial<
+  Pick<
+    MealInput,
+    | "mealTypes"
+    | "ingredients"
+    | "kcal"
+    | "proteinG"
+    | "carbsG"
+    | "fatG"
+    | "allergens"
+    | "fitsVegetarian"
+    | "fitsVegan"
+    | "fitsPescatarian"
+  >
+>;

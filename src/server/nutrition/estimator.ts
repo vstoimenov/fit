@@ -4,6 +4,9 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { estimateItemSchema, type EstimateItem } from "@/lib/nutrition/schema";
+import { CLAUDE_CLIENT_OPTIONS, wrapTag, type ClaudeClient } from "./claude-shared";
+
+export type { ClaudeClient };
 
 /** Turns a free-text food description into estimated items. */
 export interface FoodEstimator {
@@ -17,9 +20,6 @@ export class EstimateFailed extends Error {
     this.name = "EstimateFailed";
   }
 }
-
-/** Only the call the estimator uses, so tests can pass a fake. */
-export type ClaudeClient = { beta: { messages: Pick<Anthropic["beta"]["messages"], "parse"> } };
 
 export const ESTIMATE_SYSTEM_PROMPT = `You estimate calories and macronutrients for a food diary used by women in Bulgaria.
 
@@ -52,7 +52,7 @@ const modelOutputSchema = z.object({
 const MAX_ITEMS = 12;
 
 /** The SDK allows 10 s in total, so a failed call is not retried: the member would wait twice as long. */
-export const ESTIMATE_CLIENT_OPTIONS = { timeout: 10_000, maxRetries: 0 } as const;
+export const ESTIMATE_CLIENT_OPTIONS = CLAUDE_CLIENT_OPTIONS;
 
 /**
  * Cleans the model's items so one bad row cannot fail the whole estimate. Grams under 1 are raised to
@@ -78,11 +78,6 @@ function sanitizeItems(raw: z.infer<typeof modelOutputSchema>["items"]): Estimat
   return valid.slice(0, MAX_ITEMS);
 }
 
-/** Angle brackets are swapped for look-alikes, so the member's text can never form or close a tag. */
-function wrapFood(text: string): string {
-  return `<food>${text.replaceAll("<", "‹").replaceAll(">", "›")}</food>`;
-}
-
 export function createClaudeEstimator(opts: {
   apiKey: string;
   model: string;
@@ -99,7 +94,7 @@ export function createClaudeEstimator(opts: {
           model: opts.model,
           max_tokens: 4096,
           system: ESTIMATE_SYSTEM_PROMPT,
-          messages: [{ role: "user", content: wrapFood(text) }],
+          messages: [{ role: "user", content: wrapTag("food", text) }],
           output_config: { effort: "low", format: zodOutputFormat(modelOutputSchema) },
           betas: ["server-side-fallback-2026-07-01"],
           fallbacks: "default",
