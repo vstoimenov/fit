@@ -12,8 +12,8 @@ import { ALLERGEN_LABEL } from "@/lib/nutrition/labels";
 import { formatPortion, scalePortion } from "@/lib/nutrition/menu";
 import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
-import { getMeal } from "@/server/admin/meals";
 import { getMenuDay } from "@/server/nutrition/menu";
+import { getPublishedMeal } from "@/server/nutrition/meals";
 
 export const metadata = { title: "Рецепта" };
 
@@ -66,17 +66,25 @@ async function Recipe({ params, searchParams }: { params: Params; searchParams: 
     );
   }
 
-  // RLS shows members published meals only; the check keeps an admin's draft out of this page too.
-  const meal = await getMeal(supabase, id);
-  if (!meal || !meal.published) notFound();
+  // RLS shows members published meals only; this keeps an admin's draft out of this page too.
+  const meal = await getPublishedMeal(supabase, id);
+  if (!meal) notFound();
 
   // She arrives from a menu card: use that day's portion for the slot, but only if it is this dish.
   let factor = 1;
   const slot = /^[0-4]$/.test(rawSlot ?? "") ? Number(rawSlot) : null;
   if (slot !== null) {
-    const menu = await getMenuDay(supabase, user.id, sofiaToday());
-    const pick = menu.slots[slot]?.pick;
-    if (pick && pick.meal.id === meal.id) factor = pick.factor;
+    try {
+      const menu = await getMenuDay(supabase, user.id, sofiaToday());
+      const pick = menu.slots[slot]?.pick;
+      if (pick && pick.meal.id === meal.id) factor = pick.factor;
+    } catch (error) {
+      // The recipe is still worth showing at the standard portion.
+      console.error(
+        "recipe page: menu portion unavailable",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   const portion = scalePortion(meal, factor);

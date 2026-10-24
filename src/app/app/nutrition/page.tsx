@@ -10,6 +10,7 @@ import { cn } from "@/lib/cn";
 import { showDayResult } from "@/lib/nutrition/day";
 import { parseDayParam } from "@/lib/nutrition/day-param";
 import { historyDayLabel } from "@/lib/nutrition/history-format";
+import { openMenuDishes, type MenuDish } from "@/lib/nutrition/menu-format";
 import { sofiaHour, sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { getDiaryDay, getNutritionProfile, recentFoods } from "@/server/nutrition/diary";
@@ -79,6 +80,20 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
     );
   }
 
+  // Today's open menu dishes become „От менюто“ chips in the add sheet. The diary works without them.
+  let menuDishes: MenuDish[] = [];
+  if (day === today && profile.hasAccess) {
+    try {
+      const menu = await getMenuDay(supabase, user.id, today);
+      menuDishes = openMenuDishes(menu.slots, menu.eatenSlots);
+    } catch (error) {
+      console.error(
+        "diary: menu chips unavailable",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+  }
+
   return (
     <main className="space-y-6 px-5 pt-8 lg:px-8">
       <Header />
@@ -93,6 +108,7 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
           showResult={showDayResult(day, today, sofiaHour())}
           aiEnabled={Boolean(serverEnv.ANTHROPIC_API_KEY)}
           recent={profile.hasAccess && recent ? recent : []}
+          menuDishes={menuDishes}
         />
       </DayNav>
     </main>

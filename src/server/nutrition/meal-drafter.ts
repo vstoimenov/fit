@@ -7,12 +7,20 @@ import { ALLERGENS, MEAL_SLOTS, type Allergen, type MealSlot } from "@/lib/nutri
 import {
   mealIngredientSchema,
   mealInputSchema,
+  VEGAN_BLOCKERS,
+  VEGETARIAN_BLOCKERS,
   type MealDraft,
   type MealInput,
 } from "@/lib/nutrition/meal-schema";
-import { CLAUDE_CLIENT_OPTIONS, wrapTag, type ClaudeClient } from "./claude-shared";
+import { wrapTag, type ClaudeClient } from "./claude-shared";
 
 export type { MealDraft };
+
+/**
+ * A draft is an admin tool, not a member waiting on a screen: it gets 30 s (the page hosting the
+ * action allows the same) and, like the estimator, no retries, so a failure is not paid for twice.
+ */
+export const MEAL_DRAFT_CLIENT_OPTIONS = { timeout: 30_000, maxRetries: 0 } as const;
 
 /** Suggests a draft for a meal's data from its title and the admin's notes. Nothing is saved by it. */
 export interface MealDrafter {
@@ -118,6 +126,19 @@ function sanitizeDraft(raw: unknown): MealDraft {
   for (const key of ["fitsVegetarian", "fitsVegan", "fitsPescatarian"] as const) {
     if (typeof raw[key] === "boolean") out[key] = raw[key];
   }
+
+  // A diet flag that contradicts the suggested allergens is dropped (the admin ticks it by hand if it
+  // is right), rather than failing the whole draft at save time.
+  const found = out.allergens ?? [];
+  if (out.fitsVegan && found.some((a) => (VEGAN_BLOCKERS as readonly string[]).includes(a))) {
+    delete out.fitsVegan;
+  }
+  if (
+    out.fitsVegetarian &&
+    found.some((a) => (VEGETARIAN_BLOCKERS as readonly string[]).includes(a))
+  ) {
+    delete out.fitsVegetarian;
+  }
   return out;
 }
 
@@ -134,7 +155,7 @@ export function createClaudeMealDrafter(opts: {
   client?: ClaudeClient;
 }): MealDrafter {
   const client: ClaudeClient =
-    opts.client ?? new Anthropic({ apiKey: opts.apiKey, ...CLAUDE_CLIENT_OPTIONS });
+    opts.client ?? new Anthropic({ apiKey: opts.apiKey, ...MEAL_DRAFT_CLIENT_OPTIONS });
 
   return {
     async draft(title, notes) {

@@ -2,35 +2,17 @@ import { AppError } from "@/lib/app-error";
 import { DIETS, MEAL_SLOTS, type Diet, type MealSlot } from "@/lib/nutrition/labels";
 import { mealInputSchema, type Meal, type MealInput } from "@/lib/nutrition/meal-schema";
 import { mealFits } from "@/lib/nutrition/menu";
-import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
+import { getMeal, toMeal } from "@/server/nutrition/meals";
 
-type MealRow = Database["public"]["Tables"]["meals"]["Row"];
+// The read helpers live with the member code; the admin pages and tests keep importing them from here.
+export { getMeal };
 
 /** A stored meal with the time it was last changed. */
 export type MealListItem = Meal & { updatedAt: string };
 
 const NOT_FOUND = "Ястието не е намерено.";
 const FORBIDDEN = "Нямаш достъп.";
-
-/** Maps a stored row to the camelCase meal the engine and forms use. */
-export const toMeal = (r: MealRow): Meal => ({
-  id: r.id,
-  title: r.title,
-  mealTypes: r.meal_types,
-  ingredients: r.ingredients as MealInput["ingredients"],
-  kcal: r.kcal,
-  proteinG: r.protein_g,
-  carbsG: r.carbs_g,
-  fatG: r.fat_g,
-  fitsVegetarian: r.fits_vegetarian,
-  fitsVegan: r.fits_vegan,
-  fitsPescatarian: r.fits_pescatarian,
-  allergens: r.allergens as MealInput["allergens"],
-  steps: r.steps,
-  photoUrl: r.photo_url,
-  published: r.published,
-});
 
 function throwWriteError(error: { code?: string; message?: string }, what: string): never {
   if (error.code === "42501") throw new AppError("FORBIDDEN", FORBIDDEN);
@@ -46,12 +28,6 @@ export async function listMeals(db: TypedClient): Promise<MealListItem[]> {
     .limit(1000);
   if (error) throw new Error(`list meals failed: ${error.message}`);
   return data.map((r) => ({ ...toMeal(r), updatedAt: r.updated_at }));
-}
-
-export async function getMeal(db: TypedClient, id: string): Promise<Meal | null> {
-  const { data, error } = await db.from("meals").select("*").eq("id", id).maybeSingle();
-  if (error) throw new Error(`load meal failed: ${error.message}`);
-  return data ? toMeal(data) : null;
 }
 
 /**

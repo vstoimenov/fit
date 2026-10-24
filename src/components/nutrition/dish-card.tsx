@@ -2,7 +2,7 @@
 
 import { Check, UtensilsCrossed } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { eatMenuItem, swapMenuSlot } from "@/app/app/nutrition/actions";
 import { ArticleCover } from "@/components/learn/article-card";
 import { buttonClass } from "@/components/ui/button";
@@ -32,8 +32,9 @@ type Busy = "swap" | "eat";
 
 /**
  * One slot of today's menu. „Смени“ and „Изядох го“ are guarded by a ref (a double tap sends one
- * request) and disabled while either runs. The batch id lives as long as the page view, so a retry
- * after a failed „Изядох го“ cannot log the dish twice.
+ * request) and disabled while either runs. The batch id lives as long as the dish on the card, so a
+ * retry after a failed „Изядох го“ cannot log the dish twice; a swap starts a new one. After a
+ * successful „Изядох го“ a live region announces it and focus moves to the heading (the button is gone).
  */
 export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
   const guard = useRef(false);
@@ -41,7 +42,13 @@ export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
   const [busy, setBusy] = useState<Busy | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [logged, setLogged] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
   const eaten = dish.eaten || logged;
+
+  // The „Изядох го“ button disappears when the dish is logged: focus goes to the card heading.
+  useEffect(() => {
+    if (logged) heading.current?.focus();
+  }, [logged]);
 
   async function run(kind: Busy, call: () => ReturnType<typeof swapMenuSlot>) {
     if (guard.current) return;
@@ -50,8 +57,14 @@ export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
     setError(null);
     try {
       const result = await call();
-      if (!result.ok) setError(result.message);
-      else if (kind === "eat") setLogged(true);
+      if (!result.ok) {
+        setError(result.message);
+      } else {
+        setError(null);
+        if (kind === "eat") setLogged(true);
+        // A swap shows another dish: a new dish is a new log request.
+        else batchId.current = null;
+      }
     } catch {
       setError("Нещо се обърка. Опитай отново.");
     } finally {
@@ -81,7 +94,12 @@ export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
       <div className="space-y-3 p-4">
         <div className="space-y-1">
           <p className="text-xs font-semibold text-ink-soft">{dish.label}</p>
-          <h3 id={headingId} className="break-words text-lg font-extrabold leading-snug">
+          <h3
+            id={headingId}
+            ref={heading}
+            tabIndex={-1}
+            className="break-words text-lg font-extrabold leading-snug outline-none"
+          >
             {dish.title}
           </h3>
           <div className="flex flex-wrap items-center gap-2">
@@ -123,7 +141,9 @@ export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
               onClick={() => {
                 batchId.current ??= crypto.randomUUID();
                 const id = batchId.current;
-                void run("eat", () => eatMenuItem({ day, slot: dish.slot, batchId: id }));
+                void run("eat", () =>
+                  eatMenuItem({ day, slot: dish.slot, batchId: id, mealId: dish.mealId }),
+                );
               }}
               className={buttonClass(dish.primary ? "primary" : "secondary", "md")}
             >
@@ -137,6 +157,10 @@ export function DishCard({ day, dish }: { day: string; dish: DishCardData }) {
             {error}
           </p>
         )}
+        {/* Always in the page, so the text added after the tap is announced. */}
+        <p role="status" className="sr-only">
+          {logged ? `Записано в дневника: ${dish.title}` : ""}
+        </p>
       </div>
     </section>
   );

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { emptyMealForm, fillEmptyFields, mealToForm } from "./meal-form";
+import {
+  addedAllergens,
+  allergenNote,
+  emptyMealForm,
+  fillEmptyFields,
+  mealToForm,
+} from "./meal-form";
 import type { Meal, MealDraft } from "./meal-schema";
 
 const draft: MealDraft = {
@@ -55,7 +61,7 @@ describe("fillEmptyFields", () => {
     expect(filled.ingredients).toEqual(mine.ingredients);
     expect(filled.kcal).toBe("500");
     expect(filled.proteinG).toBe("0");
-    expect(filled.allergens).toEqual(["eggs"]);
+    expect(filled.allergens).toEqual(["eggs", "gluten", "milk"]);
     expect([filled.fitsVegetarian, filled.fitsVegan, filled.fitsPescatarian]).toEqual([
       false,
       true,
@@ -64,6 +70,25 @@ describe("fillEmptyFields", () => {
     // Only the still-empty macros were filled.
     expect(filled.carbsG).toBe("58,3");
     expect(filled.fatG).toBe("11");
+  });
+
+  it("merges suggested allergens with the ticked ones: AI may add, never remove", () => {
+    const form = { ...emptyMealForm(), allergens: ["eggs" as const, "gluten" as const] };
+    expect(fillEmptyFields(form, draft).allergens).toEqual(["eggs", "gluten", "milk"]);
+    expect(fillEmptyFields(form, { ...draft, allergens: [] }).allergens).toEqual([
+      "eggs",
+      "gluten",
+    ]);
+  });
+
+  it("lists what the AI added to the allergens", () => {
+    const form = { ...emptyMealForm(), allergens: ["gluten" as const] };
+    expect(addedAllergens(form, draft)).toEqual(["milk"]);
+    expect(addedAllergens(emptyMealForm(), draft)).toEqual(["gluten", "milk"]);
+    expect(addedAllergens(form, { ...draft, allergens: ["gluten"] })).toEqual([]);
+    expect(addedAllergens(form, {})).toEqual([]);
+    expect(allergenNote(["gluten", "eggs"])).toBe("AI добави: Глутен, Яйца — провери.");
+    expect(allergenNote([])).toBeNull();
   });
 
   it("treats blank ingredient rows as empty", () => {

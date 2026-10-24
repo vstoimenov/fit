@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { estimateFood, saveEstimate } from "@/app/app/nutrition/actions";
+import { eatMenuItem, estimateFood, saveEstimate } from "@/app/app/nutrition/actions";
 import { Button } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
@@ -16,6 +16,7 @@ import {
 } from "@/lib/nutrition/estimate-draft";
 import { formatNumber } from "@/lib/nutrition/format";
 import { MEAL_LABEL, type MealSlot } from "@/lib/nutrition/labels";
+import { menuChipsFor, type MenuDish } from "@/lib/nutrition/menu-format";
 import { foodTextSchema, type EstimateItem } from "@/lib/nutrition/schema";
 import type { FoodItem } from "@/server/nutrition/diary";
 import { EstimateRows } from "./estimate-rows";
@@ -47,6 +48,7 @@ export function AddFoodSheet({
   day,
   aiEnabled,
   recent,
+  menuDishes,
   onClose,
 }: {
   meal: MealSlot;
@@ -54,12 +56,15 @@ export function AddFoodSheet({
   aiEnabled: boolean;
   /** Her latest distinct foods, newest first. */
   recent: FoodItem[];
+  /** Today's menu dishes not eaten yet; the ones of this meal show as „От менюто“ chips. */
+  menuDishes: MenuDish[];
   onClose: () => void;
 }) {
   const reduced = useReducedMotion() ?? false;
   const dialog = useRef<HTMLDialogElement>(null);
   const busy = useRef(false); // correct in the same tick, unlike state: double taps
   const [batchId] = useState(() => crypto.randomUUID());
+  const menuBatches = useRef(new Map<number, string>()); // one batch id per menu chip per opening
   const [mode, setMode] = useState<"describe" | "manual">(aiEnabled ? "describe" : "manual");
   const [phase, setPhase] = useState<Phase>("input");
   const [text, setText] = useState("");
@@ -170,6 +175,29 @@ export function AddFoodSheet({
     }
   }
 
+  // One tap logs the menu dish as the menu does, with this opening's batch id for the chip.
+  async function eatFromMenu(dish: MenuDish) {
+    if (busy.current) return;
+    busy.current = true;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const id = menuBatches.current.get(dish.slot) ?? crypto.randomUUID();
+      menuBatches.current.set(dish.slot, id);
+      const result = await eatMenuItem({ day, slot: dish.slot, batchId: id, mealId: dish.mealId });
+      if (result.ok) {
+        onClose();
+        return;
+      }
+      setMessage(result.message);
+    } catch {
+      setMessage(SAVE_FAILED);
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
+  }
+
   function submit(event: React.FormEvent) {
     event.preventDefault();
     if (phase === "rows") {
@@ -178,6 +206,12 @@ export function AddFoodSheet({
       void calculate();
     }
   }
+
+  const menuChips = menuChipsFor(meal, menuDishes);
+  const menuChipList =
+    menuChips.length > 0 ? (
+      <MenuChips dishes={menuChips} disabled={saving} onPick={(dish) => void eatFromMenu(dish)} />
+    ) : null;
 
   // One tap adds the food with its last amount, as its own batch.
   const recentChips =
@@ -234,6 +268,7 @@ export function AddFoodSheet({
                   Опиши с думи
                 </Button>
               )}
+              {menuChipList}
               {recentChips}
               {message && (
                 <p role="alert" className="text-sm text-brick">
@@ -300,6 +335,7 @@ export function AddFoodSheet({
                   >
                     Въведи ръчно
                   </Button>
+                  {menuChipList}
                   {recentChips}
                 </>
               )}
@@ -409,6 +445,37 @@ function RecentChips({
               className="inline-flex min-h-11 items-center rounded-full px-4 text-left text-sm font-semibold ring-[1.5px] ring-inset ring-line active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-40"
             >
               {food.name} · {formatNumber(food.kcal)} ккал
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Today's menu dishes for this meal: one tap logs the dish with her portion, like „Изядох го“. */
+function MenuChips({
+  dishes,
+  disabled,
+  onPick,
+}: {
+  dishes: MenuDish[];
+  disabled: boolean;
+  onPick: (dish: MenuDish) => void;
+}) {
+  return (
+    <section aria-label="От менюто" className="space-y-2">
+      <h3 className="text-sm font-semibold">От менюто</h3>
+      <ul className="flex flex-wrap gap-2">
+        {dishes.map((dish) => (
+          <li key={dish.slot}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(dish)}
+              className="inline-flex min-h-11 items-center rounded-full px-4 text-left text-sm font-semibold ring-[1.5px] ring-inset ring-line active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-40"
+            >
+              {dish.title} · {formatNumber(dish.kcal)} ккал
             </button>
           </li>
         ))}

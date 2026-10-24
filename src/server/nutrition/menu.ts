@@ -8,9 +8,9 @@ import {
   type MenuSlot,
 } from "@/lib/nutrition/menu";
 import { sofiaToday } from "@/lib/progress-photos/today";
-import { toMeal } from "@/server/admin/meals";
 import type { TypedClient } from "@/server/db/types";
 import { addEntries, getDiaryDay, getNutritionProfile } from "./diary";
+import { listPublishedMeals } from "./meals";
 
 /** Target used while hers cannot be computed yet. */
 export const DEFAULT_TARGET_KCAL = 1800;
@@ -54,8 +54,8 @@ export async function getMenuDay(db: TypedClient, userId: string, day: string): 
       }
     : DEFAULT_PREFS;
 
-  const [mealRows, swapRows, diary] = await Promise.all([
-    db.from("meals").select("*").eq("published", true).order("id").limit(1000),
+  const [meals, swapRows, diary] = await Promise.all([
+    listPublishedMeals(db),
     db
       .from("menu_swaps")
       .select("menu_date, slot, meal_id")
@@ -64,9 +64,7 @@ export async function getMenuDay(db: TypedClient, userId: string, day: string): 
       .lte("menu_date", day),
     getDiaryDay(db, userId, day),
   ]);
-  if (mealRows.error) throw new Error(`load meals failed: ${mealRows.error.message}`);
   if (swapRows.error) throw new Error(`load menu swaps failed: ${swapRows.error.message}`);
-  const meals = mealRows.data.map(toMeal);
 
   const swapsOf = (date: string) =>
     new Map(swapRows.data.filter((r) => r.menu_date === date).map((r) => [r.slot, r.meal_id]));
@@ -95,7 +93,14 @@ async function loadSlot(
   day: string,
   slot: number,
 ): Promise<{ menu: MenuDay; item: MenuSlot }> {
-  if (day !== sofiaToday()) throw new AppError("INVALID", "Менюто е само за днес.");
+  const today = sofiaToday();
+  if (day !== today) {
+    // A page left open past midnight sends yesterday: say what happened instead of "only for today".
+    if (day === shiftDay(today, -1)) {
+      throw new AppError("INVALID", "Започна нов ден — презареди менюто.");
+    }
+    throw new AppError("INVALID", "Менюто е само за днес.");
+  }
   const menu = await getMenuDay(db, userId, day);
   if (!menu.hasAccess) throw new AppError("INVALID", NO_ACCESS);
   const item = Number.isInteger(slot) ? menu.slots[slot] : undefined;
@@ -125,20 +130,41 @@ export async function swapSlot(
   }
 }
 
+/** Stores the pick as today's choice for the slot, so a meal published later cannot take its place. */
+async function pinSlot(db: TypedClient, userId: string, day: string, item: MenuSlot) {
+  if (!item.pick) return;
+  const { error } = await db
+    .from("menu_swaps")
+    .upsert({ user_id: userId, menu_date: day, slot: item.slot, meal_id: item.pick.meal.id });
+  if (error) {
+    if (error.code === "42501") throw new AppError("INVALID", NO_ACCESS);
+    throw new Error(`pin menu slot failed: ${error.message}`);
+  }
+}
+
 /**
  * Logs today's slot as one diary entry. The portion is recomputed here, so nothing numeric comes from
- * the client; the batch id makes a retried request a no-op.
+ * the client; the batch id makes a retried request a no-op. `mealId` is the dish her screen showed: if
+ * the menu has changed since, nothing is logged. The eaten pick is pinned afterwards (the engine still
+ * drops the pin if the meal stops fitting her, e.g. a new allergen), so the slot stays what she ate.
  */
 export async function eatSlot(
   db: TypedClient,
   userId: string,
-  input: { day: string; slot: number; batchId: string },
+  input: { day: string; slot: number; batchId: string; mealId: string },
 ): Promise<void> {
   if (!UUID.test(input.batchId)) throw new AppError("INVALID", "Невалидни данни за записа.");
   const { menu, item } = await loadSlot(db, userId, input.day, input.slot);
-  // Already in her diary (a second tap with a new batch id): nothing more to add.
-  if (menu.eatenSlots.includes(item.slot)) return;
+  // Already in her diary (a second tap with a new batch id): nothing more to add. The pin is repeated
+  // here in case the first request logged the entry but failed before storing it.
+  if (menu.eatenSlots.includes(item.slot)) {
+    await pinSlot(db, userId, input.day, item);
+    return;
+  }
   if (!item.pick) throw new AppError("INVALID", "Няма ястие за тази част от деня.");
+  if (item.pick.meal.id !== input.mealId) {
+    throw new AppError("INVALID", "Менюто се промени — презареди.");
+  }
   const portion = scalePortion(item.pick.meal, item.pick.factor);
   await addEntries(db, userId, {
     day: input.day,
@@ -156,4 +182,5 @@ export async function eatSlot(
       },
     ],
   });
+  await pinSlot(db, userId, input.day, item);
 }

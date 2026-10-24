@@ -10,6 +10,10 @@ import { MealForm } from "../meal-form";
 
 export const metadata = { title: "Ястие" };
 
+// The AI draft (a server action invoked from this page) may take up to 30 s; Server Actions inherit
+// the page's limit.
+export const maxDuration = 30;
+
 type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string }> };
 
 export default function EditMealPage(props: Props) {

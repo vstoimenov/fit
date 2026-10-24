@@ -101,6 +101,23 @@ describe("mealFits", () => {
     expect(mealFits(m, { ...omni, avoidFoods: "лук, целина" })).toBe(true);
   });
 
+  it.each(["гъби; лук", "гъби.", "(гъби)", "лук/гъби", "лук;гъби!"])(
+    "avoid words keep working next to punctuation: %j",
+    (avoidFoods) => {
+      const m = meal({
+        mealTypes: ["lunch"],
+        title: "Ризото",
+        ingredients: [{ name: "Гъби печурки", grams: 80 }],
+      });
+      expect(mealFits(m, { ...omni, avoidFoods })).toBe(false);
+    },
+  );
+
+  it("punctuation alone is not an avoid word", () => {
+    const m = meal({ mealTypes: ["lunch"], title: "Ризото" });
+    expect(mealFits(m, { ...omni, avoidFoods: "..., ;;; ()" })).toBe(true);
+  });
+
   it("ignores avoid words shorter than 3 letters", () => {
     const m = meal({
       mealTypes: ["lunch"],

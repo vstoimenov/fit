@@ -1,7 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { describe, expect, it, vi } from "vitest";
 import { ESTIMATE_CLIENT_OPTIONS, type ClaudeClient } from "./estimator";
-import { createClaudeMealDrafter, MEAL_DRAFT_SYSTEM_PROMPT, MealDraftFailed } from "./meal-drafter";
+import {
+  createClaudeMealDrafter,
+  MEAL_DRAFT_CLIENT_OPTIONS,
+  MEAL_DRAFT_SYSTEM_PROMPT,
+  MealDraftFailed,
+} from "./meal-drafter";
 
 const output = {
   mealTypes: ["breakfast", "snack"],
@@ -114,6 +119,32 @@ describe("createClaudeMealDrafter", () => {
     expect(draft.allergens).toEqual(["gluten", "milk"]);
   });
 
+  it("drops a diet flag that contradicts the suggested allergens instead of failing the draft", async () => {
+    const vegan = drafterWith(
+      ok({ ...output, allergens: ["milk"], fitsVegan: true, fitsVegetarian: true }),
+    );
+    const a = await vegan.drafter.draft("Каша", "");
+    expect(a).not.toHaveProperty("fitsVegan");
+    expect(a.fitsVegetarian).toBe(true);
+    expect(a.allergens).toEqual(["milk"]);
+
+    const fish = drafterWith(
+      ok({ ...output, allergens: ["fish"], fitsVegan: true, fitsVegetarian: true }),
+    );
+    const b = await fish.drafter.draft("Рибна супа", "");
+    expect(b).not.toHaveProperty("fitsVegan");
+    expect(b).not.toHaveProperty("fitsVegetarian");
+    expect(b.fitsPescatarian).toBe(true);
+
+    const fine = drafterWith(
+      ok({ ...output, allergens: ["gluten"], fitsVegan: true, fitsVegetarian: true }),
+    );
+    expect(await fine.drafter.draft("Каша", "")).toMatchObject({
+      fitsVegan: true,
+      fitsVegetarian: true,
+    });
+  });
+
   it("omits the meal types when none is known, but keeps an empty allergen list", async () => {
     const { drafter } = drafterWith(ok({ ...output, mealTypes: ["brunch"], allergens: [] }));
     const draft = await drafter.draft("Каша", "");
@@ -195,9 +226,8 @@ describe("createClaudeMealDrafter", () => {
     expect(MEAL_DRAFT_SYSTEM_PROMPT).toMatch(/at most 3000/i);
   });
 
-  it("uses the same client options as the estimator", async () => {
-    const { CLAUDE_CLIENT_OPTIONS } = await import("./claude-shared");
-    expect(CLAUDE_CLIENT_OPTIONS).toBe(ESTIMATE_CLIENT_OPTIONS);
+  it("gives the drafter its own 30 s, no-retry client options; the estimator keeps 10 s", () => {
+    expect(MEAL_DRAFT_CLIENT_OPTIONS).toEqual({ timeout: 30_000, maxRetries: 0 });
     expect(ESTIMATE_CLIENT_OPTIONS).toEqual({ timeout: 10_000, maxRetries: 0 });
   });
 

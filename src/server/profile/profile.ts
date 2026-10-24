@@ -100,6 +100,7 @@ export async function exportMyData(
     rewards,
     photos,
     foodEntries,
+    menuSwaps,
   ] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).single(),
     db
@@ -137,6 +138,13 @@ export async function exportMyData(
       (e: unknown) => ({ data: null, error: e instanceof Error ? e : new Error(String(e)) }),
     ),
     listAllFoodEntries(db, userId),
+    // The meal title comes along while she can still read the meal (RLS); the id always does.
+    db
+      .from("menu_swaps")
+      .select("menu_date, slot, meal_id, created_at, meals(title)")
+      .eq("user_id", userId)
+      .order("menu_date")
+      .order("slot"),
   ]);
   // A silently partial export would misstate what is stored about the user.
   const failed = [
@@ -150,6 +158,7 @@ export async function exportMyData(
     rewards,
     photos,
     foodEntries,
+    menuSwaps,
   ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
@@ -169,6 +178,10 @@ export async function exportMyData(
       url_expires_in_seconds: 3600,
     })),
     food_entries: foodEntries.data ?? [],
+    menu_swaps: (menuSwaps.data ?? []).map(({ meals, ...swap }) => ({
+      ...swap,
+      meal_title: meals?.title ?? null,
+    })),
   };
 }
 

@@ -269,14 +269,17 @@ export async function eatMenuItem(input: {
   day: string;
   slot: number;
   batchId: string;
+  /** The dish her screen showed; a changed menu is refused instead of logging another dish. */
+  mealId: string;
 }): Promise<ActionResult<null>> {
   try {
     const { user, supabase } = await requireUser();
     const day = assertDiaryDay(input?.day);
     const slot = menuSlotSchema.parse(input?.slot);
     const batchId = z.guid("Невалидни данни за записа.").parse(input?.batchId);
+    const mealId = z.guid("Менюто се промени — презареди.").parse(input?.mealId);
     await requireDiaryAccess(supabase);
-    await eatSlot(supabase, user.id, { day, slot, batchId });
+    await eatSlot(supabase, user.id, { day, slot, batchId, mealId });
     revalidateDiary();
     return actionOk(null);
   } catch (error) {

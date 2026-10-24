@@ -1,4 +1,4 @@
-import type { Allergen, MealSlot } from "./labels";
+import { ALLERGEN_LABEL, type Allergen, type MealSlot } from "./labels";
 import type { Meal, MealDraft } from "./meal-schema";
 
 export type IngredientRow = { key: string; name: string; grams: string };
@@ -66,6 +66,17 @@ export function mealToForm(meal: Meal): MealFormState {
   };
 }
 
+/** The suggested allergens that are not ticked yet, in the draft's order. */
+export function addedAllergens(form: MealFormState, draft: MealDraft): Allergen[] {
+  return (draft.allergens ?? []).filter((a) => !form.allergens.includes(a));
+}
+
+/** „AI добави: Глутен, Яйца — провери.“; null when it added nothing. */
+export function allergenNote(added: readonly Allergen[]): string | null {
+  if (added.length === 0) return null;
+  return `AI добави: ${added.map((a) => ALLERGEN_LABEL[a]).join(", ")} — провери.`;
+}
+
 /**
  * Puts an AI draft into the fields that are still empty and leaves everything else as typed. The
  * title, steps, photo and publication state are never touched. A diet is "empty" while none of the
@@ -88,7 +99,9 @@ export function fillEmptyFields(form: MealFormState, draft: MealDraft): MealForm
     const value = draft[key];
     if (form[key].trim() === "" && value !== undefined) next[key] = show(value);
   }
-  if (form.allergens.length === 0 && draft.allergens?.length) next.allergens = draft.allergens;
+  // Allergens are a safety list: the AI may add to what is ticked, never take anything away.
+  const added = addedAllergens(form, draft);
+  if (added.length > 0) next.allergens = [...form.allergens, ...added];
   const noDiet = !form.fitsVegetarian && !form.fitsVegan && !form.fitsPescatarian;
   if (
     noDiet &&

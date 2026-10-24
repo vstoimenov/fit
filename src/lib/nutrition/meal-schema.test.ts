@@ -120,4 +120,61 @@ describe("mealInputSchema", () => {
       expect(mealInputSchema.safeParse({ ...valid, photoUrl: bad }).success).toBe(false);
     }
   });
+
+  describe("diet flags against allergens", () => {
+    const VEGAN = "Веган ястие не може да съдържа мляко, яйца, риба, ракообразни или мекотели.";
+    const VEGETARIAN = "Вегетарианско ястие не може да съдържа риба, ракообразни или мекотели.";
+
+    it.each(["milk", "eggs", "fish", "crustaceans", "molluscs"])(
+      "a vegan meal cannot contain %s",
+      (allergen) => {
+        const result = mealInputSchema.safeParse({
+          ...valid,
+          fitsVegan: true,
+          allergens: [allergen],
+        });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues.map((i) => i.message)).toContain(VEGAN);
+      },
+    );
+
+    it.each(["fish", "crustaceans", "molluscs"])(
+      "a vegetarian meal cannot contain %s",
+      (allergen) => {
+        const result = mealInputSchema.safeParse({
+          ...valid,
+          fitsVegetarian: true,
+          allergens: [allergen],
+        });
+        expect(result.success).toBe(false);
+        expect(result.error?.issues.map((i) => i.message)).toContain(VEGETARIAN);
+      },
+    );
+
+    it("a vegetarian meal may contain milk and eggs; a pescatarian one anything", () => {
+      expect(
+        mealInputSchema.safeParse({ ...valid, fitsVegetarian: true, allergens: ["milk", "eggs"] })
+          .success,
+      ).toBe(true);
+      expect(
+        mealInputSchema.safeParse({
+          ...valid,
+          fitsVegetarian: false,
+          fitsPescatarian: true,
+          allergens: ["fish", "molluscs"],
+        }).success,
+      ).toBe(true);
+    });
+
+    it("a vegan meal with other allergens is fine", () => {
+      expect(
+        mealInputSchema.safeParse({
+          ...valid,
+          fitsVegan: true,
+          fitsVegetarian: true,
+          allergens: ["gluten", "soy"],
+        }).success,
+      ).toBe(true);
+    });
+  });
 });

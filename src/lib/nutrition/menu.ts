@@ -31,11 +31,11 @@ export type MenuPrefs = {
   mealsPerDay: 3 | 4 | 5;
 };
 
-/** Avoid words: split on commas/whitespace, lower-cased, at least 3 letters. */
+/** Avoid words: split on anything that is not a letter or digit (commas, semicolons, dots, brackets), lower-cased, at least 3 letters. */
 function avoidWords(avoidFoods: string): string[] {
   return avoidFoods
     .toLowerCase()
-    .split(/[,\s]+/)
+    .split(/[^\p{L}\p{N}]+/u)
     .filter((word) => word.length >= 3);
 }
 

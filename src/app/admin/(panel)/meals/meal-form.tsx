@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Sparkles, X } from "lucide-react";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
@@ -9,6 +9,8 @@ import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/cn";
 import { ALLERGEN_LABEL, ALLERGENS, MEAL_LABEL, MEAL_SLOTS } from "@/lib/nutrition/labels";
 import {
+  addedAllergens,
+  allergenNote,
   emptyMealForm,
   fillEmptyFields,
   mealToForm,
@@ -64,6 +66,12 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
   const [deletePending, startDelete] = useTransition();
   const [deleteMessage, setDeleteMessage] = useState("");
 
+  // The latest form for the async AI answer: she may have ticked allergens while it was on its way.
+  const latest = useRef(form);
+  useEffect(() => {
+    latest.current = form;
+  }, [form]);
+
   const set = (patch: Partial<MealFormState>) => setForm((f) => ({ ...f, ...patch }));
 
   function fillWithAi() {
@@ -75,10 +83,16 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
         return;
       }
       // Read the latest state: she may have typed while the answer was on its way.
+      const note = allergenNote(addedAllergens(latest.current, result.data.draft));
       setForm((current) => fillEmptyFields(current, result.data.draft));
       setAiMessage({
         ok: true,
-        text: "Попълних празните полета — провери ги, преди да запазиш. Нищо не е публикувано.",
+        text: [
+          "Попълних празните полета — провери ги, преди да запазиш. Нищо не е публикувано.",
+          note,
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
     });
   }

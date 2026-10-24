@@ -7,6 +7,7 @@ import {
   updateProfileAnswers,
   updateProfileBasics,
 } from "@/server/profile/profile";
+import { sofiaToday } from "@/lib/progress-photos/today";
 import { addNote } from "@/server/admin/notes";
 import { recordProgressPhoto } from "@/server/progress/photos";
 import {
@@ -160,6 +161,7 @@ describe("profile services", () => {
     const data = await exportMyData(db, user.id, admin);
     expect(data.profile).toMatchObject({ id: user.id, diet: null, allergens: [] });
     expect(data.food_entries).toEqual([]);
+    expect(data.menu_swaps).toEqual([]);
     expect(data.check_ins).toHaveLength(1);
     expect(data.workout_completions).toHaveLength(1);
     expect(data.visits).toEqual([
@@ -211,6 +213,63 @@ describe("profile services", () => {
     expect(rewards).toHaveLength(1);
     expect(rewards[0]).toMatchObject({ level: 4, note: "Пратено" });
     expect(Object.keys(rewards[0]).sort()).toEqual(["given_at", "level", "note"]);
+  });
+
+  it("exports her menu swaps (day, slot, meal) but nobody else's", async () => {
+    const user = await createUser(admin, "export-swaps");
+    const other = await createUser(admin, "export-swaps-other");
+    await grantAccess(admin, user.id);
+    await grantAccess(admin, other.id);
+    const title = `Експорт ястие ${randomUUID().slice(0, 8)}`;
+    const meal = await admin
+      .from("meals")
+      .insert({
+        title,
+        meal_types: ["lunch"],
+        ingredients: [{ name: "Ориз", grams: 100 }],
+        kcal: 400,
+        protein_g: 10,
+        carbs_g: 60,
+        fat_g: 5,
+        published: true,
+      })
+      .select("id")
+      .single();
+    expect(meal.error).toBeNull();
+    const mealId = meal.data!.id;
+    try {
+      const today = sofiaToday();
+      const db = await signedInClient(user);
+      const mine = await db
+        .from("menu_swaps")
+        .insert({ user_id: user.id, menu_date: today, slot: 1, meal_id: mealId });
+      expect(mine.error).toBeNull();
+      const theirs = await (
+        await signedInClient(other)
+      )
+        .from("menu_swaps")
+        .insert({ user_id: other.id, menu_date: today, slot: 0, meal_id: mealId });
+      expect(theirs.error).toBeNull();
+
+      const data = await exportMyData(db, user.id, admin);
+      const swaps = data.menu_swaps as Record<string, unknown>[];
+      expect(swaps).toHaveLength(1);
+      expect(swaps[0]).toMatchObject({
+        menu_date: today,
+        slot: 1,
+        meal_id: mealId,
+        meal_title: title,
+      });
+      expect(Object.keys(swaps[0]).sort()).toEqual([
+        "created_at",
+        "meal_id",
+        "meal_title",
+        "menu_date",
+        "slot",
+      ]);
+    } finally {
+      await admin.from("meals").delete().eq("id", mealId);
+    }
   });
 
   it("exports the notes written about her (kind, text, time) but nobody else's and no author ids", async () => {

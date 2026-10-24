@@ -2,7 +2,7 @@ import Link from "next/link";
 import { buttonClass } from "@/components/ui/button";
 import { formatGrams, formatNumber } from "@/lib/nutrition/format";
 import { formatPortion, nextCandidate, scalePortion, SLOT_PLANS } from "@/lib/nutrition/menu";
-import { menuTotals, slotLabel } from "@/lib/nutrition/menu-format";
+import { allSlotsEmpty, menuTotals, slotLabel } from "@/lib/nutrition/menu-format";
 import type { getMenuDay } from "@/server/nutrition/menu";
 import { DishCard, type DishCardData } from "./dish-card";
 
@@ -35,6 +35,8 @@ export function MenuView({
   const plan = SLOT_PLANS[data.slots.length as 3 | 4 | 5] ?? [];
   const firstOpen = data.slots.find((s) => s.pick && !data.eatenSlots.includes(s.slot))?.slot;
   const totals = menuTotals(data.slots);
+  // Nothing in the library fits her yet: one calm card instead of a wall of empty ones.
+  const nothingYet = allSlotsEmpty(data.slots);
 
   return (
     <div className="space-y-4">
@@ -62,9 +64,16 @@ export function MenuView({
         </section>
       )}
 
+      {nothingYet && (
+        <section aria-label="Менюто" className="rounded-2xl bg-sand p-4">
+          <p className="text-sm">{EMPTY_SLOT}</p>
+        </section>
+      )}
+
       <div className="space-y-4">
         {data.slots.map((slot) => {
           const label = slotLabel(slot.meal, slot.slot, plan);
+          if (nothingYet) return null;
           if (!slot.pick) {
             return (
               <section

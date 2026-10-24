@@ -5,9 +5,9 @@ import { ALLERGENS, type Allergen, type MealSlot } from "@/lib/nutrition/labels"
 import { buildMenu, scalePortion } from "@/lib/nutrition/menu";
 import { calorieTarget } from "@/lib/nutrition/target";
 import { sofiaToday } from "@/lib/progress-photos/today";
-import { toMeal } from "@/server/admin/meals";
 import { getDiaryDay, saveNutritionAnswers } from "@/server/nutrition/diary";
 import { eatSlot, getMenuDay, swapSlot } from "@/server/nutrition/menu";
+import { toMeal } from "@/server/nutrition/meals";
 import {
   adminClient,
   createUser,
@@ -114,6 +114,13 @@ async function seedBasicDay() {
   const lunch = await seedMeal("Обяд", "lunch", 720);
   const dinner = await seedMeal("Вечеря", "dinner", 630);
   return { breakfasts, lunch, dinner };
+}
+
+/** The meal id the member's menu shows in a slot (what the client sends with „Изядох го“). */
+async function shown(db: TypedClient, userId: string, slot: number): Promise<string> {
+  const pick = (await getMenuDay(db, userId, sofiaDay())).slots[slot].pick;
+  if (!pick) throw new Error("no pick in the slot");
+  return pick.meal.id;
 }
 
 async function failure(promise: Promise<unknown>): Promise<unknown> {
@@ -334,7 +341,7 @@ describe("eatSlot", () => {
     expect(pick.factor).toBe(0.9);
     const portion = scalePortion(pick.meal, pick.factor);
 
-    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID() });
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: meal });
 
     const diary = await getDiaryDay(db, user.id, today);
     expect(diary.entries).toHaveLength(1);
@@ -358,8 +365,9 @@ describe("eatSlot", () => {
     const { user, db } = await member("menu-eat-retry");
     const today = sofiaDay();
     const batchId = randomUUID();
-    await eatSlot(db, user.id, { day: today, slot: 1, batchId });
-    await eatSlot(db, user.id, { day: today, slot: 1, batchId });
+    const mealId = await shown(db, user.id, 1);
+    await eatSlot(db, user.id, { day: today, slot: 1, batchId, mealId });
+    await eatSlot(db, user.id, { day: today, slot: 1, batchId, mealId });
     const diary = await getDiaryDay(db, user.id, today);
     expect(diary.entries).toHaveLength(1);
     expect((await getMenuDay(db, user.id, today)).eatenSlots).toEqual([1]);
@@ -373,8 +381,9 @@ describe("eatSlot", () => {
     expect(a).toBeTruthy();
     const { user, db } = await member("menu-eat-twice");
     const today = sofiaDay();
-    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID() });
-    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID() });
+    const mealId = await shown(db, user.id, 0);
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId });
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId });
     expect((await getDiaryDay(db, user.id, today)).entries).toHaveLength(1);
 
     const before = (await getMenuDay(db, user.id, today)).slots[0].pick?.meal.id;
@@ -382,35 +391,126 @@ describe("eatSlot", () => {
     expect(isAppError(swap) && swap.code).toBe("INVALID");
     expect((swap as Error).message).toBe("Това ястие вече е записано в дневника.");
     expect((await getMenuDay(db, user.id, today)).slots[0].pick?.meal.id).toBe(before);
-    expect((await admin.from("menu_swaps").select("slot").eq("user_id", user.id)).data).toEqual([]);
   });
 
   it("refuses without access, for other days, bad slots, empty slots and bad batch ids", async () => {
     await seedBasicDay();
     const today = sofiaDay();
+    const someMeal = createdMeals[0];
     const lapsed = await member("menu-eat-lapsed", { access: false });
     const refused = await failure(
-      eatSlot(lapsed.db, lapsed.user.id, { day: today, slot: 0, batchId: randomUUID() }),
+      eatSlot(lapsed.db, lapsed.user.id, {
+        day: today,
+        slot: 0,
+        batchId: randomUUID(),
+        mealId: someMeal,
+      }),
     );
     expect(isAppError(refused) && refused.code).toBe("INVALID");
     expect((refused as Error).message).toBe("Нужен е активен абонамент.");
 
     const { user, db } = await member("menu-eat-refuse");
-    const past = await failure(
-      eatSlot(db, user.id, { day: sofiaDay(-1), slot: 0, batchId: randomUUID() }),
-    );
-    expect(isAppError(past) && past.code).toBe("INVALID");
-    expect((past as Error).message).toBe("Менюто е само за днес.");
-    const bad = await failure(eatSlot(db, user.id, { day: today, slot: 9, batchId: randomUUID() }));
+    const call = (over: Partial<Parameters<typeof eatSlot>[2]>) =>
+      eatSlot(db, user.id, {
+        day: today,
+        slot: 0,
+        batchId: randomUUID(),
+        mealId: someMeal,
+        ...over,
+      });
+
+    // Yesterday: the page was left open past midnight. Any other non-today date keeps the old message.
+    const stale = await failure(call({ day: sofiaDay(-1) }));
+    expect(isAppError(stale) && stale.code).toBe("INVALID");
+    expect((stale as Error).message).toBe("Започна нов ден — презареди менюто.");
+    for (const other of [sofiaDay(-2), sofiaDay(1)]) {
+      const old = await failure(call({ day: other }));
+      expect(isAppError(old) && old.code).toBe("INVALID");
+      expect((old as Error).message).toBe("Менюто е само за днес.");
+    }
+
+    const bad = await failure(call({ slot: 9 }));
     expect(isAppError(bad) && bad.code).toBe("INVALID");
-    const batch = await failure(eatSlot(db, user.id, { day: today, slot: 0, batchId: "nope" }));
+    const batch = await failure(call({ batchId: "nope" }));
     expect(isAppError(batch) && batch.code).toBe("INVALID");
 
     await admin.from("meals").update({ published: false }).eq("id", createdMeals[3]);
-    const empty = await failure(
-      eatSlot(db, user.id, { day: today, slot: 1, batchId: randomUUID() }),
-    );
+    const empty = await failure(call({ slot: 1 }));
     expect(isAppError(empty) && empty.code).toBe("INVALID");
     expect((await getDiaryDay(db, user.id, today)).entries).toEqual([]);
+  });
+
+  it("an eaten slot stays final: a better meal published later does not replace it, and a second eat adds nothing", async () => {
+    // The slot is 450 kcal: 700 kcal at ×0,75 is 525, so a 450 kcal meal published later ranks first.
+    const first = await seedMeal("Закуска първа", "breakfast", 700);
+    await seedMeal("Обяд", "lunch", 720);
+    const { user, db } = await member("menu-eat-final");
+    const today = sofiaDay();
+    expect(await shown(db, user.id, 0)).toBe(first);
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: first });
+
+    // The eaten pick is pinned for the day.
+    const pinned = await admin.from("menu_swaps").select("*").eq("user_id", user.id);
+    expect(pinned.data).toHaveLength(1);
+    expect(pinned.data?.[0]).toMatchObject({ menu_date: today, slot: 0, meal_id: first });
+
+    // Three meals that fit the slot exactly (450 kcal). The two previous days can have served at most two
+    // of them, so one is not "recent" and ranks above the eaten meal; without the pin it would replace it.
+    const better = [
+      await seedMeal("Закуска по-добра А", "breakfast", 450),
+      await seedMeal("Закуска по-добра Б", "breakfast", 450),
+      await seedMeal("Закуска по-добра В", "breakfast", 450),
+    ];
+    const after = await getMenuDay(db, user.id, today);
+    expect(better).toContain(after.slots[0].candidates[0]);
+    expect(after.slots[0].pick?.meal.id).toBe(first);
+    expect(after.eatenSlots).toEqual([0]);
+
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: first });
+    expect((await getDiaryDay(db, user.id, today)).entries).toHaveLength(1);
+    expect((await getMenuDay(db, user.id, today)).eatenSlots).toEqual([0]);
+  });
+
+  it("the pin is dropped by the engine when the eaten meal stops fitting (a new allergen)", async () => {
+    const a = await seedMeal("Закуска с лупина", "breakfast", 450, { allergens: ["lupin"] });
+    const b = await seedMeal("Закуска със сусам", "breakfast", 450, { allergens: ["sesame"] });
+    const { user, db } = await member("menu-eat-allergen");
+    const today = sofiaDay();
+    const eatenId = await shown(db, user.id, 0);
+    expect([a, b]).toContain(eatenId);
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: eatenId });
+
+    await saveNutritionAnswers(db, user.id, {
+      ...ANSWERS,
+      allergens: [...ANSWERS.allergens, eatenId === a ? "lupin" : "sesame"],
+    });
+    const after = await getMenuDay(db, user.id, today);
+    expect(after.slots[0].pick?.meal.id).toBe(eatenId === a ? b : a);
+    expect(after.eatenSlots).toEqual([]);
+  });
+
+  it("refuses a stale meal id with a reload message and logs nothing", async () => {
+    const ids = [
+      await seedMeal("Закуска А", "breakfast", 450),
+      await seedMeal("Закуска Б", "breakfast", 500),
+    ];
+    const { user, db } = await member("menu-eat-stale");
+    const today = sofiaDay();
+    const current = await shown(db, user.id, 0);
+    const other = ids.find((id) => id !== current)!;
+    for (const mealId of [other, randomUUID(), "nope"]) {
+      const stale = await failure(
+        eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId }),
+      );
+      expect(isAppError(stale) && stale.code).toBe("INVALID");
+      expect((stale as Error).message).toBe("Менюто се промени — презареди.");
+    }
+    expect((await getDiaryDay(db, user.id, today)).entries).toEqual([]);
+    expect((await admin.from("menu_swaps").select("slot").eq("user_id", user.id)).data).toEqual([]);
+
+    // Once eaten, a call that carries an old id is still a quiet no-op (nothing more to log).
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: current });
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID(), mealId: other });
+    expect((await getDiaryDay(db, user.id, today)).entries).toHaveLength(1);
   });
 });

@@ -14,6 +14,7 @@ import {
 } from "@/lib/nutrition/day";
 import { formatGrams, formatNumber } from "@/lib/nutrition/format";
 import { MEAL_SLOTS, type MealSlot } from "@/lib/nutrition/labels";
+import type { MenuDish } from "@/lib/nutrition/menu-format";
 import type { Target } from "@/lib/nutrition/target";
 import type { FoodEntry, FoodItem } from "@/server/nutrition/diary";
 import { AddFoodSheet } from "./add-food-sheet";
@@ -66,6 +67,7 @@ export function DiaryView({
   showResult,
   aiEnabled,
   recent,
+  menuDishes,
 }: {
   day: string;
   entries: FoodEntry[];
@@ -77,6 +79,8 @@ export function DiaryView({
   aiEnabled: boolean;
   /** Her latest distinct foods, for one-tap adding. */
   recent: FoodItem[];
+  /** Today's menu dishes not eaten yet (empty on other days); the add sheet offers them per meal. */
+  menuDishes: MenuDish[];
 }) {
   const [shown, change] = useOptimistic(entries, applyChange);
   const [openMeal, setOpenMeal] = useState<MealSlot | null>(null);
@@ -170,6 +174,7 @@ export function DiaryView({
                   meal={meal}
                   aiEnabled={aiEnabled}
                   recent={recent}
+                  menuDishes={menuDishes}
                   onClose={() => setOpenMeal(null)}
                 />
               }
