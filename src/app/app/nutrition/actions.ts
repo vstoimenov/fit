@@ -237,7 +237,11 @@ export async function deleteEntryAction(input: { id: string }): Promise<ActionRe
   }
 }
 
-const menuSlotSchema = z.number("Невалидно ястие.").int("Невалидно ястие.").min(0).max(4);
+const menuSlotSchema = z
+  .number("Невалидно ястие от менюто.")
+  .int("Невалидно ястие от менюто.")
+  .min(0, "Невалидно ястие от менюто.")
+  .max(4, "Невалидно ястие от менюто.");
 
 /** „Смени“: today's slot gets the next candidate. Only today, and only with an active plan. */
 export async function swapMenuSlot(input: {

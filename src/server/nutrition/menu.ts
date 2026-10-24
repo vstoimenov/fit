@@ -95,7 +95,7 @@ async function loadSlot(
   day: string,
   slot: number,
 ): Promise<{ menu: MenuDay; item: MenuSlot }> {
-  if (day !== sofiaToday()) throw new AppError("INVALID", "Менюто се сменя само за днес.");
+  if (day !== sofiaToday()) throw new AppError("INVALID", "Менюто е само за днес.");
   const menu = await getMenuDay(db, userId, day);
   if (!menu.hasAccess) throw new AppError("INVALID", NO_ACCESS);
   const item = Number.isInteger(slot) ? menu.slots[slot] : undefined;
@@ -109,7 +109,11 @@ export async function swapSlot(
   userId: string,
   input: { day: string; slot: number },
 ): Promise<void> {
-  const { item } = await loadSlot(db, userId, input.day, input.slot);
+  const { menu, item } = await loadSlot(db, userId, input.day, input.slot);
+  // A logged slot is final: swapping would move the pick away from the entry in her diary.
+  if (menu.eatenSlots.includes(item.slot)) {
+    throw new AppError("INVALID", "Това ястие вече е записано в дневника.");
+  }
   const next = nextCandidate(item);
   if (!next) throw new AppError("INVALID", "Няма друго ястие за тази част от деня.");
   const { error } = await db
@@ -131,7 +135,9 @@ export async function eatSlot(
   input: { day: string; slot: number; batchId: string },
 ): Promise<void> {
   if (!UUID.test(input.batchId)) throw new AppError("INVALID", "Невалидни данни за записа.");
-  const { item } = await loadSlot(db, userId, input.day, input.slot);
+  const { menu, item } = await loadSlot(db, userId, input.day, input.slot);
+  // Already in her diary (a second tap with a new batch id): nothing more to add.
+  if (menu.eatenSlots.includes(item.slot)) return;
   if (!item.pick) throw new AppError("INVALID", "Няма ястие за тази част от деня.");
   const portion = scalePortion(item.pick.meal, item.pick.factor);
   await addEntries(db, userId, {
@@ -144,9 +150,9 @@ export async function eatSlot(
         name: item.pick.meal.title,
         grams: portion.grams >= 1 ? Math.min(2000, portion.grams) : null,
         kcal: portion.kcal,
-        proteinG: portion.proteinG,
-        carbsG: portion.carbsG,
-        fatG: portion.fatG,
+        proteinG: Math.min(1000, portion.proteinG),
+        carbsG: Math.min(1000, portion.carbsG),
+        fatG: Math.min(1000, portion.fatG),
       },
     ],
   });

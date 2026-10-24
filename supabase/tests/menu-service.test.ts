@@ -365,6 +365,26 @@ describe("eatSlot", () => {
     expect((await getMenuDay(db, user.id, today)).eatenSlots).toEqual([1]);
   });
 
+  it("a second tap with a new batch id adds nothing, and the eaten slot can no longer be swapped", async () => {
+    const [a] = [
+      await seedMeal("Закуска А", "breakfast", 450),
+      await seedMeal("Закуска Б", "breakfast", 450),
+    ];
+    expect(a).toBeTruthy();
+    const { user, db } = await member("menu-eat-twice");
+    const today = sofiaDay();
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID() });
+    await eatSlot(db, user.id, { day: today, slot: 0, batchId: randomUUID() });
+    expect((await getDiaryDay(db, user.id, today)).entries).toHaveLength(1);
+
+    const before = (await getMenuDay(db, user.id, today)).slots[0].pick?.meal.id;
+    const swap = await failure(swapSlot(db, user.id, { day: today, slot: 0 }));
+    expect(isAppError(swap) && swap.code).toBe("INVALID");
+    expect((swap as Error).message).toBe("Това ястие вече е записано в дневника.");
+    expect((await getMenuDay(db, user.id, today)).slots[0].pick?.meal.id).toBe(before);
+    expect((await admin.from("menu_swaps").select("slot").eq("user_id", user.id)).data).toEqual([]);
+  });
+
   it("refuses without access, for other days, bad slots, empty slots and bad batch ids", async () => {
     await seedBasicDay();
     const today = sofiaDay();
@@ -380,6 +400,7 @@ describe("eatSlot", () => {
       eatSlot(db, user.id, { day: sofiaDay(-1), slot: 0, batchId: randomUUID() }),
     );
     expect(isAppError(past) && past.code).toBe("INVALID");
+    expect((past as Error).message).toBe("Менюто е само за днес.");
     const bad = await failure(eatSlot(db, user.id, { day: today, slot: 9, batchId: randomUUID() }));
     expect(isAppError(bad) && bad.code).toBe("INVALID");
     const batch = await failure(eatSlot(db, user.id, { day: today, slot: 0, batchId: "nope" }));
