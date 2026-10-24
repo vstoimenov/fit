@@ -13,7 +13,8 @@ export type MealListItem = Meal & { updatedAt: string };
 const NOT_FOUND = "Ястието не е намерено.";
 const FORBIDDEN = "Нямаш достъп.";
 
-const toMeal = (r: MealRow): Meal => ({
+/** Maps a stored row to the camelCase meal the engine and forms use. */
+export const toMeal = (r: MealRow): Meal => ({
   id: r.id,
   title: r.title,
   mealTypes: r.meal_types,

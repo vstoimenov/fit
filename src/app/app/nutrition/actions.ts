@@ -24,6 +24,7 @@ import {
   updateEntryGrams,
 } from "@/server/nutrition/diary";
 import { createClaudeEstimator, EstimateFailed } from "@/server/nutrition/estimator";
+import { eatSlot, swapSlot } from "@/server/nutrition/menu";
 
 const DEFAULT_MODEL = "claude-opus-5-5";
 
@@ -229,6 +230,49 @@ export async function deleteEntryAction(input: { id: string }): Promise<ActionRe
     const { id } = z.object({ id: z.guid("Записът не е намерен.") }).parse(input);
     await requireDiaryAccess(supabase);
     await deleteEntry(supabase, id);
+    revalidateDiary();
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+const menuSlotSchema = z.number("Невалидно ястие.").int("Невалидно ястие.").min(0).max(4);
+
+/** „Смени“: today's slot gets the next candidate. Only today, and only with an active plan. */
+export async function swapMenuSlot(input: {
+  day: string;
+  slot: number;
+}): Promise<ActionResult<null>> {
+  try {
+    const { user, supabase } = await requireUser();
+    const day = assertDiaryDay(input?.day);
+    const slot = menuSlotSchema.parse(input?.slot);
+    await requireDiaryAccess(supabase);
+    await swapSlot(supabase, user.id, { day, slot });
+    revalidatePath("/app/nutrition");
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/**
+ * „Изядох го“: logs today's slot as one diary entry. The portion is recomputed on the server from the
+ * slot index, so nothing numeric comes from the client; the batch id makes a retried request a no-op.
+ */
+export async function eatMenuItem(input: {
+  day: string;
+  slot: number;
+  batchId: string;
+}): Promise<ActionResult<null>> {
+  try {
+    const { user, supabase } = await requireUser();
+    const day = assertDiaryDay(input?.day);
+    const slot = menuSlotSchema.parse(input?.slot);
+    const batchId = z.guid("Невалидни данни за записа.").parse(input?.batchId);
+    await requireDiaryAccess(supabase);
+    await eatSlot(supabase, user.id, { day, slot, batchId });
     revalidateDiary();
     return actionOk(null);
   } catch (error) {
