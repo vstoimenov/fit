@@ -100,11 +100,13 @@ async function Challenges({ searchParams }: Props) {
                   <span className="text-ink-soft"> · {c.days} дни</span>
                 </td>
                 <td className="p-3 tabular-nums">{c.participants}</td>
-                <td className="flex flex-wrap gap-1 p-3">
-                  <Chip tone={c.published ? "powder" : "neutral"}>
-                    {c.published ? "Публикувано" : "Чернова"}
-                  </Chip>
-                  <Chip>{PHASE_LABEL[challengeStatus(c.startDate, c.days, today).status]}</Chip>
+                <td className="p-3">
+                  <div className="flex flex-wrap gap-1">
+                    <Chip tone={c.published ? "powder" : "neutral"}>
+                      {c.published ? "Публикувано" : "Чернова"}
+                    </Chip>
+                    <Chip>{PHASE_LABEL[challengeStatus(c.startDate, c.days, today).status]}</Chip>
+                  </div>
                 </td>
               </tr>
             ))}

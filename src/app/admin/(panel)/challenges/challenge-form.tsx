@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { ActionForm } from "@/components/admin/action-form";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/cn";
-import { FIRST_14_DAYS } from "@/lib/challenges/template";
+import { growRows, parseDays, templateRows, type TaskRow } from "@/lib/challenges/task-rows";
 import type { AdminChallenge, WorkoutOption } from "@/server/admin/challenges";
 import { deleteChallengeAction } from "./actions";
 
@@ -15,10 +15,15 @@ type FormAction = (
   form: FormData,
 ) => Promise<ActionResult<unknown>>;
 
-type Row = { key: string; task: string; workoutId: string };
-
 const MIN_DAYS = 3;
 const MAX_DAYS = 60;
+const DEFAULT_DAYS = 14;
+
+/** Keys first-0, first-1, … for the rows a new form starts with. */
+function positionalKeys(): () => string {
+  let n = 0;
+  return () => `first-${n++}`;
+}
 
 export function ChallengeForm({
   action,
@@ -33,49 +38,49 @@ export function ChallengeForm({
   const [title, setTitle] = useState(challenge?.title ?? "");
   const [description, setDescription] = useState(challenge?.description ?? "");
   const [startDate, setStartDate] = useState(challenge?.startDate ?? "");
-  const [daysText, setDaysText] = useState(String(challenge?.days ?? 14));
+  const [daysText, setDaysText] = useState(String(challenge?.days ?? DEFAULT_DAYS));
   const [published, setPublished] = useState(challenge?.published ?? false);
-  const [rows, setRows] = useState<Row[]>(() =>
+  // Keys of rows added later; the first rows are keyed by position (a ref is not read while rendering).
+  const nextKey = useRef(0);
+  const newKey = () => `added-${nextKey.current++}`;
+  // Every row ever shown: rows beyond the day count stay here (hidden, not submitted) with their text.
+  const [rows, setRows] = useState<TaskRow[]>(() =>
     challenge
       ? challenge.tasks.map((t, i) => ({
-          key: `d${i}`,
+          key: `first-${i}`,
           task: t.task,
           workoutId: t.workoutId ?? "",
         }))
-      : Array.from({ length: 14 }, (_, i) => ({ key: `d${i}`, task: "", workoutId: "" })),
+      : growRows([], DEFAULT_DAYS, positionalKeys()),
   );
+  // The last valid day count: while the field holds something unfinished the rows do not change.
+  const [shownDays, setShownDays] = useState(challenge?.days ?? DEFAULT_DAYS);
   const [deletePending, startDelete] = useTransition();
   const [deleteMessage, setDeleteMessage] = useState("");
 
   const known = new Set(workouts.map((w) => w.id));
 
-  /** A valid day count adds empty rows or drops the last ones; anything else leaves the rows alone. */
   function changeDays(text: string) {
     setDaysText(text);
-    if (!/^\d+$/.test(text)) return;
-    const n = Number(text);
-    if (n < MIN_DAYS || n > MAX_DAYS) return;
-    setRows((current) =>
-      n <= current.length
-        ? current.slice(0, n)
-        : [
-            ...current,
-            ...Array.from({ length: n - current.length }, (_, i) => ({
-              key: `d${current.length + i}-${Date.now()}`,
-              task: "",
-              workoutId: "",
-            })),
-          ],
-    );
+    const n = parseDays(text);
+    if (n === null) return;
+    setShownDays(n);
+    setRows((current) => growRows(current, n, newKey));
   }
 
   function fillTemplate() {
-    setDaysText("14");
-    setRows(FIRST_14_DAYS.map((task, i) => ({ key: `t${i}`, task, workoutId: "" })));
+    if (
+      rows.slice(0, shownDays).some((r) => r.task !== "") &&
+      !window.confirm("Шаблонът ще замени въведените задачи. Продължаваш ли?")
+    )
+      return;
+    setDaysText(String(DEFAULT_DAYS));
+    setShownDays(DEFAULT_DAYS);
+    setRows((current) => templateRows(current, newKey));
     setTitle((current) => current || "Първите 14 дни");
   }
 
-  function setRow(key: string, patch: Partial<Row>) {
+  function setRow(key: string, patch: Partial<TaskRow>) {
     setRows((current) => current.map((row) => (row.key === key ? { ...row, ...patch } : row)));
   }
 
@@ -158,7 +163,7 @@ export function ChallengeForm({
             </div>
           )}
           <ol className="space-y-3">
-            {rows.map((row, i) => (
+            {rows.slice(0, shownDays).map((row, i) => (
               <li key={row.key} className="space-y-2 rounded-2xl bg-sand p-3">
                 <p className="text-sm font-semibold">Ден {i + 1}</p>
                 <input

@@ -37,7 +37,7 @@ async function EditChallenge({ params, searchParams }: Props) {
           {challenge.published ? "Публикувано" : "Чернова"}
         </Chip>
       </header>
-      {saved && (
+      {saved === "1" && (
         <p role="status" className="text-moss">
           Създадено ✓
         </p>
