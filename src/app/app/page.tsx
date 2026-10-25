@@ -174,7 +174,7 @@ async function Home() {
             <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
           </Link>
 
-          {!challenge && (
+          {!challenge && view.hasAccess && (
             <Link
               href="/app/challenges"
               className="flex min-h-14 items-center gap-3 rounded-2xl bg-sand p-4 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"

@@ -16,6 +16,7 @@ import {
   participantsLabel,
   progressLabel,
 } from "@/lib/challenges/format";
+import { canStillTick } from "@/lib/challenges/calendar";
 import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { getChallengeView } from "@/server/challenges/challenges";
@@ -60,7 +61,8 @@ async function Challenge({ params }: { params: Params }) {
   // A malformed id would be a database error, not a missing row.
   if (!UUID.test(id)) notFound();
 
-  const view = await getChallengeView(supabase, user.id, id, sofiaToday());
+  const today = sofiaToday();
+  const view = await getChallengeView(supabase, user.id, id, today);
   if (!view) {
     // RLS hides published challenges from a lapsed member: tell her why instead of a bare 404.
     const { data: hasAccess, error } = await supabase.rpc("my_access");
@@ -99,14 +101,12 @@ async function Challenge({ params }: { params: Params }) {
       {challenge.description.trim() !== "" && <ArticleBody body={challenge.description} />}
 
       {!joined && open && hasAccess && <JoinButton challengeId={challenge.id} />}
-      {!hasAccess && (joined || open) && (
-        <PlanCta
-          text={
-            joined
-              ? "Отмятането е достъпно с активен абонамент."
-              : "Включването е достъпно с активен абонамент."
-          }
-        />
+      {/* A lapsed participant is only pitched the plan while a tick could still be missed. */}
+      {!hasAccess && joined && canStillTick(challenge.startDate, challenge.days, today) && (
+        <PlanCta text="Отмятането е достъпно с активен абонамент." />
+      )}
+      {!hasAccess && !joined && open && (
+        <PlanCta text="Включването е достъпно с активен абонамент." />
       )}
 
       {progress && (

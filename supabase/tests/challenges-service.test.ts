@@ -390,7 +390,7 @@ describe("getChallengeView", () => {
   it("returns the leaderboard with her own row marked", async () => {
     const id = await seedChallenge({ start: -3 });
     const a = await member("chal-board-a", { name: "Мария Петрова" });
-    const b = await member("chal-board-b", { name: "Яна" });
+    const b = await member("chal-board-b", { name: "Яна Иванова" });
     await seedParticipant(id, a.user.id, sofiaDay(-3));
     await seedParticipant(id, b.user.id, sofiaDay(-3));
     await seedTick(id, b.user.id, 3);
@@ -399,7 +399,7 @@ describe("getChallengeView", () => {
 
     const view = await getChallengeView(a.db, a.user.id, id, today);
     expect(view?.board).toEqual([
-      { rank: 1, name: "Яна", ticked: 2, isMe: false },
+      { rank: 1, name: "Яна И.", ticked: 2, isMe: false },
       { rank: 2, name: "Мария П.", ticked: 1, isMe: true },
     ]);
     expect(view?.challenge.participants).toBe(2);

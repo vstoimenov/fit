@@ -251,9 +251,16 @@ begin
         raise exception 'Ден %: невалидна тренировка.', v_i + 1 using errcode = '22023';
       end if;
       v_wid := (v_item ->> 'workoutId')::uuid;
+      -- A workout already stored for this very day stays acceptable after it is unpublished, so hiding or
+      -- editing a challenge is not blocked by it; attaching any other unpublished workout is refused.
       if not exists (
         select 1 from public.workouts w
         where w.id = v_wid and w.publish_at is not null and w.publish_at <= now()
+      ) and not (
+        p_id is not null and exists (
+          select 1 from public.challenge_days d
+          where d.challenge_id = p_id and d.day = v_i + 1 and d.workout_id = v_wid
+        )
       ) then
         raise exception 'Ден %: тренировката не е публикувана.', v_i + 1 using errcode = '22023';
       end if;
@@ -382,9 +389,9 @@ revoke execute on function public.challenge_counts(uuid[]) from public, anon;
 grant execute on function public.challenge_counts(uuid[]) to authenticated;
 
 -- Leaderboard: all participants ordered by ticked days (desc), then whoever reached that count first. Returns
--- the top 10 plus the caller's own row. Names are first name + initial of the second word ("Мария П."), just
--- the first word when there is no second one, and "Участничка" when she opted out or has no name. Never the
--- surname or the email.
+-- the top 10 plus the caller's own row. Names are first name + upper-cased initial of the second word ("Мария П."),
+-- "Участничка" when she opted out, has no name, has only one word, or the first word looks like an email or has
+-- a digit. Never the surname or the email.
 create function public.challenge_board(p_id uuid)
 returns table (rank int, display_name text, ticked int, is_me boolean)
 language plpgsql stable security definer set search_path = '' as $$
@@ -421,9 +428,11 @@ begin
     )
     select r.rk,
            case
-             when not r.shown or coalesce(r.parts[1], '') = '' then 'Участничка'
-             when r.parts[2] is null then r.parts[1]
-             else r.parts[1] || ' ' || left(r.parts[2], 1) || '.'
+             when not r.shown
+               or coalesce(r.parts[1], '') = ''
+               or r.parts[2] is null
+               or r.parts[1] ~ '[@0-9]' then 'Участничка'
+             else r.parts[1] || ' ' || upper(left(r.parts[2], 1)) || '.'
            end,
            r.cnt,
            r.uid = v_uid

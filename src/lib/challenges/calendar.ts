@@ -77,8 +77,20 @@ export function progress(
   return { done: ticked, total, finished: total > 0 && ticked >= total };
 }
 
-/** „1 ное“ for a YYYY-MM-DD day, with the fixed Bulgarian month table. */
-export function formatChallengeDate(day: string): string {
+/**
+ * True while any day of the challenge could still be ticked: from the start through the day after the end
+ * (yesterday's last day stays open that long).
+ */
+export function canStillTick(start: string, days: number, today: string): boolean {
+  const todayDay = dayOf(start, today);
+  return todayDay >= 1 && todayDay <= days + 1;
+}
+
+/** „1 ное“ for a YYYY-MM-DD day; pass today's date to add the year („1 ное 2027“) when it is another year. */
+export function formatChallengeDate(day: string, today?: string): string {
   const date = new Date(`${day}T12:00:00Z`);
-  return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
+  const base = `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]}`;
+  return today !== undefined && day.slice(0, 4) !== today.slice(0, 4)
+    ? `${base} ${date.getUTCFullYear()}`
+    : base;
 }

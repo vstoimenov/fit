@@ -95,8 +95,8 @@ async function Challenges({ searchParams }: Props) {
                   </Link>
                 </td>
                 <td className="p-3">
-                  {formatChallengeDate(c.startDate)} –{" "}
-                  {formatChallengeDate(dayDate(c.startDate, c.days))}
+                  {formatChallengeDate(c.startDate, today)} –{" "}
+                  {formatChallengeDate(dayDate(c.startDate, c.days), today)}
                   <span className="text-ink-soft"> · {c.days} дни</span>
                 </td>
                 <td className="p-3 tabular-nums">{c.participants}</td>

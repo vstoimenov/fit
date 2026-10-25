@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canStillTick,
   challengeStatus,
   dayDate,
   firstDayFor,
@@ -104,5 +105,21 @@ describe("formatChallengeDate", () => {
     expect(formatChallengeDate("2026-11-01")).toBe("1 ное");
     expect(formatChallengeDate("2026-10-15")).toBe("15 окт");
     expect(formatChallengeDate("2026-01-09")).toBe("9 яну");
+  });
+
+  it("adds the year when it is not the current year", () => {
+    expect(formatChallengeDate("2027-11-01", "2026-10-25")).toBe("1 ное 2027");
+    expect(formatChallengeDate("2026-11-01", "2026-10-25")).toBe("1 ное");
+    expect(formatChallengeDate("2025-12-31", "2026-01-01")).toBe("31 дек 2025");
+  });
+});
+
+describe("canStillTick", () => {
+  it("is true while running and on the day after it ends, false before and after", () => {
+    expect(canStillTick(START, DAYS, "2026-10-24")).toBe(false);
+    expect(canStillTick(START, DAYS, "2026-10-25")).toBe(true);
+    expect(canStillTick(START, DAYS, "2026-11-07")).toBe(true);
+    expect(canStillTick(START, DAYS, "2026-11-08")).toBe(true);
+    expect(canStillTick(START, DAYS, "2026-11-09")).toBe(false);
   });
 });

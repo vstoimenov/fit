@@ -271,6 +271,48 @@ describe("admin_save_challenge", () => {
       await admin.from("workouts").delete().eq("id", wid);
     });
 
+    it("keeps a since-unpublished workout on the day that already stores it, but refuses it anywhere else", async () => {
+      const wid = await createWorkout(admin, {
+        title: "По-късно скрита тренировка",
+        duration_min: 15,
+        kind: "regular",
+        level: "beginner",
+        publish_at: new Date(Date.now() - 3600_000).toISOString(),
+      });
+      const created = await save(boss, { p_days: 3, p_tasks: tasks(3, [{ workoutId: wid }]) });
+      expect(created.error).toBeNull();
+      const id = created.data as unknown as string;
+      await admin.from("workouts").update({ publish_at: null }).eq("id", wid);
+
+      // Same day, same workout: hiding the challenge (or editing the text) is not blocked.
+      const hide = await save(boss, {
+        p_id: id,
+        p_days: 3,
+        p_published: false,
+        p_tasks: tasks(3, [{ workoutId: wid, task: "Нов текст" }]),
+      });
+      expect(hide.error).toBeNull();
+      const stored = await admin
+        .from("challenge_days")
+        .select("day, task, workout_id")
+        .eq("challenge_id", id)
+        .order("day");
+      expect(stored.data![0]).toEqual({ day: 1, task: "Нов текст", workout_id: wid });
+
+      // Moving it to another day is a new attachment: refused.
+      const moved = await save(boss, {
+        p_id: id,
+        p_days: 3,
+        p_tasks: tasks(3, [{}, { workoutId: wid }]),
+      });
+      expect(moved.error).not.toBeNull();
+      // And it is refused on a brand-new challenge.
+      const fresh = await save(boss, { p_days: 3, p_tasks: tasks(3, [{ workoutId: wid }]) });
+      expect(fresh.error).not.toBeNull();
+      await admin.from("challenges").delete().eq("id", id);
+      await admin.from("workouts").delete().eq("id", wid);
+    });
+
     it("accepts the edges: 3-character title, 4000-character description, 3 and 60 days, 200-character task", async () => {
       const a = await save(boss, {
         p_title: "Абв",
@@ -844,10 +886,23 @@ describe("challenge_board", () => {
     expect(asB.map((r) => r.is_me)).toEqual([false, true, false]);
   });
 
-  it("formats names: first word + initial of the second, first word alone, 'Участничка' when empty", async () => {
+  it("formats names: first word + upper-cased initial of the second; 'Участничка' for one word, empty or email/digit-shaped names", async () => {
     const id = await boardChallenge();
-    const names = ["Мария Петрова", "Елена", "", "Йоана Ивана Георгиева", "  Дара   Стоянова  "];
-    const members = await Promise.all(names.map((n, i) => member(`board-name-${i}`, { name: n })));
+    const names = [
+      "Мария Петрова",
+      "Елена",
+      "",
+      "Йоана Ивана Георгиева",
+      "  Дара   Стоянова  ",
+      "мария петрова",
+      "ivana@mail.bg",
+      "ivana@mail.bg Петрова",
+      "User42 Тодорова",
+    ];
+    // Sequential: nine parallel sign-ins time out the local auth service.
+    const members: Awaited<ReturnType<typeof member>>[] = [];
+    for (const [i, n] of names.entries())
+      members.push(await member(`board-name-${i}`, { name: n }));
     for (const m of members) await seedParticipant(id, m.user.id, sofiaDay(-1));
     // Distinct counts keep the order deterministic.
     await seedTick(id, members[0]!.user.id, 1);
@@ -856,12 +911,18 @@ describe("challenge_board", () => {
     await seedTick(id, members[2]!.user.id, 2);
     await seedTick(id, members[3]!.user.id, 1);
     await seedTick(id, members[4]!.user.id, 2);
+    await seedTick(id, members[5]!.user.id, 1);
+    await seedTick(id, members[6]!.user.id, 1);
+    await seedTick(id, members[7]!.user.id, 1);
+    await seedTick(id, members[8]!.user.id, 1);
 
     const rows = await board(members[0]!.db, id);
     const byTicks = rows.map((r) => r.display_name);
     expect(byTicks[0]).toBe("Мария П.");
-    expect(byTicks).toEqual(expect.arrayContaining(["Елена", "Участничка", "Йоана И.", "Дара С."]));
-    expect(rows).toHaveLength(5);
+    expect(byTicks.filter((n) => n === "Участничка")).toHaveLength(5); // "", "Елена", and the three email/digit names
+    expect(byTicks).toEqual(expect.arrayContaining(["Йоана И.", "Дара С.", "мария П."]));
+    expect(byTicks).not.toContain("Елена");
+    expect(rows).toHaveLength(9);
     for (const r of rows) {
       expect(r.display_name).not.toContain("Петрова");
       expect(r.display_name).not.toContain("Георгиева");
