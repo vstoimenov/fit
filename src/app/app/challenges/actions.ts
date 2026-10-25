@@ -50,19 +50,19 @@ export async function joinChallengeAction(id: string): Promise<ActionResult<null
   }
 }
 
-/** Ticks (done) or unticks one day: today or yesterday only; the first tick of a day earns the points. */
+/** Ticks (done) or unticks one day: today or yesterday only; the first tick of a day earns the points (`points` says whether this call did). */
 export async function toggleTickAction(input: {
   id: string;
   day: number;
   done: boolean;
-}): Promise<ActionResult<null>> {
+}): Promise<ActionResult<{ points: boolean }>> {
   try {
     const { user, supabase } = await requireUser();
     const parsed = tickSchema.parse(input);
     await requireChallengeAccess(supabase);
-    await setTick(supabase, user.id, parsed);
+    const { points } = await setTick(supabase, user.id, parsed);
     revalidateChallenge();
-    return actionOk(null);
+    return actionOk({ points });
   } catch (error) {
     return actionFail(error);
   }

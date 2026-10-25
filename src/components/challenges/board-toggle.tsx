@@ -42,13 +42,13 @@ export function BoardToggle({ challengeId, show }: { challengeId: string; show: 
           aria-hidden="true"
           className={cn(
             "relative h-7 w-12 shrink-0 rounded-full transition-colors",
-            shown ? "bg-ink" : "bg-line",
+            shown ? "bg-ink" : "bg-white ring-2 ring-inset ring-ink-soft",
           )}
         >
           <span
             className={cn(
-              "absolute top-0.5 size-6 rounded-full bg-white transition-[left]",
-              shown ? "left-[1.375rem]" : "left-0.5",
+              "absolute top-0.5 size-6 rounded-full transition-[left]",
+              shown ? "left-[1.375rem] bg-white" : "left-0.5 bg-ink-soft",
             )}
           />
         </span>

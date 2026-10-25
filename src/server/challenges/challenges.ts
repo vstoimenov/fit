@@ -380,22 +380,35 @@ export async function joinChallenge(db: TypedClient, id: string): Promise<void> 
  * Ticks or unticks one day. The database enforces every rule (participant, plan, today or yesterday, from
  * her first day) and the first tick of a day earns the points. A tick that is already there, or an untick
  * of a day that is not ticked, changes nothing and is not an error.
+ *
+ * `points` is true only when this call inserted the tick and the day had never earned points before, so
+ * the screen shows „+5 точки“ only for points she really got (a re-tick after an untick, or a tap on a day
+ * ticked on another device, earns nothing).
  */
 export async function setTick(
   db: TypedClient,
   userId: string,
   input: { id: string; day: number; done: boolean },
-): Promise<void> {
+): Promise<{ points: boolean }> {
   if (!Number.isInteger(input.day) || input.day < 1 || input.day > 60) {
     throw new AppError("INVALID", "Невалиден ден.");
   }
   if (input.done) {
+    // Read before the insert: the insert trigger writes the ledger row.
+    const earlier = await db
+      .from("points_ledger")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("source", "challenge")
+      .eq("ref", `${input.id}:${input.day}`)
+      .maybeSingle();
+    if (earlier.error) throw new Error(`read points failed: ${earlier.error.message}`);
     const { error } = await db
       .from("challenge_ticks")
       .insert({ challenge_id: input.id, user_id: userId, day: input.day });
     // Unique violation: a second tap on a day that is already ticked.
     if (error && error.code !== "23505") throwWriteError(error, "tick day");
-    return;
+    return { points: !error && earlier.data === null };
   }
   const { error } = await db
     .from("challenge_ticks")
@@ -404,6 +417,7 @@ export async function setTick(
     .eq("user_id", userId)
     .eq("day", input.day);
   if (error) throwWriteError(error, "untick day");
+  return { points: false };
 }
 
 /** Shows or hides her name on the leaderboard of a challenge she joined. */

@@ -66,10 +66,16 @@ describe("challenge actions", () => {
     expect(mocks.setTick).not.toHaveBeenCalled();
   });
 
-  it("passes a valid tick to the service with her id", async () => {
+  it("passes a valid tick to the service with her id and reports the points", async () => {
+    mocks.setTick.mockResolvedValueOnce({ points: false });
     expect(await toggleTickAction({ id: ID, day: 3, done: false })).toEqual({
       ok: true,
-      data: null,
+      data: { points: false },
+    });
+    mocks.setTick.mockResolvedValueOnce({ points: true });
+    expect(await toggleTickAction({ id: ID, day: 3, done: true })).toEqual({
+      ok: true,
+      data: { points: true },
     });
     expect(mocks.setTick).toHaveBeenCalledWith({ rpc: mocks.rpc }, "user-1", {
       id: ID,

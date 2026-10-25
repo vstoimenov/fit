@@ -479,6 +479,23 @@ describe("joinChallenge, setTick and setBoardVisibility", () => {
     expect(data).toEqual([{ points: 5 }]);
   });
 
+  it("reports points only for a tick that earned them", async () => {
+    const id = await seedChallenge({ start: -3 });
+    const { user, db } = await member("chal-points");
+    await joinChallenge(db, id);
+
+    expect(await setTick(db, user.id, { id, day: 4, done: true })).toEqual({ points: true });
+    // The same day ticked again (another device, a retried tap): nothing new.
+    expect(await setTick(db, user.id, { id, day: 4, done: true })).toEqual({ points: false });
+    expect(await setTick(db, user.id, { id, day: 4, done: false })).toEqual({ points: false });
+    // Ticked again after an untick: the points were taken the first time.
+    expect(await setTick(db, user.id, { id, day: 4, done: true })).toEqual({ points: false });
+    // Another challenge's day is a first tick of its own.
+    const other = await seedChallenge({ start: -3 });
+    await joinChallenge(db, other);
+    expect(await setTick(db, user.id, { id: other, day: 4, done: true })).toEqual({ points: true });
+  });
+
   it("explains refusals in Bulgarian", async () => {
     const id = await seedChallenge({ start: -5 });
     const { user, db } = await member("chal-refuse");

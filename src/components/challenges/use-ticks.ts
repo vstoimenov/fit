@@ -8,9 +8,9 @@ const TOAST_MS = 3000;
 
 /**
  * Ticking days of one challenge with an optimistic check: the state flips at once and rolls back by
- * itself when the action fails (the message is kept). `toast` is „+5 точки“ for a few seconds after a
- * tick the database accepted; a day she unticked in this visit and ticks again earns nothing, so it
- * shows nothing. One call at a time: the buttons are disabled while `pending`.
+ * itself when the action fails (the message is kept). `toast` is „+5 точки“ for a few seconds, only when
+ * the server says this tick earned points (a re-tick, or a day ticked elsewhere, earns nothing). One call
+ * at a time: the buttons are disabled while `pending`.
  */
 export function useTicks(challengeId: string, serverDone: Record<number, boolean>) {
   const [done, setDone] = useOptimistic(
@@ -20,7 +20,6 @@ export function useTicks(challengeId: string, serverDone: Record<number, boolean
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState("");
   const [toast, setToast] = useState("");
-  const unticked = useRef(new Set<number>());
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -33,21 +32,19 @@ export function useTicks(challengeId: string, serverDone: Record<number, boolean
     clearTimeout(timer.current);
     startTransition(async () => {
       setDone({ day, done: next });
+      let points = false;
       try {
         const result = await toggleTickAction({ id: challengeId, day, done: next });
         if (!result.ok) {
           setError(result.message);
           return;
         }
+        points = result.data.points;
       } catch {
         setError("Нещо се обърка. Опитай отново.");
         return;
       }
-      if (!next) {
-        unticked.current.add(day);
-        return;
-      }
-      if (unticked.current.has(day)) return;
+      if (!points) return;
       setToast(POINTS_TOAST);
       timer.current = setTimeout(() => setToast(""), TOAST_MS);
     });

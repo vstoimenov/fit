@@ -42,20 +42,26 @@ export function TickButton({
 }
 
 /**
- * The live region for a tick: „+5 точки“ after a first tick and the error after a refused one. It
- * stays mounted, so screen readers announce the text when it appears.
+ * „+5 точки“ after a first tick and the error after a refused one. The live region stays mounted (and
+ * out of the layout, so an idle card has no blank gap) and announces the text when it appears; the
+ * visible toast is a separate element that only exists while it shows.
  */
 export function TickStatus({ toast, error }: { toast: string; error: string }) {
   return (
-    <div>
-      <p role="status" aria-live="polite" className="text-sm font-extrabold text-rose-deep">
+    <>
+      <p role="status" aria-live="polite" className="sr-only">
         {toast}
       </p>
+      {toast && (
+        <p aria-hidden="true" className="text-sm font-extrabold text-rose-deep">
+          {toast}
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm font-semibold text-brick">
           {error}
         </p>
       )}
-    </div>
+    </>
   );
 }
