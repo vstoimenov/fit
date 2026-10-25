@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/cn";
-import { growRows, parseDays, templateRows, type TaskRow } from "@/lib/challenges/task-rows";
+import {
+  growRows,
+  parseDays,
+  templateRows,
+  templateWouldOverwrite,
+  type TaskRow,
+} from "@/lib/challenges/task-rows";
 import type { AdminChallenge, WorkoutOption } from "@/server/admin/challenges";
 import { deleteChallengeAction } from "./actions";
 
@@ -65,18 +71,18 @@ export function ChallengeForm({
     const n = parseDays(text);
     if (n === null) return;
     setShownDays(n);
-    setRows((current) => growRows(current, n, newKey));
+    setRows(growRows(rows, n, newKey));
   }
 
   function fillTemplate() {
     if (
-      rows.slice(0, shownDays).some((r) => r.task !== "") &&
+      templateWouldOverwrite(rows) &&
       !window.confirm("Шаблонът ще замени въведените задачи. Продължаваш ли?")
     )
       return;
     setDaysText(String(DEFAULT_DAYS));
     setShownDays(DEFAULT_DAYS);
-    setRows((current) => templateRows(current, newKey));
+    setRows(templateRows(rows, newKey));
     setTitle((current) => current || "Първите 14 дни");
   }
 

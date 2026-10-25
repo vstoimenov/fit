@@ -40,3 +40,8 @@ export function templateRows(rows: TaskRow[], newKey: () => string): TaskRow[] {
     i < FIRST_14_DAYS.length ? { ...row, task: FIRST_14_DAYS[i] } : row,
   );
 }
+
+/** True when applying the template would replace text typed on any of days 1-14, shown or hidden. */
+export function templateWouldOverwrite(rows: TaskRow[]): boolean {
+  return rows.slice(0, FIRST_14_DAYS.length).some((row) => row.task !== "");
+}

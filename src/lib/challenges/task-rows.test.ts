@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { growRows, parseDays, templateRows, type TaskRow } from "./task-rows";
+import {
+  growRows,
+  parseDays,
+  templateRows,
+  templateWouldOverwrite,
+  type TaskRow,
+} from "./task-rows";
 import { FIRST_14_DAYS } from "./template";
 
 function counter() {
@@ -61,5 +67,22 @@ describe("templateRows", () => {
     expect(rows[3].workoutId).toBe("w-3");
     // Days beyond 14 stay as they were (hidden once the count is 14).
     expect(rows[17]).toEqual(current[17]);
+  });
+});
+
+describe("templateWouldOverwrite", () => {
+  it("is false for empty rows and for text only beyond day 14", () => {
+    const key = counter();
+    const rows = growRows([], 20, key);
+    expect(templateWouldOverwrite(rows)).toBe(false);
+    expect(templateWouldOverwrite(rows.map((r, i) => (i === 15 ? { ...r, task: "x" } : r)))).toBe(
+      false,
+    );
+  });
+
+  it("is true when hidden days 4-14 hold text although the shown days 1-3 are empty", () => {
+    const rows = growRows([], 14, counter()).map((r, i) => (i >= 3 ? { ...r, task: "скрито" } : r));
+    expect(rows.slice(0, 3).every((r) => r.task === "")).toBe(true);
+    expect(templateWouldOverwrite(rows)).toBe(true);
   });
 });
