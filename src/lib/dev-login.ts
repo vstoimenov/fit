@@ -1,0 +1,35 @@
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function hostnameOf(value: string): string | null {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The bookmarkable test sign-in (/dev/login) exists only for a dev server opened on this computer
+ * against the local Supabase stack. Any other build, database or host refuses it.
+ */
+export function devLoginAllowed(input: {
+  nodeEnv: string | undefined;
+  supabaseUrl: string;
+  host: string | null;
+}): boolean {
+  if (input.nodeEnv !== "development") return false;
+  const db = hostnameOf(input.supabaseUrl);
+  if (!db || !LOCAL_HOSTS.has(db)) return false;
+  const site = input.host ? hostnameOf(`http://${input.host}`) : null;
+  return site !== null && LOCAL_HOSTS.has(site);
+}
+
+const ACCOUNTS = {
+  client: { email: "klientka@example.test", next: "/app" },
+  admin: { email: "admin@example.test", next: "/admin" },
+} as const;
+
+/** The local test account and start page for `?as=client|admin`, or null for anything else. */
+export function devLoginAccount(as: string | null): { email: string; next: string } | null {
+  return as === "client" || as === "admin" ? { ...ACCOUNTS[as] } : null;
+}
