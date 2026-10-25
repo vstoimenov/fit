@@ -1,7 +1,7 @@
 /** Every brand-specific value. The marketing pass changes this file only. */
 export const brand = {
-  name: "Форма",
-  shortName: "Форма",
+  name: "I AM STRONG",
+  shortName: "I AM STRONG",
   tagline: "Тренировки у дома, които пасват в деня ти.",
   description: "Видео тренировки за жени, по програма и с проследяване на прогреса.",
   themeColor: "#111111",
