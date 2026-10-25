@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/admin/workouts", label: "Тренировки" },
   { href: "/admin/articles", label: "Статии" },
   { href: "/admin/meals", label: "Ястия" },
+  { href: "/admin/challenges", label: "Предизвикателства" },
   { href: "/admin/clients", label: "Клиентки" },
   { href: "/admin/rewards", label: "Награди" },
   { href: "/admin/activity", label: "Активност" },
