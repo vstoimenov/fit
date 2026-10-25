@@ -28,6 +28,9 @@ export const serverEnvSchema = z.object({
   ANTHROPIC_API_KEY: trimmedOptional(z.string().startsWith("sk-ant-")),
   // Optional: overrides the default model (claude-opus-5-5), e.g. a cheaper one.
   NUTRITION_AI_MODEL: optionalFromEnv(z.string().min(1)),
+  // Optional, temporary testing only: the exact public tunnel host on which testers sign in
+  // without a password into their own fresh account (see src/app/dev/login/route.ts). Unset = off.
+  TEST_SHARE_HOST: optionalFromEnv(z.string().min(1)),
 });
 
 export const clientEnvSchema = z.object({

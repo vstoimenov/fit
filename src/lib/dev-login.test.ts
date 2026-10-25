@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { devAutoLoginTarget, devLoginAccount, devLoginAllowed } from "./dev-login";
+import {
+  devAutoLoginTarget,
+  devLoginAccount,
+  devLoginAllowed,
+  shareLoginAllowed,
+} from "./dev-login";
 
 const local = {
   nodeEnv: "development",
@@ -30,6 +35,34 @@ describe("devLoginAllowed", () => {
     expect(devLoginAllowed({ ...local, host: "192.168.0.131:3120" })).toBe(false);
     expect(devLoginAllowed({ ...local, host: "localhost.evil.com" })).toBe(false);
     expect(devLoginAllowed({ ...local, host: null })).toBe(false);
+  });
+});
+
+describe("shareLoginAllowed", () => {
+  it("allows exactly the configured share host", () => {
+    expect(
+      shareLoginAllowed({
+        shareHost: "abc-def.trycloudflare.com",
+        host: "abc-def.trycloudflare.com",
+      }),
+    ).toBe(true);
+  });
+
+  it("refuses when no share host is configured or the host differs", () => {
+    expect(shareLoginAllowed({ shareHost: undefined, host: "abc-def.trycloudflare.com" })).toBe(
+      false,
+    );
+    expect(shareLoginAllowed({ shareHost: "", host: "" })).toBe(false);
+    expect(
+      shareLoginAllowed({ shareHost: "abc-def.trycloudflare.com", host: "iamstrong.bg" }),
+    ).toBe(false);
+    expect(
+      shareLoginAllowed({
+        shareHost: "abc-def.trycloudflare.com",
+        host: "evil-abc-def.trycloudflare.com",
+      }),
+    ).toBe(false);
+    expect(shareLoginAllowed({ shareHost: "abc-def.trycloudflare.com", host: null })).toBe(false);
   });
 });
 

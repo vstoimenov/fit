@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env";
 import { decideAuthRedirect } from "@/lib/auth-redirect";
-import { devAutoLoginTarget, devLoginAllowed } from "@/lib/dev-login";
+import { devAutoLoginTarget, devLoginAllowed, shareLoginAllowed } from "@/lib/dev-login";
 
 /** Refreshes the Supabase session cookie and applies optimistic auth redirects. */
 export async function proxy(request: NextRequest) {
@@ -32,14 +32,19 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Local testing only: a signed-out visit signs in as a test account instead of showing /login.
+  // Testing only: a signed-out visit signs in as a test account instead of showing /login —
+  // locally (client or admin) or on the test-share tunnel host (member app only, a fresh tester).
+  const host = request.headers.get("host");
+  const devLocal = devLoginAllowed({
+    nodeEnv: process.env.NODE_ENV,
+    supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+    host,
+  });
+  const devShare =
+    shareLoginAllowed({ shareHost: process.env.TEST_SHARE_HOST, host }) &&
+    /^\/app(\/|$)/.test(request.nextUrl.pathname);
   const devTarget =
-    !user &&
-    devLoginAllowed({
-      nodeEnv: process.env.NODE_ENV,
-      supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
-      host: request.headers.get("host"),
-    })
+    !user && (devLocal || devShare)
       ? devAutoLoginTarget(request.nextUrl.pathname, request.nextUrl.search)
       : null;
   const target =

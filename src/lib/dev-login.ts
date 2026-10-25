@@ -25,6 +25,17 @@ export function devLoginAllowed(input: {
 }
 
 /**
+ * Test-share mode (a temporary public tunnel to this computer): the tester sign-in works only on
+ * the exact host named in TEST_SHARE_HOST. Unset means off.
+ */
+export function shareLoginAllowed(input: {
+  shareHost: string | undefined;
+  host: string | null;
+}): boolean {
+  return Boolean(input.shareHost) && input.host === input.shareHost;
+}
+
+/**
  * Where the proxy sends a signed-out visit when the dev sign-in is allowed: the admin panel signs in
  * as the test admin, the member app as the test client, and the page she asked for is kept.
  */
