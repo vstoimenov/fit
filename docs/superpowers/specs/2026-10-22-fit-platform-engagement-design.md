@@ -57,10 +57,32 @@ function `level_for_points(int)` and one TS mirror pinned by a parity test. Rewa
 - After a workout the after-workout screen shows „+10 точки“ and the new total/level; level-up gets a short
   celebration line.
 
-## Phase 2 — Challenges (outline)
-Admin creates a challenge (title, description, start date, N days, a task per day, optional workout per day). Members
-join; each day they tick the task (only today and past days; not future); progress bar; leaderboard by first name +
-initial; 5 points per day. Home shows the joined challenge card. „Първите 14 дни“ is the first one.
+## Phase 2 — Challenges (detailed 2026-10-25; owner approved the outline, details are the controller's calls)
+
+### Admin „Предизвикателства“ (`/admin/challenges`)
+- Fields: title (3–80), description (Markdown, ≤ 4 000, same renderer as articles), start date (Sofia date), number of
+  days N (3–60), a task per day (1–200 chars) with an optional workout per day (any published workout), published.
+- Start date and N cannot change once anyone has joined (the form shows them read-only with „Вече има участнички“);
+  task texts and workouts stay editable. A challenge with participants cannot be deleted, only unpublished.
+- „Шаблон: Първите 14 дни“ button pre-fills a new draft with 14 suggested tasks (the owner edits and publishes).
+- List: title, dates, days, participants, published. Audit trigger like other admin tables.
+
+### Member
+- `/app/challenges`: running and upcoming published challenges plus the ones she joined (finished ones under
+  „Завършени“). Card: title, „Ден 3 от 14“ or „Започва на 1 ноем.“, participants count, her progress bar.
+- `/app/challenges/[id]`: description, „Включи се“ (primary; while the challenge has not ended), today's task with a
+  check button, the day list (each day: task, optional workout link, done/not done; future days locked).
+- Ticking: only today and yesterday (Sofia) can be ticked — a one-day catch-up, no back-filling of older days
+  (anti-farming). Unticking is allowed for the same two days. Each first tick of a day earns 5 points
+  (`points_ledger` source `challenge`, ref `challengeId:day`); unticking does not claw points back.
+- Leaderboard (top 10 by ticked days, ties by the earlier last tick): first name + initial („Мария П.“); her own place
+  is shown even outside the top 10. A toggle „Покажи ме в класацията“ (default on) on the detail page hides her name
+  as „Участничка“ for others.
+- Finished (all N days ticked): „Завърши предизвикателството!“ with a share button reusing the existing share pattern
+  (image with title, days and the I AM STRONG badge).
+- Начало: a card for the joined running challenge: „Ден X от N · {today's task}“ with the tick button; nothing when
+  none. Nav: `/app/challenges/**` counts as Начало.
+- Access: everything requires `my_access()`; without it the pages show the plan CTA.
 
 ## Phase 3 — Live + recipes (outline)
 Admin schedules live sessions (title, start time, Zoom/YouTube link, later a recording link). Home shows the next one
