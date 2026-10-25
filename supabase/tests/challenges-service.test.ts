@@ -355,6 +355,38 @@ describe("getChallengeView", () => {
     expect(view?.days.find((x) => x.day === 3)?.workoutDoneToday).toBe(false);
   });
 
+  it("flags the workout hint only on the day whose date is today", async () => {
+    const workout = await createWorkout(admin, {
+      title: "Повторена тренировка",
+      duration_min: 20,
+      kind: "regular",
+      level: "beginner",
+      publish_at: new Date(Date.now() - 3600_000).toISOString(),
+    });
+    createdWorkouts.push(workout);
+    // Today is day 4; the same workout is on days 2 (past), 4 (today) and 7 (future).
+    const id = await seedChallenge({
+      start: -3,
+      tasks: tasks(10, [
+        {},
+        { workoutId: workout },
+        {},
+        { workoutId: workout },
+        {},
+        {},
+        { workoutId: workout },
+      ]),
+    });
+    const { user, db } = await member("chal-workout-once");
+    await seedParticipant(id, user.id, sofiaDay(-3));
+    expect((await db.from("workout_completions").insert({ workout_id: workout })).error).toBeNull();
+
+    const view = await getChallengeView(db, user.id, id, today);
+    const flagged = view?.days.filter((x) => x.workoutDoneToday).map((x) => x.day);
+    expect(flagged).toEqual([4]);
+    expect(view?.days.filter((x) => x.workout).map((x) => x.day)).toEqual([2, 4, 7]);
+  });
+
   it("returns the leaderboard with her own row marked", async () => {
     const id = await seedChallenge({ start: -3 });
     const a = await member("chal-board-a", { name: "Мария Петрова" });
@@ -413,7 +445,9 @@ describe("homeChallenge", () => {
     const notJoined = await seedChallenge({ start: -1 });
     const { user, db } = await member("chal-home-ignore");
     await seedParticipant(ended, user.id, sofiaDay(-8));
-    expect(notJoined).toBeTruthy();
+    // It is listed for her (published, running) but is not on the home card because she is not in it.
+    const list = await listMemberChallenges(db, user.id, today);
+    expect(list.running.map((c) => c.id)).toContain(notJoined);
     expect(await homeChallenge(db, user.id, today)).toBeNull();
   });
 });

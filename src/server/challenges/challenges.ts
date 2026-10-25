@@ -149,21 +149,23 @@ export async function listMemberChallenges(
   const joinedOn = new Map(parts.data.map((p) => [p.challenge_id, p.joined_on]));
   const visible = rows.data.filter((c) => c.published || joinedOn.has(c.id));
 
+  const joinedIds = [...joinedOn.keys()];
+  const [ticks, counts] = await Promise.all([
+    joinedIds.length === 0
+      ? Promise.resolve({ data: [] as { challenge_id: string }[], error: null })
+      : db
+          .from("challenge_ticks")
+          .select("challenge_id")
+          .eq("user_id", userId)
+          .in("challenge_id", joinedIds),
+    participantCounts(
+      db,
+      visible.map((c) => c.id),
+    ),
+  ]);
+  if (ticks.error) throw new Error(`list ticks failed: ${ticks.error.message}`);
   const tickedBy = new Map<string, number>();
-  if (joinedOn.size > 0) {
-    const ticks = await db
-      .from("challenge_ticks")
-      .select("challenge_id")
-      .eq("user_id", userId)
-      .in("challenge_id", [...joinedOn.keys()]);
-    if (ticks.error) throw new Error(`list ticks failed: ${ticks.error.message}`);
-    for (const t of ticks.data)
-      tickedBy.set(t.challenge_id, (tickedBy.get(t.challenge_id) ?? 0) + 1);
-  }
-  const counts = await participantCounts(
-    db,
-    visible.map((c) => c.id),
-  );
+  for (const t of ticks.data) tickedBy.set(t.challenge_id, (tickedBy.get(t.challenge_id) ?? 0) + 1);
 
   const list: MemberChallengeList = { running: [], upcoming: [], joinedFinished: [] };
   for (const c of visible) {
@@ -285,7 +287,8 @@ export async function getChallengeView(
         tickable: tickable.has(d.day),
         locked: date > today,
         beforeJoin: firstDay !== null && d.day < firstDay,
-        workoutDoneToday: d.workouts ? doneWorkouts.has(d.workouts.id) : false,
+        // Only the day whose date is today: the same workout reused on other days must not light them up.
+        workoutDoneToday: date === today && d.workouts ? doneWorkouts.has(d.workouts.id) : false,
       };
     }),
     participation:
