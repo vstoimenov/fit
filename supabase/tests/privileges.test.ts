@@ -27,6 +27,10 @@ const TABLES = [
   "meals",
   "menu_swaps",
   "meal_draft_calls",
+  "challenges",
+  "challenge_days",
+  "challenge_participants",
+  "challenge_ticks",
 ];
 const ROLES = ["anon", "authenticated"];
 // MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).

@@ -97,6 +97,147 @@ export type Database = {
         };
         Relationships: [];
       };
+      challenge_days: {
+        Row: {
+          challenge_id: string;
+          day: number;
+          task: string;
+          workout_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          challenge_id: string;
+          day: number;
+          task: string;
+          workout_id?: string | null;
+        };
+        Update: {
+          challenge_id?: string;
+          day?: number;
+          task?: string;
+          workout_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "challenge_days_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: false;
+            referencedRelation: "challenges";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "challenge_days_workout_id_fkey";
+            columns: ["workout_id"];
+            isOneToOne: false;
+            referencedRelation: "workouts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      challenge_participants: {
+        Row: {
+          challenge_id: string;
+          created_at: string;
+          joined_on: string;
+          show_on_board: boolean;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          challenge_id: string;
+          created_at?: string;
+          joined_on: string;
+          show_on_board?: boolean;
+          user_id: string;
+        };
+        Update: {
+          challenge_id?: string;
+          created_at?: string;
+          joined_on?: string;
+          show_on_board?: boolean;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "challenge_participants_challenge_id_fkey";
+            columns: ["challenge_id"];
+            isOneToOne: false;
+            referencedRelation: "challenges";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "challenge_participants_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      challenge_ticks: {
+        Row: {
+          challenge_id: string;
+          day: number;
+          ticked_at: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          challenge_id: string;
+          day: number;
+          ticked_at?: string;
+          user_id: string;
+        };
+        Update: {
+          challenge_id?: string;
+          day?: number;
+          ticked_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "challenge_ticks_challenge_id_user_id_fkey";
+            columns: ["challenge_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "challenge_participants";
+            referencedColumns: ["challenge_id", "user_id"];
+          },
+        ];
+      };
+      challenges: {
+        Row: {
+          created_at: string;
+          days: number;
+          description: string;
+          id: string;
+          published: boolean;
+          start_date: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          days: number;
+          description?: string;
+          id?: string;
+          published?: boolean;
+          start_date: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          days?: number;
+          description?: string;
+          id?: string;
+          published?: boolean;
+          start_date?: string;
+          title?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       check_ins: {
         Row: {
           created_at: string;
@@ -1012,9 +1153,22 @@ export type Database = {
         }[];
       };
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
+      admin_delete_challenge: { Args: { p_id: string }; Returns: undefined };
       admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
       admin_mfa_required: { Args: Record<PropertyKey, never>; Returns: boolean };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
+      admin_save_challenge: {
+        Args: {
+          p_days: number;
+          p_description: string;
+          p_id: string;
+          p_published: boolean;
+          p_start: string;
+          p_tasks: Json;
+          p_title: string;
+        };
+        Returns: string;
+      };
       apply_subscription_event: {
         Args: {
           p_cancel_at_period_end: boolean;
@@ -1033,12 +1187,29 @@ export type Database = {
         Returns: string;
       };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
+      challenge_board: {
+        Args: { p_id: string };
+        Returns: {
+          display_name: string;
+          is_me: boolean;
+          rank: number;
+          ticked: number;
+        }[];
+      };
+      challenge_counts: {
+        Args: { p_ids: string[] };
+        Returns: {
+          challenge_id: string;
+          participants: number;
+        }[];
+      };
       claim_meal_draft_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       claim_nutrition_ai_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      join_challenge: { Args: { p_id: string }; Returns: undefined };
       level_for_points: { Args: { p: number }; Returns: number };
       meal_ingredients_valid: { Args: { p_items: Json }; Returns: boolean };
       meal_types_valid: {
