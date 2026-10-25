@@ -7,16 +7,12 @@ import { cn } from "@/lib/cn";
 import { copyText, downloadFile, isAbort } from "@/lib/share/browser";
 import { pickShareMode } from "@/lib/share/share-mode";
 
-const FILE_NAME = "trenirovka.png";
 const FAILED = "Не успяхме да споделим. Опитай пак.";
 
-async function loadImage(completionId: string): Promise<File> {
-  const res = await fetch(`/api/share/${encodeURIComponent(completionId)}?format=story`, {
-    credentials: "same-origin",
-    cache: "no-store",
-  });
+async function loadImage(src: string, fileName: string): Promise<File> {
+  const res = await fetch(src, { credentials: "same-origin", cache: "no-store" });
   if (!res.ok) throw new Error(`share image ${res.status}`);
-  return new File([await res.blob()], FILE_NAME, { type: "image/png" });
+  return new File([await res.blob()], fileName, { type: "image/png" });
 }
 
 /**
@@ -28,6 +24,28 @@ async function loadImage(completionId: string): Promise<File> {
  * tap's user activation, which a network round trip inside the click handler can outlast.
  */
 export function ShareButton({ completionId, text }: { completionId: string; text: string }) {
+  return (
+    <ImageShareButton
+      src={`/api/share/${encodeURIComponent(completionId)}?format=story`}
+      fileName="trenirovka.png"
+      text={text}
+    />
+  );
+}
+
+/**
+ * The share flow for any server-rendered image: `src` is a same-origin PNG route, `text` carries
+ * nothing beyond what the image shows.
+ */
+export function ImageShareButton({
+  src,
+  fileName,
+  text,
+}: {
+  src: string;
+  fileName: string;
+  text: string;
+}) {
   const [state, setState] = useState<"idle" | "busy" | "copied">("idle");
   const [error, setError] = useState("");
   const image = useRef<Promise<File> | null>(null);
@@ -36,7 +54,7 @@ export function ShareButton({ completionId, text }: { completionId: string; text
   const copiedTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
-    const p = loadImage(completionId);
+    const p = loadImage(src, fileName);
     image.current = p;
     p.then(
       (file) => {
@@ -52,7 +70,7 @@ export function ShareButton({ completionId, text }: { completionId: string; text
       ready.current = null;
       clearTimeout(copiedTimer.current);
     };
-  }, [completionId]);
+  }, [src, fileName]);
 
   async function share() {
     if (busy.current) return;
@@ -63,7 +81,7 @@ export function ShareButton({ completionId, text }: { completionId: string; text
     try {
       let file = ready.current;
       if (!file) {
-        image.current ??= loadImage(completionId);
+        image.current ??= loadImage(src, fileName);
         file = await image.current;
         ready.current = file;
       }

@@ -1,7 +1,8 @@
-import { Apple, ChartLine, ChevronRight, Clock } from "lucide-react";
+import { Apple, ChartLine, ChevronRight, Clock, Flag } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { HomeChallengeCard } from "@/components/challenges/home-card";
 import { LevelCard } from "@/components/home/level-card";
 import { ArticleCard } from "@/components/learn/article-card";
 import { Countdown } from "@/components/today/countdown";
@@ -18,6 +19,7 @@ import { levelProgress } from "@/lib/points/levels";
 import { sofiaToday } from "@/lib/progress-photos/today";
 import { requireUser } from "@/server/auth/require-user";
 import { listArticlesFor, type ArticleSummary } from "@/server/content/articles";
+import { homeChallenge } from "@/server/challenges/challenges";
 import { getMemberPoints } from "@/server/content/points";
 import { getTodayView } from "@/server/content/today";
 import type { TypedClient } from "@/server/db/types";
@@ -39,7 +41,7 @@ async function Home() {
   const { user, supabase } = await requireUser();
   const view = await getTodayView(supabase, user.id);
   // Level and article are extras: if their reads fail the day's workout must still show.
-  const [progress, article, nutrition] = await Promise.all([
+  const [progress, article, nutrition, challenge] = await Promise.all([
     getMemberPoints(supabase, user.id).then(
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
@@ -50,6 +52,9 @@ async function Home() {
     ),
     nutritionToday(supabase, user.id).catch((error: unknown) =>
       logSkipped("nutrition", user.id, error, null),
+    ),
+    homeChallenge(supabase, user.id, sofiaToday()).catch((error: unknown) =>
+      logSkipped("challenge", user.id, error, null),
     ),
   ]);
   const firstName = view.name.split(" ")[0];
@@ -139,6 +144,8 @@ async function Home() {
             )}
           </section>
 
+          {challenge && <HomeChallengeCard data={challenge} />}
+
           <WeekStrip week={view.week} />
 
           <div className="grid grid-cols-2 gap-3">
@@ -166,6 +173,20 @@ async function Home() {
             </span>
             <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
           </Link>
+
+          {!challenge && (
+            <Link
+              href="/app/challenges"
+              className="flex min-h-14 items-center gap-3 rounded-2xl bg-sand p-4 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <Flag size={24} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-extrabold">Предизвикателства</span>
+                <span className="block text-sm text-ink-soft">Малки ежедневни задачи заедно</span>
+              </span>
+              <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
+            </Link>
+          )}
 
           {nutrition && (
             <Link

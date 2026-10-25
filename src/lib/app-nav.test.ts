@@ -26,6 +26,8 @@ describe("activeNavHref", () => {
     ["/app/learn/some-article", "/app/learn"],
     ["/app/profile", "/app/profile"],
     ["/app/plan", "/app/profile"],
+    ["/app/challenges", "/app"],
+    ["/app/challenges/abc", "/app"],
   ])("%s -> %s", (path, href) => {
     expect(activeNavHref(path)).toBe(href);
   });
@@ -39,6 +41,7 @@ describe("activeNavHref", () => {
     expect(activeNavHref("/app/library-old")).toBeNull();
     expect(activeNavHref("/app/learner")).toBeNull();
     expect(activeNavHref("/app/nutrition-old")).toBeNull();
+    expect(activeNavHref("/app/challenges-old")).toBeNull();
   });
 });
 
