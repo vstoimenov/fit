@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv, serverEnv } from "@/env";
+import { safeNext } from "@/lib/auth-redirect";
 import { devLoginAccount, devLoginAllowed } from "@/lib/dev-login";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
@@ -35,5 +36,6 @@ export async function GET(request: NextRequest) {
     token_hash: data.properties.hashed_token,
   });
   if (verifyError) return NextResponse.redirect(new URL("/login?error=link", request.url));
-  return NextResponse.redirect(new URL(account.next, request.url));
+  const next = safeNext(request.nextUrl.searchParams.get("next"), account.next);
+  return NextResponse.redirect(new URL(next, request.url));
 }

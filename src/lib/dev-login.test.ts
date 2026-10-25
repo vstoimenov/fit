@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { devLoginAccount, devLoginAllowed } from "./dev-login";
+import { devAutoLoginTarget, devLoginAccount, devLoginAllowed } from "./dev-login";
 
 const local = {
   nodeEnv: "development",
@@ -30,6 +30,28 @@ describe("devLoginAllowed", () => {
     expect(devLoginAllowed({ ...local, host: "192.168.0.131:3120" })).toBe(false);
     expect(devLoginAllowed({ ...local, host: "localhost.evil.com" })).toBe(false);
     expect(devLoginAllowed({ ...local, host: null })).toBe(false);
+  });
+});
+
+describe("devAutoLoginTarget", () => {
+  it("sends a signed-out visit of the app to the client sign-in, keeping the page", () => {
+    expect(devAutoLoginTarget("/app", "")).toBe("/dev/login?as=client&next=%2Fapp");
+    expect(devAutoLoginTarget("/app/nutrition", "?view=menu")).toBe(
+      "/dev/login?as=client&next=%2Fapp%2Fnutrition%3Fview%3Dmenu",
+    );
+  });
+
+  it("sends the admin panel to the admin sign-in", () => {
+    expect(devAutoLoginTarget("/admin/meals", "")).toBe(
+      "/dev/login?as=admin&next=%2Fadmin%2Fmeals",
+    );
+  });
+
+  it("leaves public pages alone", () => {
+    expect(devAutoLoginTarget("/", "")).toBeNull();
+    expect(devAutoLoginTarget("/login", "")).toBeNull();
+    expect(devAutoLoginTarget("/application", "")).toBeNull();
+    expect(devAutoLoginTarget("/administrator", "")).toBeNull();
   });
 });
 

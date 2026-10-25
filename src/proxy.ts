@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env";
 import { decideAuthRedirect } from "@/lib/auth-redirect";
+import { devAutoLoginTarget, devLoginAllowed } from "@/lib/dev-login";
 
 /** Refreshes the Supabase session cookie and applies optimistic auth redirects. */
 export async function proxy(request: NextRequest) {
@@ -31,11 +32,23 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const target = decideAuthRedirect({
-    pathname: request.nextUrl.pathname,
-    search: request.nextUrl.search,
-    hasSession: user !== null,
-  });
+  // Local testing only: a signed-out visit signs in as a test account instead of showing /login.
+  const devTarget =
+    !user &&
+    devLoginAllowed({
+      nodeEnv: process.env.NODE_ENV,
+      supabaseUrl: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+      host: request.headers.get("host"),
+    })
+      ? devAutoLoginTarget(request.nextUrl.pathname, request.nextUrl.search)
+      : null;
+  const target =
+    devTarget ??
+    decideAuthRedirect({
+      pathname: request.nextUrl.pathname,
+      search: request.nextUrl.search,
+      hasSession: user !== null,
+    });
   if (!target) return response;
 
   const redirect = NextResponse.redirect(new URL(target, request.url));

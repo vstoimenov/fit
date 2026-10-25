@@ -24,6 +24,20 @@ export function devLoginAllowed(input: {
   return site !== null && LOCAL_HOSTS.has(site);
 }
 
+/**
+ * Where the proxy sends a signed-out visit when the dev sign-in is allowed: the admin panel signs in
+ * as the test admin, the member app as the test client, and the page she asked for is kept.
+ */
+export function devAutoLoginTarget(pathname: string, search: string): string | null {
+  const as = /^\/admin(\/|$)/.test(pathname)
+    ? "admin"
+    : /^\/app(\/|$)/.test(pathname)
+      ? "client"
+      : null;
+  if (!as) return null;
+  return `/dev/login?as=${as}&next=${encodeURIComponent(pathname + search)}`;
+}
+
 const ACCOUNTS = {
   client: { email: "klientka@example.test", next: "/app" },
   admin: { email: "admin@example.test", next: "/admin" },
