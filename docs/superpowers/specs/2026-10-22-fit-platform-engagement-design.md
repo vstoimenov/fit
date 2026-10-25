@@ -84,6 +84,20 @@ function `level_for_points(int)` and one TS mirror pinned by a parity test. Rewa
   none. Nav: `/app/challenges/**` counts as Начало.
 - Access: everything requires `my_access()`; without it the pages show the plan CTA.
 
+### Settled after the builder check (controller's calls)
+- **Late joiners:** she can join until the challenge's last day. Her days start on her join day: earlier days show
+  „Преди да се включиш“ and cannot be ticked. Progress is „X от Y“ where Y = days from her join day to the end;
+  „Завърши“ means all of her Y days ticked. Ticking still only today and yesterday, and never before her join day.
+- **Several challenges:** she may join several. Начало shows the running one that ends first, with „+N още“ linking to
+  `/app/challenges`.
+- **Unpublished / lapsed:** a joined member keeps seeing a challenge after it is unpublished (participation makes it
+  visible to her) and can keep ticking while she has access. Without access she can read but not tick; she still
+  counts in the participant number and stays on the leaderboard. Participant counts and the leaderboard come from a
+  security-definer function that exposes only first name + initial (or „Участничка“ when hidden, when the name is
+  empty, or one word) and ticked-day counts.
+- **Workouts:** ticking stays manual. A day with a workout shows the link and, when she completed that workout that
+  day, the hint „Тренировката е отбелязана — отметни и задачата.“ (workout 10 points + task 5 points is intended).
+
 ## Phase 3 — Live + recipes (outline)
 Admin schedules live sessions (title, start time, Zoom/YouTube link, later a recording link). Home shows the next one
 with „Добави в календара“ (.ics). Members tap „Влизам“ at start time (5 points once per session). Recordings list in
