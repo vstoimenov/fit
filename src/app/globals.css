@@ -24,6 +24,28 @@
   --font-sans: var(--font-manrope), system-ui, sans-serif;
   /* Handwritten accent (Bad Script): the logo and at most a few notes on the public site. */
   --font-script: var(--font-script), cursive;
+  /* Public-site entrance animations (CSS only, so server and client markup match;
+     `motion-reduce:animate-none` turns them off). */
+  --animate-site-reveal: site-reveal 0.45s ease-out both;
+  --animate-site-zoom: site-zoom 1.2s ease-out both;
+  @keyframes site-reveal {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes site-zoom {
+    from {
+      transform: scale(1.04);
+    }
+    to {
+      transform: none;
+    }
+  }
 }
 
 html {

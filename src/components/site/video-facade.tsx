@@ -3,6 +3,7 @@
 import { Lock, Play } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
+import { coverIsUnoptimized } from "@/components/learn/article-card";
 import { cn } from "@/lib/cn";
 import type { VideoRef } from "@/lib/video/parse-video-url";
 
@@ -54,6 +55,8 @@ export function VideoFacade({
         alt=""
         fill
         sizes="(min-width:1024px) 640px, 100vw"
+        // Workout thumbnails live in Supabase Storage, which is not in images.remotePatterns.
+        unoptimized={coverIsUnoptimized(posterSrc)}
         className="object-cover"
       />
       <div aria-hidden className="absolute inset-0 bg-ink/20" />

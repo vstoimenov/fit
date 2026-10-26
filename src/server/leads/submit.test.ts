@@ -4,22 +4,30 @@ import { hashIp, submitLead } from "./submit";
 
 const lead = { name: "Мария", email: "maria@example.com", marketing: false };
 
-function fakeDb(result: { error: { message: string } | null }) {
-  const rpc = vi.fn().mockResolvedValue(result);
+function fakeDb(result: { data?: boolean | null; error: { message: string } | null }) {
+  const rpc = vi.fn().mockResolvedValue({ data: null, ...result });
   return { db: { rpc } as unknown as TypedClient, rpc };
 }
 
 describe("submitLead", () => {
-  it("calls submit_lead with the lead and the ip hash", async () => {
-    const { db, rpc } = fakeDb({ error: null });
+  it("calls submit_lead with the lead and the ip hash and reports a new row", async () => {
+    const { db, rpc } = fakeDb({ data: true, error: null });
     const res = await submitLead(db, lead, "abc", "free-workout");
-    expect(res).toEqual({ ok: true });
+    expect(res).toEqual({ ok: true, inserted: true });
     expect(rpc).toHaveBeenCalledWith("submit_lead", {
       p_name: "Мария",
       p_email: "maria@example.com",
       p_marketing: false,
       p_source: "free-workout",
       p_ip_hash: "abc",
+    });
+  });
+
+  it("reports a refreshed existing row as not inserted", async () => {
+    const { db } = fakeDb({ data: false, error: null });
+    expect(await submitLead(db, lead, "abc", "free-workout")).toEqual({
+      ok: true,
+      inserted: false,
     });
   });
 

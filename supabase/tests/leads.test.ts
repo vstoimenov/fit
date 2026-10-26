@@ -3,11 +3,12 @@ import { adminClient, anonClient, createAdminUser, createUser, signedInClient } 
 
 const stamp = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+/** The app calls the RPC with the service role from a server action, never from the browser. */
 async function submit(
   email: string,
   opts: { name?: string; marketing?: boolean; ip?: string } = {},
 ) {
-  return anonClient().rpc("submit_lead", {
+  return adminClient().rpc("submit_lead", {
     p_name: opts.name ?? "Мария",
     p_email: email,
     p_marketing: opts.marketing ?? false,
@@ -17,12 +18,25 @@ async function submit(
 }
 
 describe("submit_lead", () => {
-  it("anon upserts a lead by e-mail, case-insensitively, and cannot read it back", async () => {
+  it("is not callable with the public (anon) key", async () => {
+    const { error } = await anonClient().rpc("submit_lead", {
+      p_name: "Бот",
+      p_email: `bot-${stamp()}@example.test`,
+      p_marketing: false,
+      p_source: "free-workout",
+      p_ip_hash: "",
+    });
+    expect(error).not.toBeNull();
+  });
+
+  it("inserts once per e-mail (case-insensitively), then refreshes the row", async () => {
     const email = `lead-${stamp()}@example.test`;
     const first = await submit(` ${email.toUpperCase()} `);
     expect(first.error).toBeNull();
+    expect(first.data).toBe(true);
     const second = await submit(email, { name: "Мария Иванова", marketing: true });
     expect(second.error).toBeNull();
+    expect(second.data).toBe(false);
 
     const { data } = await adminClient()
       .from("leads")
@@ -45,6 +59,20 @@ describe("submit_lead", () => {
     }
     const { error } = await submit(`lead-${stamp()}-11@example.test`, { ip });
     expect(error?.message).toContain("rate_limited");
+  });
+
+  it("forgets ip hashes older than 30 days", async () => {
+    const admin = adminClient();
+    const email = `old-${stamp()}@example.test`;
+    await submit(email, { ip: "old-hash" });
+    const { error } = await admin
+      .from("leads")
+      .update({ created_at: new Date(Date.now() - 40 * 86400000).toISOString() })
+      .eq("email", email);
+    expect(error).toBeNull();
+    await submit(`fresh-${stamp()}@example.test`);
+    const { data } = await admin.from("leads").select("ip_hash").eq("email", email).single();
+    expect(data?.ip_hash).toBeNull();
   });
 
   it("only admins read leads", async () => {

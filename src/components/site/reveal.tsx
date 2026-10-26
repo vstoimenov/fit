@@ -1,29 +1,28 @@
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
+import { cn } from "@/lib/cn";
 
-/** Fades a block in (and lifts it 12 px) the first time ≥ 30 % of it is visible. */
+/**
+ * Fades a block in (and lifts it 12 px) as it appears. Pure CSS: the server and the client render
+ * identical markup, visitors with reduced motion get the final state at once, and the text is
+ * visible even before JavaScript runs.
+ */
 export function Reveal({
   children,
   delay = 0,
   className,
+  as: Tag = "div",
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   delay?: number;
   className?: string;
+  as?: "div" | "span";
 }) {
-  const reduced = useReducedMotion() ?? false;
-  if (reduced) return <div className={className}>{children}</div>;
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: 12 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, amount: 0.3 }}
-      transition={{ duration: 0.45, delay, ease: "easeOut" }}
+    <Tag
+      className={cn("animate-site-reveal motion-reduce:animate-none", className)}
+      style={delay ? { animationDelay: `${delay}s` } : undefined}
     >
       {children}
-    </motion.div>
+    </Tag>
   );
 }

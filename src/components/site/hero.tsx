@@ -1,6 +1,3 @@
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
 import { PHOTOS } from "@/lib/photos";
@@ -9,7 +6,6 @@ import { CTA, CTA_PRIMARY, CTA_SECONDARY, WRAP } from "./styles";
 
 /** First screen: the three-line promise, the hero photo and the two calls to action. */
 export function Hero({ hasFreeWorkout }: { hasFreeWorkout: boolean }) {
-  const reduced = useReducedMotion() ?? false;
   return (
     <section id="hero" className={`${WRAP} pt-6 pb-16 sm:pt-10 lg:pb-24`}>
       <Reveal>
@@ -20,13 +16,13 @@ export function Hero({ hasFreeWorkout }: { hasFreeWorkout: boolean }) {
         </p>
       </Reveal>
       <h1 className="text-[44px] leading-[1.02] font-extrabold tracking-[-0.03em] sm:text-7xl lg:text-[104px]">
-        <Reveal>
-          <span className="block">Силно тяло.</span>
+        <Reveal as="span" className="block">
+          Силно тяло.
         </Reveal>
-        <Reveal delay={0.08}>
-          <span className="block">20 минути на ден.</span>
+        <Reveal as="span" className="block" delay={0.08}>
+          20 минути на ден.
         </Reveal>
-        <Reveal delay={0.16}>
+        <Reveal as="span" className="inline-block" delay={0.16}>
           <span className="mt-1 inline-block rounded-[14px] bg-powder px-3.5 py-0.5">
             Без зала.
           </span>
@@ -35,12 +31,8 @@ export function Hero({ hasFreeWorkout }: { hasFreeWorkout: boolean }) {
 
       <div className="mt-12 grid gap-8 lg:mt-14 lg:grid-cols-12 lg:gap-12">
         <div className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-sand lg:col-span-7">
-          <motion.div
-            className="absolute inset-0"
-            initial={reduced ? false : { scale: 1.04 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 1.2, ease: "easeOut" }}
-          >
+          {/* One slow settle from 1.04 to 1 on load; off under reduced motion. */}
+          <div className="absolute inset-0 animate-site-zoom motion-reduce:animate-none">
             <Image
               src={PHOTOS.hero.src}
               alt={PHOTOS.hero.alt}
@@ -50,7 +42,7 @@ export function Hero({ hasFreeWorkout }: { hasFreeWorkout: boolean }) {
               sizes="(min-width:1024px) 680px, 100vw"
               className="object-cover"
             />
-          </motion.div>
+          </div>
         </div>
         <div className="flex flex-col justify-end gap-6 lg:col-span-5">
           <p className="text-xl leading-relaxed">

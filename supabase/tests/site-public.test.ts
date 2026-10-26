@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminClient, anonClient } from "./helpers";
+import { adminClient, anonClient, freeWorkoutId } from "./helpers";
 
 describe("public site functions", () => {
   it("anon can read the free workout through the function only", async () => {
@@ -12,6 +12,22 @@ describe("public site functions", () => {
 
     const direct = await anon.from("workouts").select("id").eq("kind", "free");
     expect(direct.data).toEqual([]);
+  });
+
+  it("hides the free workout while it is unpublished", async () => {
+    const admin = adminClient();
+    const id = await freeWorkoutId(admin);
+    const { error } = await admin.from("workouts").update({ publish_at: null }).eq("id", id);
+    expect(error).toBeNull();
+    try {
+      const { data } = await anonClient().rpc("public_free_workout");
+      expect(data).toEqual([]);
+    } finally {
+      await admin
+        .from("workouts")
+        .update({ publish_at: new Date(Date.now() - 86400000).toISOString() })
+        .eq("id", id);
+    }
   });
 
   it("anon gets only https site links", async () => {

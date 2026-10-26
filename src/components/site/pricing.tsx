@@ -5,20 +5,20 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
-import { yearlySavings } from "@/lib/site/pricing";
+import { pickPlan, yearlySavings } from "@/lib/site/pricing";
 import type { PublicPlan } from "@/server/content/public-plans";
-import { CTA, CTA_PRIMARY, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
+import { CTA, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
 
-type Interval = "month" | "year";
+type Period = "month" | "year";
 
-/** Monthly / yearly cards from the live `plans` table, plus the gift voucher card. */
+/** Monthly / yearly card from the live `plans` table, plus the gift voucher card. */
 export function Pricing({ plans }: { plans: PublicPlan[] }) {
   const month = plans.find((p) => p.interval === "month");
   const year = plans.find((p) => p.interval === "year");
-  const [interval, setInterval] = useState<Interval>("month");
+  const [period, setPeriod] = useState<Period>("month");
   const id = useId();
   const savings = yearlySavings(month?.price_cents, year?.price_cents);
-  const shown = interval === "month" ? month : year;
+  const shown = pickPlan(plans, period);
   const currency = shown?.currency ?? "EUR";
 
   return (
@@ -39,11 +39,11 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
                 key={v}
                 type="button"
                 role="radio"
-                aria-checked={interval === v}
-                onClick={() => setInterval(v)}
+                aria-checked={period === v}
+                onClick={() => setPeriod(v)}
                 className={cn(
                   "min-h-11 rounded-full px-5 text-[15px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
-                  interval === v ? "bg-ink text-white" : "text-ink hover:bg-white",
+                  period === v ? "bg-ink text-white" : "text-ink hover:bg-white",
                 )}
               >
                 {v === "month" ? "Месечно" : "Годишно"}
@@ -57,7 +57,7 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
         {shown && (
           <div className="flex flex-col gap-6 rounded-3xl bg-ink p-8 text-white lg:col-span-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className={`${EYEBROW} text-[#BDBBB4]`}>
+              <p className={cn(EYEBROW, "text-[#BDBBB4]")}>
                 {shown.interval === "month" ? "Месечно членство" : "Годишно членство"}
               </p>
               <p className="mt-3 text-5xl font-extrabold tracking-[-0.03em] sm:text-6xl">
@@ -85,7 +85,7 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
 
         <div className="flex flex-col justify-between gap-6 rounded-3xl bg-powder-light p-8">
           <div>
-            <p className={`${EYEBROW} flex items-center gap-2 text-rose-deep`}>
+            <p className={cn(EYEBROW, "flex items-center gap-2 text-rose-deep")}>
               <Gift size={16} aria-hidden="true" /> Подари
             </p>
             <p className="mt-3 text-3xl font-extrabold tracking-[-0.02em]">от €29</p>
@@ -116,7 +116,6 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
           профила си.
         </p>
       </div>
-      {!shown && <span className={cn("hidden", CTA_PRIMARY)} />}
     </section>
   );
 }

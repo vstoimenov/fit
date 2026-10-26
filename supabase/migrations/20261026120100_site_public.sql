@@ -24,7 +24,8 @@ $$;
 revoke execute on function public.public_site_links() from public;
 grant execute on function public.public_site_links() to anon, authenticated;
 
--- The single free workout (kind = 'free') with its video, for the „try it now" section.
+-- The single published free workout (kind = 'free') with its video, for the „try it now" section.
+-- Same publish rule as can_watch(); a free workout cannot carry min_member_level (table check).
 create function public.public_free_workout()
 returns table (id uuid, title text, duration_min int, thumbnail_url text, video_url text)
 language sql stable security definer set search_path = '' as $$
@@ -32,6 +33,7 @@ language sql stable security definer set search_path = '' as $$
   from public.workouts w
   join public.workout_media m on m.workout_id = w.id
   where w.kind = 'free'
+    and w.publish_at is not null and w.publish_at <= now()
   order by w.created_at
   limit 1;
 $$;

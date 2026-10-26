@@ -1,6 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { GIFT_OPTIONS } from "./gift";
-import { yearlySavings } from "./pricing";
+import { pickPlan, yearlySavings } from "./pricing";
+
+const month = {
+  id: "m",
+  name: "Месечен",
+  interval: "month" as const,
+  price_cents: 2900,
+  currency: "EUR",
+};
+const year = {
+  id: "y",
+  name: "Годишен",
+  interval: "year" as const,
+  price_cents: 25700,
+  currency: "EUR",
+};
+
+describe("pickPlan", () => {
+  it("returns the plan for the chosen period, or whichever plan exists", () => {
+    expect(pickPlan([month, year], "year")).toBe(year);
+    expect(pickPlan([month, year], "month")).toBe(month);
+    expect(pickPlan([year], "month")).toBe(year);
+    expect(pickPlan([month], "year")).toBe(month);
+    expect(pickPlan([], "month")).toBeUndefined();
+  });
+});
 
 describe("yearlySavings", () => {
   it("shows the per-month price and the saving when the year is cheaper", () => {

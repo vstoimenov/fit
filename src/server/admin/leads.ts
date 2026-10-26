@@ -35,7 +35,9 @@ export async function countRecentLeads(db: TypedClient, now = new Date()): Promi
   return count ?? 0;
 }
 
-function cell(value: string): string {
+function cell(raw: string): string {
+  // A leading = + - @ tab or CR would be run as a formula by Excel; a quote neutralises it.
+  const value = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 

@@ -5,12 +5,13 @@ import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/cn";
 
+// Absolute hashes, so the links also work from /podari, /trenirovka and the legal pages.
 const LINKS = [
-  { href: "#kak-raboti", label: "Как работи" },
-  { href: "#vatre", label: "Какво има вътре" },
-  { href: "#aksenia", label: "Аксения" },
-  { href: "#ceni", label: "Цени" },
-  { href: "#vaprosi", label: "Въпроси" },
+  { href: "/#kak-raboti", label: "Как работи" },
+  { href: "/#vatre", label: "Какво има вътре" },
+  { href: "/#aksenia", label: "Аксения" },
+  { href: "/#ceni", label: "Цени" },
+  { href: "/#vaprosi", label: "Въпроси" },
 ] as const;
 
 const BTN =

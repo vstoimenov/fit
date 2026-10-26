@@ -1281,7 +1281,7 @@ export type Database = {
           p_name: string;
           p_source: string;
         };
-        Returns: undefined;
+        Returns: boolean;
       };
     };
     Enums: {

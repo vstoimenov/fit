@@ -2,7 +2,8 @@
 
 import { Play } from "lucide-react";
 import Image from "next/image";
-import { useRef } from "react";
+import { useRef, useState } from "react";
+import { cn } from "@/lib/cn";
 import { PHOTOS } from "@/lib/photos";
 import type { VideoRef } from "@/lib/video/parse-video-url";
 import { CTA, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
@@ -11,6 +12,12 @@ import { VideoFacade } from "./video-facade";
 /** Аксения: photo, three short paragraphs in the first person, an optional 60-second video. */
 export function Trainer({ video }: { video: VideoRef | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  // The facade is mounted only while the dialog is open, so closing it also stops the video.
+  const [open, setOpen] = useState(false);
+  const show = () => {
+    setOpen(true);
+    dialog.current?.showModal();
+  };
   return (
     <section id="aksenia" className="scroll-mt-20 bg-ink py-20 text-white lg:py-28">
       <div className={`${WRAP} grid items-center gap-10 lg:grid-cols-12 lg:gap-12`}>
@@ -25,7 +32,7 @@ export function Trainer({ video }: { video: VideoRef | null }) {
           />
         </div>
         <div className="lg:col-span-6 lg:col-start-7">
-          <p className={`${EYEBROW} text-[#BDBBB4]`}>Треньорката</p>
+          <p className={cn(EYEBROW, "text-[#BDBBB4]")}>Треньорката</p>
           <h2 className={`${DISPLAY} mt-3 text-4xl sm:text-[56px]`}>Аксения Михайлова</h2>
           {/* TODO owner copy: the three paragraphs below are working text in Аксения's voice. */}
           <div className="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-[#DDD]">
@@ -46,7 +53,7 @@ export function Trainer({ video }: { video: VideoRef | null }) {
             <>
               <button
                 type="button"
-                onClick={() => dialog.current?.showModal()}
+                onClick={show}
                 className={`${CTA} ${CTA_SECONDARY} mt-8 border-white text-white hover:bg-white hover:text-ink`}
               >
                 <Play size={18} strokeWidth={2.2} aria-hidden="true" />
@@ -56,15 +63,18 @@ export function Trainer({ video }: { video: VideoRef | null }) {
                 ref={dialog}
                 aria-label="Видео с Аксения"
                 className="m-auto w-[min(92vw,900px)] max-w-none rounded-3xl bg-ink p-3 backdrop:bg-ink/70"
+                onClose={() => setOpen(false)}
                 onClick={(e) => {
                   if (e.target === dialog.current) dialog.current?.close();
                 }}
               >
-                <VideoFacade
-                  video={video}
-                  posterSrc={PHOTOS.step2.src}
-                  title="Аксения за 60 секунди"
-                />
+                {open && (
+                  <VideoFacade
+                    video={video}
+                    posterSrc={PHOTOS.step2.src}
+                    title="Аксения за 60 секунди"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => dialog.current?.close()}
