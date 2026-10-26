@@ -26,7 +26,8 @@ export default function FinishPage() {
           return;
         }
         clearDraft();
-        router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
+        // Straight into the app; the home screen offers the first workout from there.
+        router.replace("/app");
       })
       .catch(() => {
         // Network or server failure: say so and go back to the wizard, which keeps her answers.

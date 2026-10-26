@@ -2,21 +2,19 @@ import { AppError } from "@/lib/app-error";
 import { levelFromExperience, onboardingSchema } from "@/lib/onboarding/schema";
 import type { TypedClient } from "@/server/db/types";
 
-/** Validates the questionnaire and writes it to the user's profile. Throws ZodError/AppError. */
+/**
+ * Validates the questionnaire and writes it to the user's profile. Throws ZodError/AppError.
+ * `freeWorkoutId` is informational: sign-up must work even before the owner has uploaded the
+ * free workout, so a missing one yields null instead of an error.
+ */
 export async function saveOnboarding(
   db: TypedClient,
   userId: string,
   raw: unknown,
-): Promise<{ freeWorkoutId: string }> {
+): Promise<{ freeWorkoutId: string | null }> {
   const a = onboardingSchema.parse(raw);
-  // Look up the free workout first so a missing seed never leaves a half-written profile.
-  const { data: free, error: freeError } = await db
-    .from("workouts")
-    .select("id")
-    .eq("kind", "free")
-    .maybeSingle();
-  if (freeError || !free)
-    throw new AppError("NOT_FOUND", "Безплатната тренировка още не е качена.");
+  const { data: free } = await db.from("workouts").select("id").eq("kind", "free").maybeSingle();
+  const freeWorkoutId = free?.id ?? null;
 
   // Replay (retry, second tab, stale draft): keep the first answers and the original consent time.
   const { data: profile, error: profileError } = await db
@@ -25,7 +23,7 @@ export async function saveOnboarding(
     .eq("id", userId)
     .single();
   if (profileError) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
-  if (profile.onboarding_done) return { freeWorkoutId: free.id };
+  if (profile.onboarding_done) return { freeWorkoutId };
 
   const fields = {
     name: a.name,
@@ -66,5 +64,5 @@ export async function saveOnboarding(
   }
   if (error) throw new AppError("INVALID", "Не успяхме да запазим отговорите. Опитай пак.");
   // No error and no row means another request completed onboarding between our read and write: same outcome.
-  return { freeWorkoutId: free.id };
+  return { freeWorkoutId };
 }

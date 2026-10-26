@@ -6,7 +6,7 @@ import { saveOnboarding } from "@/server/onboarding/save-onboarding";
 
 export async function completeOnboarding(
   raw: unknown,
-): Promise<ActionResult<{ freeWorkoutId: string }>> {
+): Promise<ActionResult<{ freeWorkoutId: string | null }>> {
   try {
     const { user, supabase } = await requireUser();
     return actionOk(await saveOnboarding(supabase, user.id, raw));
