@@ -5,6 +5,7 @@ import { serverEnv } from "@/env";
 import { stepRate } from "@/lib/admin/funnel";
 import { formatPrice } from "@/lib/format";
 import { getDashboard } from "@/server/admin/dashboard";
+import { countRecentLeads } from "@/server/admin/leads";
 import { requireAdmin } from "@/server/admin/require-admin";
 
 export const metadata = { title: "Табло" };
@@ -32,7 +33,11 @@ export default function DashboardPage() {
 async function Dashboard() {
   await connection();
   const { supabase } = await requireAdmin();
-  const d = await getDashboard(supabase, new Date(), new URL(serverEnv.APP_URL).host);
+  const now = new Date();
+  const [d, leads7] = await Promise.all([
+    getDashboard(supabase, now, new URL(serverEnv.APP_URL).host),
+    countRecentLeads(supabase, now),
+  ]);
   const { active, canceled_30 } = d.subscriptions;
   const churn =
     active + canceled_30 > 0 ? Math.round((canceled_30 / (active + canceled_30)) * 100) : 0;
@@ -52,6 +57,7 @@ async function Dashboard() {
           label="Регистрации 7 / 30 дни"
           value={`${d.registrations.d7} / ${d.registrations.d30}`}
         />
+        <Tile label="Лийдове 7 дни" value={leads7} hint="безплатна тренировка" />
         <Tile label="Активни абонаменти" value={active} />
         <Tile label="MRR" value={formatPrice(d.subscriptions.mrr_cents, "EUR")} />
         <Tile label="Откази 30 дни" value={canceled_30} hint={`churn ≈ ${churn}%`} />

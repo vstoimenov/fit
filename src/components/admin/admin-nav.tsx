@@ -12,6 +12,7 @@ const ITEMS = [
   { href: "/admin/meals", label: "Ястия" },
   { href: "/admin/challenges", label: "Предизвикателства" },
   { href: "/admin/clients", label: "Клиентки" },
+  { href: "/admin/leads", label: "Лийдове" },
   { href: "/admin/rewards", label: "Награди" },
   { href: "/admin/activity", label: "Активност" },
   { href: "/admin/at-risk", label: "Изостават" },
