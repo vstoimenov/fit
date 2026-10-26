@@ -27,3 +27,13 @@ export function countsTime(
   if (!state.visible) return false;
   return provider === "youtube" ? state.playing : true;
 }
+
+/**
+ * Seconds of playback that unlock „Завърших": the planned 70% of the typed duration, but never
+ * more than 70% of the real video once YouTube reports its length (an admin may type 20 min for a
+ * 13-minute video; one full play must still be enough).
+ */
+export function unlockThreshold(unlockAfterSec: number, videoSeconds: number): number {
+  if (!Number.isFinite(videoSeconds) || videoSeconds <= 0) return unlockAfterSec;
+  return Math.min(unlockAfterSec, Math.floor(videoSeconds * 0.7));
+}

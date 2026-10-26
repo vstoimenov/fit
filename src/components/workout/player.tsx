@@ -10,7 +10,7 @@ import { cn } from "@/lib/cn";
 import { LEVEL_LABEL, type FEELING_LABEL } from "@/lib/labels";
 import type { CompletionPoints } from "@/lib/points/copy";
 import type { VideoRef } from "@/lib/video/parse-video-url";
-import { countsTime } from "@/lib/video/player-time";
+import { countsTime, unlockThreshold } from "@/lib/video/player-time";
 import type { CompletionStats } from "@/server/content/completion";
 import type { WorkoutSummary } from "@/server/content/today";
 import { AfterWorkout } from "./after-workout";
@@ -23,9 +23,9 @@ interface Completed {
 }
 
 /**
- * „Завърших" unlocks after `unlockAfterSec` of watched time (70% of the workout length). A
- * YouTube video counts only while it plays and the tab is visible; the other embeds cannot report
- * playback, so they count while the tab is visible. „Гледано" is her own mark, separate from the
+ * „Завърших" unlocks after `unlockAfterSec` of watched time (70% of the typed workout length,
+ * capped at 70% of the real video once known). A YouTube video counts only while it plays and the
+ * tab is visible; the other embeds cannot report playback, so they count while the tab is visible. „Гледано" is her own mark, separate from the
  * points-earning completion: set by hand, when the video ends, or by the completion itself.
  */
 export function Player({
@@ -46,6 +46,8 @@ export function Player({
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [playing, setPlaying] = useState(false);
+  // Real length from YouTube; 0 until known (the other embeds never report it).
+  const [videoSeconds, setVideoSeconds] = useState(0);
   const [completed, setCompleted] = useState<Completed | null>(null);
   const [error, setError] = useState("");
   // The ref blocks a second tap in the same tick; state disables the button for the user.
@@ -64,8 +66,9 @@ export function Player({
     return () => clearInterval(timer);
   }, [video.provider, playing]);
 
-  const unlocked = elapsed >= unlockAfterSec;
-  const remainingMin = Math.max(1, Math.ceil((unlockAfterSec - elapsed) / 60));
+  const threshold = unlockThreshold(unlockAfterSec, videoSeconds);
+  const unlocked = elapsed >= threshold;
+  const remainingMin = Math.max(1, Math.ceil((threshold - elapsed) / 60));
 
   async function finish() {
     if (busy.current) return;
@@ -148,6 +151,7 @@ export function Player({
               focus={workout.focus[0] ?? null}
               onPlayingChange={setPlaying}
               onEnded={() => void setWatched(true)}
+              onDuration={setVideoSeconds}
             />
           ) : (
             <div className="aspect-video w-full">

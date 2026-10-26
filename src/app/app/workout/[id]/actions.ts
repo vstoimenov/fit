@@ -97,7 +97,7 @@ export async function setWorkoutWatched(
 ): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireUser();
-    await setWatched(supabase, z.uuid().parse(workoutId), Boolean(watched));
+    await setWatched(supabase, z.uuid().parse(workoutId), z.boolean().parse(watched));
     revalidatePath("/app/library");
     return actionOk(null);
   } catch (error) {

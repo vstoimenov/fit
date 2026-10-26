@@ -34,3 +34,8 @@ revoke execute on function public.mark_watched_on_completion() from public, anon
 
 create trigger workout_completions_watched after insert on public.workout_completions
   for each row execute function public.mark_watched_on_completion();
+
+-- Workouts completed before this table existed count as watched too.
+insert into public.workout_watches (user_id, workout_id)
+select distinct user_id, workout_id from public.workout_completions
+on conflict (user_id, workout_id) do nothing;

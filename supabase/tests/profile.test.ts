@@ -164,6 +164,10 @@ describe("profile services", () => {
     expect(data.menu_swaps).toEqual([]);
     expect(data.check_ins).toHaveLength(1);
     expect(data.workout_completions).toHaveLength(1);
+    // Completing a workout also marks it watched; the mark is personal data too.
+    expect(data.workout_watches).toEqual([
+      expect.objectContaining({ workout_id: expect.any(String), watched_at: expect.any(String) }),
+    ]);
     expect(data.visits).toEqual([
       expect.objectContaining({ path: "/app", device: "mobile", referrer: null, utm: null }),
     ]);

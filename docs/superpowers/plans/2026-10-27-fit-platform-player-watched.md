@@ -26,6 +26,23 @@
 - Task 3–4 complete: `watches.ts` service (6/6), `setWorkoutWatched` action, `getWorkoutForPlayer` → `video: VideoRef`, `YouTubePlayer`, `Player` wiring, library badge.
 - Ruling: the paused/ended screens are opaque (poster + dim) rather than the frozen frame — the only way to cover YouTube's title bar and related-videos shelf. Cost if wrong: she loses the paused frame; nothing functional.
 - Ruling: Vimeo/Bunny keep the plain iframe and count watch time while the tab is visible (they do not report playback). Cost if wrong: none today — every workout is on YouTube.
-- Ruling: no `preload` on the poster inside the player. A preloaded image inside the streamed Suspense boundary held the boundary's reveal back for 5–30 s (React 19.2 / Next 16.4); without it hydration takes 200 ms. Cost if wrong: the poster is not LCP-prioritised on the player page.
+- Ruling (corrected): the poster keeps `preload`. The slow/never reveal of the streamed Suspense boundary was not the image: React 19.2's `$RC` reveals batched boundaries on `requestAnimationFrame`, which Chrome never fires while the Browser pane is hidden/not painting — a test-environment artefact. Verified by `$RB.length === 4` and an rAF that never fired with `visibilityState === "visible"`. Cost if wrong: none; a backgrounded tab on a real device reveals when it returns, by React's design.
 - Ruling: iOS fallback — when a play call on a touch device gets no answer within 1.2 s, the centre of the poster passes one tap through to YouTube's own play button (edges stay ours so the title-bar links are unreachable). Verified only by code path; no iOS device in this session. Cost if wrong: an iPhone needs a second tap to start; nothing breaks.
 - Deferred minor: the locked workout view still renders `WorkoutCover preload` inside the same Suspense boundary; check its reveal time on a device (pre-existing).
+- Final review (Opus, whole branch): 1 Critical, 7 Important, 11 Minor. Fix pass in one commit:
+  - fixed native-tap fallback blocked by the cover + missing edge strips — cover/surface/button `pointer-events-none` in that mode, four edge strips with a centre hole; browser-verified geometry only (no iOS device).
+  - fixed tap before `onReady` throwing — `readyRef`; a tap before ready is queued and honoured on ready (browser-verified).
+  - fixed API script failure → endless spinner — `onerror` + 15 s timeout reject and forget the promise; `failed` state with „Опитай пак"; 20 s ready timeout.
+  - fixed keyboard users losing controls — controls stay mounted (opacity), keyboard focus pins them, any key reveals; `inert` on the hidden iframe.
+  - fixed iPhone without fullscreen — CSS theatre mode when element fullscreen is unavailable; Esc exits; bar shown at the end too.
+  - fixed controls never hiding after a queued play — hide timer armed on the PLAYING transition.
+  - fixed GDPR export missing `workout_watches` — profile.test RED→GREEN.
+  - fixed unlock threshold vs real length — `unlockThreshold` (unit RED→GREEN), real duration reported from the player.
+  - also: `z.boolean()` in the action; backfill of pre-existing completions in the migration; DB tests for locked workout, foreign delete, admin read, plain-insert duplicate.
+- Final: minor (deferred): watch reads throw instead of degrading (page/library) — adopt the `…OrNull` pattern.
+- Final: minor (deferred): seek thumb jumps while dragging (250 ms poll overwrites); seekTo on every input event; bar hides under a resting mouse.
+- Final: minor (deferred): „Гледано" toggle changes label and `aria-pressed` together — pick one.
+- Final: minor (deferred): 1 s timer restarts on PLAYING↔BUFFERING flips and drops partial seconds (safe side).
+- Final: minor (deferred): no component tests for `YouTubePlayer` (needs a DOM test environment + fake YT).
+- Final: minor (deferred): library badges „Гледано" + long lock badge may overlap on narrow cards.
+- Final: Ruling: the 70% gate stays client-side (`completeWorkout` accepts a direct call) — pre-existing, out of scope — cost if wrong: a technical member can self-complete; points only.
