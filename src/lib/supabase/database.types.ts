@@ -389,6 +389,40 @@ export type Database = {
           },
         ];
       };
+      leads: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          ip_hash: string | null;
+          marketing_consent_at: string | null;
+          name: string;
+          source: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          ip_hash?: string | null;
+          marketing_consent_at?: string | null;
+          name: string;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          ip_hash?: string | null;
+          marketing_consent_at?: string | null;
+          name?: string;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       meal_draft_calls: {
         Row: {
           admin_id: string;
@@ -1239,6 +1273,16 @@ export type Database = {
         }[];
       };
       public_site_links: { Args: Record<PropertyKey, never>; Returns: Json };
+      submit_lead: {
+        Args: {
+          p_email: string;
+          p_ip_hash: string;
+          p_marketing: boolean;
+          p_name: string;
+          p_source: string;
+        };
+        Returns: undefined;
+      };
     };
     Enums: {
       activity_level: "sedentary" | "light" | "moderate" | "active";

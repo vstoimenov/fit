@@ -17,8 +17,32 @@ describe("parseEnv", () => {
     );
   });
 
-  it("treats empty optional mail variables as unset", () => {
+  it("requires a lead salt of at least 16 characters and digits for the Brevo list id", () => {
     const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    expect(() => parseEnv(serverEnvSchema, { ...base, LEADS_SALT: "short" }, "server")).toThrow(
+      /LEADS_SALT/,
+    );
+    expect(() =>
+      parseEnv(
+        serverEnvSchema,
+        { ...base, LEADS_SALT: "0123456789abcdef", BREVO_LEADS_LIST_ID: "abc" },
+        "server",
+      ),
+    ).toThrow(/BREVO_LEADS_LIST_ID/);
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, LEADS_SALT: "0123456789abcdef", BREVO_LEADS_LIST_ID: "12" },
+      "server",
+    );
+    expect(env.BREVO_LEADS_LIST_ID).toBe("12");
+  });
+
+  it("treats empty optional mail variables as unset", () => {
+    const base = {
+      SUPABASE_SERVICE_ROLE_KEY: "k",
+      APP_URL: "http://localhost:3120",
+      LEADS_SALT: "0123456789abcdef",
+    };
     const env = parseEnv(
       serverEnvSchema,
       { ...base, BREVO_API_KEY: "", EMAIL_FROM_ADDRESS: "", EMAIL_FROM_NAME: "" },
@@ -30,14 +54,22 @@ describe("parseEnv", () => {
   });
 
   it("rejects an invalid EMAIL_FROM_ADDRESS", () => {
-    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const base = {
+      SUPABASE_SERVICE_ROLE_KEY: "k",
+      APP_URL: "http://localhost:3120",
+      LEADS_SALT: "0123456789abcdef",
+    };
     expect(() =>
       parseEnv(serverEnvSchema, { ...base, EMAIL_FROM_ADDRESS: "not-an-email" }, "server"),
     ).toThrow(/EMAIL_FROM_ADDRESS/);
   });
 
   it("treats empty Stripe variables as unset and rejects the wrong key type", () => {
-    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const base = {
+      SUPABASE_SERVICE_ROLE_KEY: "k",
+      APP_URL: "http://localhost:3120",
+      LEADS_SALT: "0123456789abcdef",
+    };
     const env = parseEnv(
       serverEnvSchema,
       { ...base, STRIPE_SECRET_KEY: "", STRIPE_WEBHOOK_SECRET: "" },
@@ -60,7 +92,11 @@ describe("parseEnv", () => {
   });
 
   it("trims whitespace around Stripe values pasted into the env", () => {
-    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const base = {
+      SUPABASE_SERVICE_ROLE_KEY: "k",
+      APP_URL: "http://localhost:3120",
+      LEADS_SALT: "0123456789abcdef",
+    };
     const env = parseEnv(
       serverEnvSchema,
       { ...base, STRIPE_SECRET_KEY: " sk_test_abc\n", STRIPE_WEBHOOK_SECRET: "  whsec_abc " },
@@ -73,7 +109,11 @@ describe("parseEnv", () => {
   });
 
   it("treats empty Anthropic variables as unset and rejects a key without the sk-ant- prefix", () => {
-    const base = { SUPABASE_SERVICE_ROLE_KEY: "k", APP_URL: "http://localhost:3120" };
+    const base = {
+      SUPABASE_SERVICE_ROLE_KEY: "k",
+      APP_URL: "http://localhost:3120",
+      LEADS_SALT: "0123456789abcdef",
+    };
     const env = parseEnv(
       serverEnvSchema,
       { ...base, ANTHROPIC_API_KEY: " \n", NUTRITION_AI_MODEL: "" },
