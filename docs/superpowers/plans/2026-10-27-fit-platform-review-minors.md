@@ -20,3 +20,8 @@
 - Pricing stays one switching card (the owner approved the current look); the spec's two-card wording is superseded.
 - Rate-limit check-then-insert stays (negligible).
 - Player seek/hover/timer minors and component tests for the player stay deferred (need a DOM test environment).
+
+## Ledger
+- Tasks 1–8 complete in one commit (b1ca9e4): unit 836/836, typecheck + lint clean. Browser-verified: pricing arrow keys/Home/End with roving tabindex, lead form keeps values and focuses the error, time-plan live text, admin leads page. DB tests unaffected (no schema change).
+- Ruling: `listLeads` now returns `{ rows, hasMore }` (was `Lead[]`) — the dashboard uses `countRecentLeads` only, so nothing else changed. Cost if wrong: a compile error, caught by typecheck.
+- Ruling: PhoneFrame lost its preload entirely rather than switching to `preload` — the column is hidden on phones and desktop LCP is the hero. Cost if wrong: slightly later paint of the phone screen on desktop.
