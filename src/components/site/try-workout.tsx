@@ -62,7 +62,7 @@ export function TryWorkout({ workout }: { workout: FreeWorkout }) {
           </div>
           <div ref={formBox} className="rounded-3xl bg-white p-6 sm:p-8 lg:col-span-5">
             {unlocked ? (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4" role="status">
                 <p className="text-2xl font-extrabold tracking-[-0.02em]">
                   {name ? `Готово, ${name}. Пусни я.` : "Отключена е. Пусни я."}
                 </p>

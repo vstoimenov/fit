@@ -22,7 +22,10 @@ export function parseSiteLinks(
     if (!parseVideoUrl(video)) {
       return { ok: false, message: "Видеото трябва да е YouTube, Vimeo или Bunny линк." };
     }
-    links.trainerVideoUrl = normalizeVideoInput(video);
+    // Canonical and always https (the settings schema insists on it).
+    const url = new URL(normalizeVideoInput(video));
+    url.protocol = "https:";
+    links.trainerVideoUrl = url.toString();
   }
   if (instagram) {
     let url: URL;
@@ -31,9 +34,10 @@ export function parseSiteLinks(
     } catch {
       return { ok: false, message: "Instagram линкът не е валиден адрес." };
     }
-    if (url.protocol !== "https:" || !INSTAGRAM_HOSTS.has(url.hostname.toLowerCase())) {
+    if (!INSTAGRAM_HOSTS.has(url.hostname.toLowerCase())) {
       return { ok: false, message: "Instagram линкът трябва да води към instagram.com." };
     }
+    url.protocol = "https:";
     links.instagramUrl = url.toString();
   }
   return { ok: true, links };

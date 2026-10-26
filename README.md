@@ -114,6 +114,13 @@ No name, weight, measurements or e-mail ever go into the image.
   `BREVO_API_KEY` and `EMAIL_FROM_ADDRESS` are set (and the sender is verified in Brevo); without them the
   lead is still stored and the workout still unlocks, nothing is mailed. `LEADS_SALT` (≥16 chars) is required
   in every Vercel environment the form runs in — Preview deployments too, or the action fails.
+- **Push notifications (Web Push).** Members turn them on from Профил → Известия (daily reminder at a chosen
+  hour when she has not trained, „Нова тренировка“ when a workout with „известие“ is published, and
+  broadcasts from `/admin/notifications`). Setup: `npx web-push generate-vapid-keys`, then set
+  `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT=mailto:info@iamstrong.bg` and
+  `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` (same value as the public key) in Vercel; set `CRON_SECRET` (random, ≥16
+  chars) — Vercel Cron (`vercel.json`, hourly) calls `/api/cron/push` with it. Without the keys the card says
+  „скоро“ and nothing is sent. iPhone needs the app on the home screen (iOS 16.4+).
 - **Video player.** YouTube videos play inside our own player (poster, play/pause, seek, mute, fullscreen; YouTube's
   controls, title bar and related videos are never shown). The video must allow embedding on YouTube (default for
   public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout

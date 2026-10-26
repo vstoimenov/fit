@@ -1,10 +1,10 @@
+const BREVO_TIMEOUT_MS = 5000;
+
 /**
  * Adds (or updates) a lead as a Brevo contact in the configured list. Best effort: without a key
  * or list id it does nothing, and a failed request is logged, never thrown — the workout unlocks
  * regardless.
  */
-const BREVO_TIMEOUT_MS = 5000;
-
 export async function addBrevoContact(
   env: { BREVO_API_KEY?: string; BREVO_LEADS_LIST_ID?: string },
   lead: { email: string; name: string; marketing: boolean; source: string },

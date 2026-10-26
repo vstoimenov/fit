@@ -92,22 +92,42 @@ describe("listLeads pages", () => {
 });
 
 describe("listAllLeads", () => {
-  it("walks the pages until the last one", async () => {
-    const pages = [
-      [row(1), row(2), row(3)],
-      [row(3), row(4)],
-    ];
-    let n = 0;
+  it("gets past PostgREST's 1000-row cap (inclusive range, capped response)", async () => {
+    const all = Array.from({ length: 1500 }, (_, i) => row(i + 1));
     const db = {
       from: () => ({
-        select: () => ({
-          order: () => ({
-            range: async () => ({ data: pages[n++] ?? [], error: null }),
-          }),
-        }),
+        select: () => {
+          const q = {
+            order: () => q,
+            range: async (from: number, to: number) => ({
+              data: all.slice(from, Math.min(to + 1, from + 1000)),
+              error: null,
+            }),
+          };
+          return q;
+        },
       }),
     } as unknown as TypedClient;
-    const all = await listAllLeads(db, 2);
-    expect(all.map((r) => r.id)).toEqual(["1", "2", "3", "4"]);
+    expect((await listAllLeads(db)).length).toBe(1500);
+  });
+
+  it("stops at the first short page", async () => {
+    const ranges: string[] = [];
+    const db = {
+      from: () => ({
+        select: () => {
+          const q = {
+            order: () => q,
+            range: async (from: number, to: number) => {
+              ranges.push(`${from}-${to}`);
+              return { data: [row(1), row(2)], error: null };
+            },
+          };
+          return q;
+        },
+      }),
+    } as unknown as TypedClient;
+    expect((await listAllLeads(db)).map((r) => r.id)).toEqual(["1", "2"]);
+    expect(ranges).toEqual(["0-999"]);
   });
 });

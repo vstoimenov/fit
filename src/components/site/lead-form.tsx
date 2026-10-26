@@ -76,9 +76,9 @@ export function LeadForm({ onUnlocked }: { onUnlocked: (name: string) => void })
         </span>
       </label>
       {state.status === "error" && (
+        // Focus announces it (and re-announces a repeated message); role="alert" on top would read it twice.
         <p
           ref={alertRef}
-          role="alert"
           tabIndex={-1}
           className="text-sm font-semibold text-brick focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
         >

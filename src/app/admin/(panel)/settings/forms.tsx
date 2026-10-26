@@ -225,7 +225,7 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
         >
           <Field
             label="Видео на Аксения (60 секунди)"
-            hint="YouTube или Vimeo линк за бутона „Чуй я за 60 секунди“ на началната страница. Празно = няма бутон."
+            hint="YouTube, Vimeo или Bunny линк за бутона „Чуй я за 60 секунди“ на началната страница. Празно = няма бутон."
           >
             <input
               name="trainerVideoUrl"

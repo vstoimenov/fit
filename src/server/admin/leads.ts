@@ -27,6 +27,8 @@ export async function listLeads(
     .from("leads")
     .select(COLUMNS)
     .order("created_at", { ascending: false })
+    // Tie-breaker: equal timestamps must not shuffle rows between pages.
+    .order("id")
     .range(from, from + pageSize);
   if (q) query = query.ilike("email", `%${q.replace(/[%_\\]/g, "\\$&")}%`);
   const { data, error } = await query;
@@ -34,14 +36,28 @@ export async function listLeads(
   return { rows: data.slice(0, pageSize), hasMore: data.length > pageSize };
 }
 
-/** Every lead, for the CSV export: walks the pages so PostgREST's row cap never truncates it. */
-export async function listAllLeads(db: TypedClient, pageSize = 1000): Promise<Lead[]> {
+const EXPORT_PAGE = 1000;
+const EXPORT_MAX_PAGES = 100;
+
+/**
+ * Every lead, for the CSV export. PostgREST answers at most `max_rows` (1000) per request, so this
+ * asks for exactly 1000 at a time (an inclusive range) and stops at the first short page.
+ */
+export async function listAllLeads(db: TypedClient): Promise<Lead[]> {
   const all: Lead[] = [];
-  for (let page = 1; ; page++) {
-    const { rows, hasMore } = await listLeads(db, null, { page, pageSize });
-    all.push(...rows);
-    if (!hasMore) return all;
+  for (let page = 0; page < EXPORT_MAX_PAGES; page++) {
+    const from = page * EXPORT_PAGE;
+    const { data, error } = await db
+      .from("leads")
+      .select(COLUMNS)
+      .order("created_at", { ascending: false })
+      .order("id")
+      .range(from, from + EXPORT_PAGE - 1);
+    if (error) throw new Error(`export leads failed: ${error.message}`);
+    all.push(...data);
+    if (data.length < EXPORT_PAGE) break;
   }
+  return all;
 }
 
 /** Leads created in the last 7 days, for the dashboard tile. */

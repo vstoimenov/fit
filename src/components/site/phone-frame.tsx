@@ -22,7 +22,7 @@ export function PhoneFrame({
         src={src}
         alt={alt}
         fill
-        // Never preloaded: on phones this column is hidden and the preload would only cost data.
+        // Never preloaded: the desktop call site is hidden on phones, where the preload would only cost data.
         sizes="300px"
         className="object-cover object-top"
       />

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GIFT_OPTIONS } from "./gift";
-import { pickPlan, yearlySavings } from "./pricing";
-import { nextPeriod } from "./pricing";
+import { nextPeriod, pickPlan, yearlySavings } from "./pricing";
 
 const month = {
   id: "m",

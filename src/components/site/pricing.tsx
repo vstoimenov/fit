@@ -30,6 +30,8 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
             role="radiogroup"
             aria-labelledby={`${id}-toggle`}
             onKeyDown={(event) => {
+              // Alt/Cmd + arrows are browser history shortcuts; leave them alone.
+              if (event.altKey || event.ctrlKey || event.metaKey) return;
               const next = nextPeriod(period, event.key);
               if (!next) return;
               event.preventDefault();

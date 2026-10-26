@@ -93,7 +93,7 @@ export function TimePlanCalculator() {
         </div>
 
         <div className="rounded-3xl bg-sand p-7 sm:p-9 lg:col-span-7">
-          <p aria-live="polite" className="sr-only">
+          <p aria-live="polite" aria-atomic="true" className="sr-only">
             Около {settled.weeklyMinutes} минути на седмица, {settled.workoutsPer30Days} тренировки
             за 30 дни, тренировки {settled.lengthLabel}, ниво {settled.levelLabel}.
           </p>

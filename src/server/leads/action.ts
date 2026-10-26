@@ -19,8 +19,8 @@ export type LeadState = {
 
 function typed(form: FormData) {
   return {
-    name: String(form.get("name") ?? ""),
-    email: String(form.get("email") ?? ""),
+    name: String(form.get("name") ?? "").slice(0, 60),
+    email: String(form.get("email") ?? "").slice(0, 254),
     marketing: form.get("marketing") === "on",
   };
 }

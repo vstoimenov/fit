@@ -21,7 +21,7 @@ export function Trainer({ video }: { video: VideoRef | null }) {
   return (
     <section id="aksenia" className="scroll-mt-20 bg-ink py-20 text-white lg:py-28">
       <div className={`${WRAP} grid items-center gap-10 lg:grid-cols-12 lg:gap-12`}>
-        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-ink lg:col-span-5">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-white/5 lg:col-span-5">
           {/* TODO owner photo: replace the stock image with a real photo of Аксения. */}
           <Image
             src={PHOTOS.step2.src}
