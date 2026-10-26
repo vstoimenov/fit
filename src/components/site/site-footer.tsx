@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Logo } from "@/components/ui/logo";
 import { brand } from "@/lib/brand";
 
-/** Public-site footer. `instagramUrl` comes from the admin settings; null hides the link. */
-export function SiteFooter({ instagramUrl }: { instagramUrl: string | null }) {
-  const year = new Date().getFullYear();
+/**
+ * Public-site footer. `instagramUrl` comes from the admin settings (null hides the link); `year`
+ * comes from `getSiteFlags()` because `new Date()` is not allowed while prerendering.
+ */
+export function SiteFooter({ instagramUrl, year }: { instagramUrl: string | null; year: number }) {
   return (
     <footer id="site-footer" className="border-t border-line bg-white">
       <div className="mx-auto grid max-w-[1180px] gap-8 px-6 py-12 lg:grid-cols-12 lg:px-10">

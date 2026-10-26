@@ -3,6 +3,7 @@ import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { cacheLife } from "next/cache";
 import { clientEnv } from "@/env";
+import { foundersLive } from "@/lib/site/founders";
 import type { Database } from "@/lib/supabase/database.types";
 import { fetchPublicPlans, type PublicPlan } from "@/server/content/public-plans";
 import { mapFreeWorkout, mapSiteLinks, type FreeWorkout, type SiteLinks } from "./map";
@@ -33,6 +34,18 @@ export async function getSiteLinks(): Promise<SiteLinks> {
   const { data, error } = await anonDb().rpc("public_site_links");
   if (error) throw new Error(`load site links failed: ${error.message}`);
   return mapSiteLinks(data);
+}
+
+/**
+ * Time-dependent bits of the public pages. `new Date()` is not allowed while prerendering, but it
+ * is fine inside a cached function; an hour of staleness is irrelevant for a day-level flag and
+ * the copyright year.
+ */
+export async function getSiteFlags(): Promise<{ showFounders: boolean; year: number }> {
+  "use cache";
+  cacheLife("hours");
+  const now = new Date();
+  return { showFounders: foundersLive(now), year: now.getFullYear() };
 }
 
 export async function getPublicPlans(): Promise<PublicPlan[]> {
