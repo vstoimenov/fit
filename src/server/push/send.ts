@@ -17,6 +17,41 @@ export interface PushPayload {
   body: string;
   /** App-relative link the notification opens; defaults to /app in the service worker. */
   url?: string;
+  /** Notifications with the same tag replace each other; keep it unique per message. */
+  tag?: string;
+}
+
+const PAGE = 1000;
+const IN_CHUNK = 100;
+
+/** Every subscription (optionally for some users): pages past PostgREST's row cap, short URLs. */
+export async function listSubscriptions(
+  admin: TypedClient,
+  userIds: string[] | "all",
+): Promise<PushRow[]> {
+  const groups = userIds === "all" ? [null] : chunked(userIds, IN_CHUNK);
+  const rows: PushRow[] = [];
+  for (const group of groups) {
+    for (let from = 0; ; from += PAGE) {
+      let query = admin
+        .from("push_subscriptions")
+        .select("id, user_id, endpoint, p256dh, auth")
+        .order("id")
+        .range(from, from + PAGE - 1);
+      if (group) query = query.in("user_id", group);
+      const { data, error } = await query;
+      if (error) throw new Error(`load push subscriptions failed: ${error.message}`);
+      rows.push(...data);
+      if (data.length < PAGE) break;
+    }
+  }
+  return rows;
+}
+
+function chunked<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
 
 /** One delivery attempt; rejects with `statusCode` 404/410 when the subscription is dead. */
@@ -89,6 +124,8 @@ export function webPushTransport(env: ServerEnv): PushTransport | null {
       privateKey: env.WEB_PUSH_PRIVATE_KEY,
     },
     TTL: 60 * 60 * 12,
+    // A hung push service must not hold the job open.
+    timeout: 10_000,
   };
   return (subscription, payload) => webpush.sendNotification(subscription, payload, options);
 }
@@ -106,12 +143,11 @@ export async function sendToUsers(
   if (userIds !== "all" && userIds.length === 0) {
     return { users: 0, delivered: 0, pruned: 0, failed: 0 };
   }
-  let query = admin.from("push_subscriptions").select("id, user_id, endpoint, p256dh, auth");
-  if (userIds !== "all") query = query.in("user_id", userIds);
-  const { data, error } = await query;
-  if (error) throw new Error(`load push subscriptions failed: ${error.message}`);
-  return sendPush(data, payload, transport, async (ids) => {
-    const { error: pruneError } = await admin.from("push_subscriptions").delete().in("id", ids);
-    if (pruneError) console.error("push prune failed", pruneError.message);
+  const rows = await listSubscriptions(admin, userIds);
+  return sendPush(rows, payload, transport, async (ids) => {
+    for (const part of chunked(ids, IN_CHUNK)) {
+      const { error } = await admin.from("push_subscriptions").delete().in("id", part);
+      if (error) console.error("push prune failed", error.message);
+    }
   });
 }

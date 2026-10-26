@@ -88,13 +88,13 @@ export function PushCard({
       }
       setStatus({ kind: "on", endpoint: subscription.endpoint });
     } catch {
+      const denied = "Notification" in window && Notification.permission === "denied";
       setError(
-        Notification.permission === "denied"
+        denied
           ? "Известията са забранени за сайта в настройките на браузъра."
           : "Не успяхме да включим известията. Опитай отново.",
       );
-      if (Notification.permission === "denied")
-        setStatus({ kind: "unavailable", support: "denied" });
+      if (denied) setStatus({ kind: "unavailable", support: "denied" });
     } finally {
       busy.current = false;
       setPending(false);
@@ -169,7 +169,6 @@ export function PushCard({
               value={hour}
               onChange={(event) => void changeHour(Number(event.target.value))}
               className={`${inputOnCardClass} max-w-32`}
-              aria-label="Час за напомняне"
             >
               {HOURS.map((h) => (
                 <option key={h} value={h}>

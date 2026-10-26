@@ -1475,7 +1475,9 @@ export type Database = {
         }[];
       };
       public_site_links: { Args: Record<PropertyKey, never>; Returns: Json };
+      push_cron_status: { Args: Record<PropertyKey, never>; Returns: Json };
       redeem_gift_voucher: { Args: { p_code: string }; Returns: string };
+      run_push_cron: { Args: Record<PropertyKey, never>; Returns: undefined };
       submit_lead: {
         Args: {
           p_email: string;

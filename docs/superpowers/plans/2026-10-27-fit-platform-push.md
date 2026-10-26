@@ -30,3 +30,14 @@
 - Ruling: „Нова тренировка“ only for workouts published within the last 2 days and with `notified_at` null; everything published before the migration is marked announced. Cost if wrong: none for members; a workout published during a >2-day cron outage is simply not announced.
 - Ruling: the broadcast link must be app-relative (`/…`) — no external links in notifications. Cost if wrong: the owner cannot push an external link; she can link a „Полезно“ article instead.
 - Verification limits: the pane browser has notifications denied, so the subscribe flow itself (permission prompt → PushSubscription → action) is covered by schema/unit tests and code review, not by a live push. The card's SSR/denied/unsupported states and the admin page were checked in the browser.
+- Final review (Opus): 1 Critical, 5 Important, 12 Minor. Fix pass (one commit), each with a failing test first where a unit exists:
+  - Critical: hourly `vercel.json` cron would fail every deploy on the Hobby team (confirmed with `vercel teams ls`) — removed; the hour job now runs from Supabase pg_cron + pg_net (`run_push_cron()` reads `app_url`/`cron_secret` from Vault, no-op until set; `push_cron_status()` for tests/admin). DB test: job scheduled.
+  - backfill only for workouts already published (`publish_at <= now()`); DB test: a future workout keeps `notified_at` null.
+  - endpoint allow-list (FCM, Mozilla, WNS, Apple, Samsung) in zod and the DB check; member insert grant/policy removed (service role only); ≤10 devices per member; web-push `timeout: 10 s`.
+  - paging past the 1000-row cap for subscriptions, reminder profiles and the admin count; `.in()` lists chunked by 100; reminders claim `push_reminded_on` first (idempotent across overlapping runs).
+  - unique tags (`reminder-<date>`, `workout-<id>`, `broadcast-<ts>`) + `renotify`; SW click stays on our origin, prefers the right tab, never navigates the admin.
+  - shared device: a subscription found at load is re-attached to the signed-in member (`claimPushAction`).
+  - minors done: `/\\evil.com` links refused via `safeNext`; admin page says whether CRON_SECRET is set and when the last automatic send went; form hidden when not configured; iPad detection; guarded `Notification`; hour set before the device save; write errors logged; GDPR export includes `push_subscriptions`; label mismatch fixed.
+- Final: minor (deferred): VAPID key rotation leaves old subscriptions failing with 403 (never pruned); badge icon is full-colour; broadcast success does not show the recipient count; pending label is ActionForm's generic one.
+- Final: Ruling: bodies up to 200 chars (plan said 160) — the DB and zod agree on 200; 160 was a guideline. Cost if wrong: a long body is clipped by the OS.
+- Final: Ruling: „Нова тренировка“ goes to every subscribed member regardless of level/access (spec) — revisit if daily multi-level drops make it noisy.

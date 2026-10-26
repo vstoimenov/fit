@@ -2,31 +2,37 @@ import { describe, expect, it } from "vitest";
 import { adminClient, createAdminUser, createUser, freeWorkoutId, signedInClient } from "./helpers";
 
 const sub = (n: number) => ({
-  endpoint: `https://push.example/${n}-${Date.now()}`,
+  endpoint: `https://fcm.googleapis.com/fcm/send/${n}-${Date.now()}`,
   p256dh: "BHxk-p256dh",
   auth: "authsecret",
   user_agent: "test",
 });
 
 describe("push_subscriptions", () => {
-  it("a member keeps her own subscriptions and nobody else sees them", async () => {
+  it("subscriptions are written by the server only; a member sees and deletes her own", async () => {
     const admin = adminClient();
     const me = await createUser(admin, "push-me");
     const other = await createUser(admin, "push-other");
     const mine = await signedInClient(me);
     const theirs = await signedInClient(other);
 
-    const first = sub(1);
-    const { error } = await mine.from("push_subscriptions").insert(first);
+    const first = { ...sub(1), user_id: me.id };
+    const { error } = await admin.from("push_subscriptions").insert(first);
     expect(error).toBeNull();
     // Same endpoint twice is one row (re-subscribe after a reinstall).
-    const dup = await mine.from("push_subscriptions").insert(first);
+    const dup = await admin.from("push_subscriptions").insert(first);
     expect(dup.error?.code).toBe("23505");
+    // Only the browsers' push services are accepted as endpoints.
+    const rogue = await admin
+      .from("push_subscriptions")
+      .insert({ ...sub(9), user_id: me.id, endpoint: "https://attacker.example/x" });
+    expect(rogue.error?.code).toBe("23514");
+    // Members cannot insert at all (no grant): the action goes through the service role.
+    const direct = await mine.from("push_subscriptions").insert(sub(3));
+    expect(direct.error?.code).toBe("42501");
 
     const seenByOther = await theirs.from("push_subscriptions").select("endpoint");
     expect(seenByOther.data).toEqual([]);
-    const planted = await theirs.from("push_subscriptions").insert({ ...sub(2), user_id: me.id });
-    expect(planted.error).not.toBeNull();
 
     // Deleting by endpoint is scoped to her own rows.
     await theirs.from("push_subscriptions").delete().neq("endpoint", "");
@@ -40,7 +46,7 @@ describe("push_subscriptions", () => {
     const admin = adminClient();
     const member = await createUser(admin, "push-member");
     const db = await signedInClient(member);
-    await db.from("push_subscriptions").insert(sub(3));
+    await admin.from("push_subscriptions").insert({ ...sub(3), user_id: member.id });
     const { error: logError } = await admin
       .from("push_sends")
       .insert({ kind: "broadcast", title: "Здравей", body: "Тест", url: null, recipients: 1 });
@@ -76,10 +82,31 @@ describe("push_subscriptions", () => {
     expect(marker.error).not.toBeNull();
   });
 
-  it("workouts carry a notified_at marker only the service role writes", async () => {
+  it("a workout published in the future is not marked as announced", async () => {
     const admin = adminClient();
     const id = await freeWorkoutId(admin);
     const { data } = await admin.from("workouts").select("notified_at").eq("id", id).single();
     expect(data).toEqual({ notified_at: null });
+    const { data: scheduled, error } = await admin
+      .from("workouts")
+      .insert({
+        title: "Утрешна",
+        kind: "regular",
+        level: "beginner",
+        duration_min: 20,
+        focus: ["full_body"],
+        publish_at: new Date(Date.now() + 86_400_000).toISOString(),
+      })
+      .select("notified_at")
+      .single();
+    expect(error).toBeNull();
+    expect(scheduled?.notified_at).toBeNull();
+  });
+
+  it("the hourly job is scheduled in pg_cron and skips quietly without vault secrets", async () => {
+    const admin = adminClient();
+    const { data, error } = await admin.rpc("push_cron_status");
+    expect(error).toBeNull();
+    expect(data).toMatchObject({ scheduled: true, schedule: "0 * * * *" });
   });
 });

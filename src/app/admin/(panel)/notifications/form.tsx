@@ -4,7 +4,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { Field, inputClass } from "@/components/ui/field";
 import { sendBroadcastAction } from "./actions";
 
-export function BroadcastForm({ disabled }: { disabled: boolean }) {
+export function BroadcastForm() {
   return (
     <ActionForm
       action={sendBroadcastAction}
@@ -14,7 +14,7 @@ export function BroadcastForm({ disabled }: { disabled: boolean }) {
       confirmMessage="Да изпратим известието на всички включили го клиентки?"
       className="space-y-4"
     >
-      <fieldset disabled={disabled} className="space-y-4">
+      <fieldset className="space-y-4">
         <Field label="Заглавие (до 80 знака)">
           <input name="title" required maxLength={80} className={inputClass} />
         </Field>

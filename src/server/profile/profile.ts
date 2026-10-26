@@ -102,6 +102,7 @@ export async function exportMyData(
     foodEntries,
     menuSwaps,
     watches,
+    pushSubscriptions,
   ] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).single(),
     db
@@ -151,6 +152,11 @@ export async function exportMyData(
       .select("workout_id, watched_at")
       .eq("user_id", userId)
       .order("watched_at"),
+    db
+      .from("push_subscriptions")
+      .select("endpoint, user_agent, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
   ]);
   // A silently partial export would misstate what is stored about the user.
   const failed = [
@@ -166,6 +172,7 @@ export async function exportMyData(
     foodEntries,
     menuSwaps,
     watches,
+    pushSubscriptions,
   ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
@@ -190,6 +197,7 @@ export async function exportMyData(
       meal_title: meals?.title ?? null,
     })),
     workout_watches: watches.data ?? [],
+    push_subscriptions: pushSubscriptions.data ?? [],
   };
 }
 

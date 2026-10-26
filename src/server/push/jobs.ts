@@ -60,58 +60,103 @@ export function dueReminders(
 export const reminderBody = () =>
   "Днес още не си тренирала. 20 минути стигат — пусни си тренировката.";
 
-/** Daily reminders for the current hour; stamps `push_reminded_on` so an hour never repeats. */
+/** One tag per local day: a reminder must never silently replace another notification. */
+export const reminderTag = (localDate: string) => `reminder-${localDate}`;
+
+export function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
+}
+
+const PAGE = 1000;
+const IN_CHUNK = 100;
+
+/**
+ * Daily reminders for the current hour. Claim-first: `push_reminded_on` is stamped for everyone due
+ * before anything is sent, so two overlapping runs cannot send twice and a dead device never
+ * retries every hour.
+ */
 export async function sendReminders(
   admin: TypedClient,
   now: Date,
   transport: PushTransport,
 ): Promise<{ users: number }> {
-  const { data: profiles, error } = await admin
-    .from("profiles")
-    .select("id, timezone, push_hour, push_reminded_on")
-    .not("push_hour", "is", null);
-  if (error) throw new Error(`load reminder profiles failed: ${error.message}`);
-  // Candidates for this hour first; only they need the completions lookup.
+  const profiles: Array<{
+    id: string;
+    timezone: string;
+    push_hour: number | null;
+    push_reminded_on: string | null;
+  }> = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await admin
+      .from("profiles")
+      .select("id, timezone, push_hour, push_reminded_on")
+      .not("push_hour", "is", null)
+      .order("id")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error(`load reminder profiles failed: ${error.message}`);
+    profiles.push(...data);
+    if (data.length < PAGE) break;
+  }
   const candidates = dueReminders(
     profiles.map((p) => ({ ...p, trained_today: false })),
     now,
   );
   if (candidates.length === 0) return { users: 0 };
-  const { data: trained, error: trainedError } = await admin
-    .from("workout_completions")
-    .select("user_id, local_date")
-    .in(
-      "user_id",
-      candidates.map((c) => c.id),
-    )
-    .in("local_date", [...new Set(candidates.map((c) => c.localDate))]);
-  if (trainedError) throw new Error(`load completions failed: ${trainedError.message}`);
-  const trainedKeys = new Set(trained.map((t) => `${t.user_id}:${t.local_date}`));
-  const due = candidates.filter((c) => !trainedKeys.has(`${c.id}:${c.localDate}`));
+
+  // Claim: only rows whose stamp is not already today's come back.
+  const claimed = new Set<string>();
+  const byDate = new Map<string, string[]>();
+  for (const c of candidates) byDate.set(c.localDate, [...(byDate.get(c.localDate) ?? []), c.id]);
+  for (const [localDate, ids] of byDate) {
+    for (const part of chunk(ids, IN_CHUNK)) {
+      const { data, error } = await admin
+        .from("profiles")
+        .update({ push_reminded_on: localDate })
+        .in("id", part)
+        .or(`push_reminded_on.is.null,push_reminded_on.neq.${localDate}`)
+        .select("id");
+      if (error) throw new Error(`claim reminders failed: ${error.message}`);
+      for (const row of data) claimed.add(row.id);
+    }
+  }
+  const mine = candidates.filter((c) => claimed.has(c.id));
+  if (mine.length === 0) return { users: 0 };
+
+  const trainedKeys = new Set<string>();
+  const dates = [...new Set(mine.map((c) => c.localDate))];
+  for (const part of chunk(
+    mine.map((c) => c.id),
+    IN_CHUNK,
+  )) {
+    const { data, error } = await admin
+      .from("workout_completions")
+      .select("user_id, local_date")
+      .in("user_id", part)
+      .in("local_date", dates);
+    if (error) throw new Error(`load completions failed: ${error.message}`);
+    for (const t of data) trainedKeys.add(`${t.user_id}:${t.local_date}`);
+  }
+  const due = mine.filter((c) => !trainedKeys.has(`${c.id}:${c.localDate}`));
   if (due.length === 0) return { users: 0 };
 
+  const localDate = due[0]!.localDate;
   const report = await sendToUsers(
     admin,
     due.map((d) => d.id),
-    { title: "I AM STRONG", body: reminderBody(), url: "/app" },
+    { title: "I AM STRONG", body: reminderBody(), url: "/app", tag: reminderTag(localDate) },
     transport,
   );
-  // Stamp everyone due, reached or not: a dead subscription must not retry every hour.
-  for (const d of due) {
-    const { error: stampError } = await admin
-      .from("profiles")
-      .update({ push_reminded_on: d.localDate })
-      .eq("id", d.id);
-    if (stampError) console.error("reminder stamp failed", stampError.message);
-  }
   if (report.users > 0) {
-    await admin.from("push_sends").insert({
+    const { error } = await admin.from("push_sends").insert({
       kind: "reminder",
       title: "I AM STRONG",
       body: reminderBody(),
       url: "/app",
       recipients: report.users,
     });
+    if (error) console.error("reminder log failed", error.message);
   }
   return { users: report.users };
 }
@@ -135,23 +180,36 @@ export async function notifyPublishedWorkouts(
     .gte("publish_at", new Date(now.getTime() - NEW_WORKOUT_WINDOW_MS).toISOString());
   if (error) throw new Error(`load workouts to notify failed: ${error.message}`);
   let users = 0;
+  let workouts = 0;
   for (const w of data) {
-    // Mark first so a crash mid-send cannot announce the same workout twice.
-    const { error: markError } = await admin
+    // Claim first (only if still unmarked) so a crash or a parallel run cannot announce it twice.
+    const { data: marked, error: markError } = await admin
       .from("workouts")
       .update({ notified_at: now.toISOString() })
       .eq("id", w.id)
-      .is("notified_at", null);
-    if (markError) {
-      console.error("notified_at update failed", markError.message);
+      .is("notified_at", null)
+      .select("id");
+    if (markError || !marked.length) {
+      if (markError) console.error("notified_at update failed", markError.message);
       continue;
     }
-    const payload = { title: "Нова тренировка", body: w.title, url: `/app/workout/${w.id}` };
+    workouts++;
+    const payload = {
+      title: "Нова тренировка",
+      body: w.title,
+      url: `/app/workout/${w.id}`,
+      tag: `workout-${w.id}`,
+    };
     const report = await sendToUsers(admin, "all", payload, transport);
     users += report.users;
-    await admin
-      .from("push_sends")
-      .insert({ kind: "workout", ...payload, recipients: report.users });
+    const { error } = await admin.from("push_sends").insert({
+      kind: "workout",
+      title: payload.title,
+      body: w.title,
+      url: payload.url,
+      recipients: report.users,
+    });
+    if (error) console.error("workout push log failed", error.message);
   }
-  return { workouts: data.length, users };
+  return { workouts, users };
 }

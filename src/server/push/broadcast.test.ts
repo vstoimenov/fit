@@ -23,3 +23,14 @@ describe("broadcastSchema", () => {
     expect(() => broadcastSchema.parse({ title: "A", body: "x".repeat(201), url: "" })).toThrow();
   });
 });
+
+describe("broadcastSchema links", () => {
+  it("refuses links that only look app-relative", () => {
+    // "/\evil.com" and "//evil.com" resolve to https://evil.com/ in a browser.
+    expect(() => broadcastSchema.parse({ title: "A", body: "B", url: "/\\evil.com" })).toThrow();
+    expect(() => broadcastSchema.parse({ title: "A", body: "B", url: "//evil.com" })).toThrow();
+    expect(broadcastSchema.parse({ title: "A", body: "B", url: "/app/learn?x=1" }).url).toBe(
+      "/app/learn?x=1",
+    );
+  });
+});

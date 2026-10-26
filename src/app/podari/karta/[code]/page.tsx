@@ -49,7 +49,8 @@ export default async function GiftCardPage({ params }: { params: Promise<{ code:
             <li>Членството започва веднага — за {giftMonthsLabel(card.months)}.</li>
           </ol>
           <p className="text-sm text-ink-soft">
-            Кодът важи до {expires}.{card.redeemed ? " Вече е активиран." : ""}
+            Кодът важи до {expires}
+            {card.redeemed ? " Вече е активиран." : ""}
           </p>
         </div>
       </article>

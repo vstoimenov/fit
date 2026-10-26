@@ -32,12 +32,19 @@ async function Notifications() {
   const configured = Boolean(
     serverEnv.WEB_PUSH_PUBLIC_KEY && serverEnv.WEB_PUSH_PRIVATE_KEY && serverEnv.WEB_PUSH_SUBJECT,
   );
+  const cronReady = Boolean(serverEnv.CRON_SECRET);
+  const lastAutomatic = sends.find((s) => s.kind !== "broadcast")?.created_at ?? null;
+  const lastText = lastAutomatic
+    ? ` (последно: ${utcToZoned(lastAutomatic).date} ${utcToZoned(lastAutomatic).time})`
+    : " (още нищо не е пращано автоматично)";
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-extrabold">Известия</h1>
       <p className="text-sm text-ink-soft">
         {subscribed} {subscribed === 1 ? "клиентка е включила" : "клиентки са включили"} известията.
-        Напомнянията и „Нова тренировка“ се пращат автоматично всеки час.
+        {cronReady
+          ? ` Напомнянията и „Нова тренировка“ тръгват автоматично всеки час${lastText}.`
+          : " Автоматичните известия не са включени: липсва CRON_SECRET (виж README)."}
       </p>
       {!configured && (
         <p className="rounded-xl bg-powder-light p-4 text-sm text-rose-deep">
@@ -45,10 +52,12 @@ async function Notifications() {
           WEB_PUSH_SUBJECT (виж README).
         </p>
       )}
-      <section className="rounded-xl bg-white p-5 ring-1 ring-line">
-        <h2 className="mb-4 font-semibold">Съобщение до всички</h2>
-        <BroadcastForm disabled={!configured} />
-      </section>
+      {configured && (
+        <section className="rounded-xl bg-white p-5 ring-1 ring-line">
+          <h2 className="mb-4 font-semibold">Съобщение до всички</h2>
+          <BroadcastForm />
+        </section>
+      )}
       <section className="space-y-3">
         <h2 className="font-semibold">Последни изпращания</h2>
         {sends.length === 0 ? (

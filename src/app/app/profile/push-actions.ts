@@ -7,6 +7,7 @@ import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/server/auth/require-user";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import {
+  claimSubscription,
   removeSubscription,
   saveSubscription,
   setPushHour,
@@ -24,9 +25,25 @@ export async function subscribePushAction(
     const { user, supabase } = await requireUser();
     const input = subscriptionSchema.parse(subscription);
     const userAgent = (await headers()).get("user-agent");
-    await saveSubscription(createAdminSupabaseClient(), user.id, input, userAgent);
+    // Hour first: if the device save fails she is not left with a silent subscription.
     await setPushHour(supabase, user.id, hourSchema.parse(hour));
+    await saveSubscription(createAdminSupabaseClient(), user.id, input, userAgent);
     revalidatePath("/app/profile");
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** A subscription found on the device at load time is re-attached to whoever is signed in now. */
+export async function claimPushAction(subscription: unknown): Promise<ActionResult<null>> {
+  try {
+    const { user } = await requireUser();
+    await claimSubscription(
+      createAdminSupabaseClient(),
+      user.id,
+      subscriptionSchema.parse(subscription),
+    );
     return actionOk(null);
   } catch (error) {
     return actionFail(error);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dueReminders, isCronAuthorized, reminderBody } from "./jobs";
+import { chunk, dueReminders, isCronAuthorized, reminderBody, reminderTag } from "./jobs";
 
 const now = new Date("2026-10-27T16:05:00Z"); // 18:05 in Sofia, 17:05 in Vienna
 
@@ -75,6 +75,19 @@ describe("isCronAuthorized", () => {
     expect(isCronAuthorized("Bearer wrong", "s3cret")).toBe(false);
     expect(isCronAuthorized(null, "s3cret")).toBe(false);
     expect(isCronAuthorized("Bearer s3cret", undefined)).toBe(false);
+  });
+});
+
+describe("chunk", () => {
+  it("splits long id lists so PostgREST URLs stay short", () => {
+    expect(chunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(chunk([], 2)).toEqual([]);
+  });
+});
+
+describe("reminderTag", () => {
+  it("is unique per day so a reminder never silently replaces another notification", () => {
+    expect(reminderTag("2026-10-27")).toBe("reminder-2026-10-27");
   });
 });
 

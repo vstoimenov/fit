@@ -124,8 +124,12 @@ No name, weight, measurements or e-mail ever go into the image.
   broadcasts from `/admin/notifications`). Setup: `npx web-push generate-vapid-keys`, then set
   `WEB_PUSH_PUBLIC_KEY`, `WEB_PUSH_PRIVATE_KEY`, `WEB_PUSH_SUBJECT=mailto:info@iamstrong.bg` and
   `NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY` (same value as the public key) in Vercel; set `CRON_SECRET` (random, ≥16
-  chars) — Vercel Cron (`vercel.json`, hourly) calls `/api/cron/push` with it. Without the keys the card says
-  „скоро“ and nothing is sent. iPhone needs the app on the home screen (iOS 16.4+).
+  chars) in Vercel too. The hourly job runs from Supabase (pg_cron + pg_net, migration `20261027110000_push`),
+  not from Vercel (the Hobby plan allows daily crons only): once, in the Supabase SQL editor, store the two values
+  it needs — `select vault.create_secret('https://iamstrong.bg', 'app_url'); select vault.create_secret('<the same
+CRON_SECRET>', 'cron_secret');` — until then the job runs and does nothing. `select public.push_cron_status();`
+  shows whether it is scheduled; `select * from cron.job_run_details order by start_time desc limit 5;` shows runs.
+  Without the keys the card says „скоро“ and nothing is sent. iPhone needs the app on the home screen (iOS 16.4+).
 - **Video player.** YouTube videos play inside our own player (poster, play/pause, seek, mute, fullscreen; YouTube's
   controls, title bar and related videos are never shown). The video must allow embedding on YouTube (default for
   public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout

@@ -21,3 +21,10 @@
 5. **Redeem** `/app/plan` form + action `redeemGiftAction`; messages for invalid/expired/used/active-paid.
 6. **Admin** `/admin/vouchers` list + issue form, nav „Ваучери“; README notes.
 7. Verify in the browser (podari form state without Stripe, card page, redeem flow with a manual voucher, admin), commit, deploy after the owner applies migrations.
+
+## Ledger
+- Tasks 1–2 complete (f2adb92): code helpers 3/3, migration + RPCs, DB tests 5/5.
+- Tasks 3–6 complete (fd74abb): purchase schema/parser/apply 7/7, Stripe `createGiftCheckout` (inline `price_data`, `mode: payment`), webhook gift branch, `/podari` form (shown only with Stripe keys), `/podari/blagodarya` polling, printable card + PNG, `/app/plan` redeem form, `/admin/vouchers`; browser-checked: card page, admin list, podari copy.
+- Ruling: the card page is public and keyed only by the code (the buyer's secret) with `noindex`. Cost if wrong: a leaked code shows the card (no buyer e-mail on it).
+- Ruling: a live Stripe subscription blocks redemption and keeps the code (no attempt to extend Stripe billing). Cost if wrong: she redeems later; nothing lost.
+- Not verified: a real Stripe Checkout + webhook round trip (no keys); covered by the parser/apply unit tests and the existing webhook plumbing.
