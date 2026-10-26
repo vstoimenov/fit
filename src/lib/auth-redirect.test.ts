@@ -15,6 +15,15 @@ describe("decideAuthRedirect", () => {
     expect(decideAuthRedirect({ pathname: "/login", search: "", hasSession: true })).toBe("/app");
   });
 
+  it("sends signed-in visitors of the marketing pages to the app", () => {
+    expect(decideAuthRedirect({ pathname: "/", search: "", hasSession: true })).toBe("/app");
+    expect(
+      decideAuthRedirect({ pathname: "/osnovatelki", search: "?utm=x", hasSession: true }),
+    ).toBe("/app");
+    expect(decideAuthRedirect({ pathname: "/podari", search: "", hasSession: true })).toBeNull();
+    expect(decideAuthRedirect({ pathname: "/", search: "", hasSession: false })).toBeNull();
+  });
+
   it("leaves everything else alone", () => {
     expect(decideAuthRedirect({ pathname: "/", search: "", hasSession: false })).toBeNull();
     expect(decideAuthRedirect({ pathname: "/start", search: "", hasSession: true })).toBeNull();

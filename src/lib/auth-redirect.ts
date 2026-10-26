@@ -1,4 +1,6 @@
 const PROTECTED = [/^\/app(\/|$)/, /^\/admin(\/|$)/];
+/** Marketing pages a signed-in member never sees: she goes straight to the app. */
+const MARKETING = new Set(["/", "/osnovatelki", "/login"]);
 
 /** Optimistic redirect decided in the proxy; real checks live in requireUser() and RLS. */
 export function decideAuthRedirect(input: {
@@ -10,7 +12,7 @@ export function decideAuthRedirect(input: {
   if (isProtected && !input.hasSession) {
     return `/login?next=${encodeURIComponent(input.pathname + input.search)}`;
   }
-  if (input.pathname === "/login" && input.hasSession) return "/app";
+  if (MARKETING.has(input.pathname) && input.hasSession) return "/app";
   return null;
 }
 
