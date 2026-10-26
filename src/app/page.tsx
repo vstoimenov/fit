@@ -5,6 +5,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { Situations } from "@/components/site/situations";
 import { StickyCta } from "@/components/site/sticky-cta";
+import { TryWorkout } from "@/components/site/try-workout";
 import { getFreeWorkout, getSiteFlags, getSiteLinks } from "@/server/site/content";
 
 export const metadata = {
@@ -27,6 +28,7 @@ export default async function HomePage() {
         <Hero hasFreeWorkout={freeWorkout !== null} />
         <FactsStrip />
         <Situations />
+        {freeWorkout && <TryWorkout workout={freeWorkout} />}
         <FinalCta />
       </main>
       <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />
