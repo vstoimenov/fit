@@ -96,6 +96,16 @@ export function ArticleForm({ action, article }: { action: FormAction; article?:
           />
         </Field>
         <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Вид">
+            <select
+              name="category"
+              defaultValue={article?.category ?? "article"}
+              className={inputClass}
+            >
+              <option value="article">Статия</option>
+              <option value="recipe">Рецепта</option>
+            </select>
+          </Field>
           <Field label="Ниво">
             <select name="level" defaultValue={article?.level ?? ""} className={inputClass}>
               <option value="">Всички нива</option>

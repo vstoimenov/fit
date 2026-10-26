@@ -26,6 +26,7 @@ export const articleInputSchema = z.object({
   ),
   level: z.union([z.literal(""), z.enum(["beginner", "advanced", "pro"])], "Невалидно ниво"),
   membersOnly: z.boolean(),
+  category: z.enum(["article", "recipe"]).default("article"),
 });
 
 export type ArticleInput = z.infer<typeof articleInputSchema>;
@@ -36,6 +37,7 @@ export interface ArticleListItem {
   title: string;
   level: Level | null;
   membersOnly: boolean;
+  category: "article" | "recipe";
   publishedAt: string | null;
   updatedAt: string;
 }
@@ -46,7 +48,7 @@ export interface AdminArticle extends ArticleListItem {
   coverUrl: string | null;
 }
 
-const LIST_COLUMNS = "id, slug, title, level, members_only, published_at, updated_at";
+const LIST_COLUMNS = "id, slug, title, level, members_only, category, published_at, updated_at";
 const COLUMNS = `${LIST_COLUMNS}, excerpt, body, cover_url`;
 
 type ListRow = {
@@ -55,6 +57,7 @@ type ListRow = {
   title: string;
   level: Level | null;
   members_only: boolean;
+  category: string;
   published_at: string | null;
   updated_at: string;
 };
@@ -66,6 +69,7 @@ const toListItem = (r: ListRow): ArticleListItem => ({
   title: r.title,
   level: r.level,
   membersOnly: r.members_only,
+  category: r.category === "recipe" ? "recipe" : "article",
   publishedAt: r.published_at,
   updatedAt: r.updated_at,
 });
@@ -118,6 +122,7 @@ export async function saveArticle(
     cover_url: a.coverUrl === "" ? null : a.coverUrl,
     level: a.level === "" ? null : a.level,
     members_only: a.membersOnly,
+    category: a.category,
   };
   if (id === null) {
     const { data, error } = await db.from("articles").insert(fields).select("id").single();

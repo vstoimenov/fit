@@ -27,6 +27,7 @@ function readArticle(form: FormData) {
     coverUrl: formString(form, "coverUrl"),
     level: formString(form, "level"),
     membersOnly: formBool(form, "membersOnly"),
+    category: formString(form, "category") || "article",
   };
 }
 

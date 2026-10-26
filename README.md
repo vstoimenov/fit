@@ -114,6 +114,10 @@ No name, weight, measurements or e-mail ever go into the image.
   `BREVO_API_KEY` and `EMAIL_FROM_ADDRESS` are set (and the sender is verified in Brevo); without them the
   lead is still stored and the workout still unlocks, nothing is mailed. `LEADS_SALT` (≥16 chars) is required
   in every Vercel environment the form runs in — Preview deployments too, or the action fails.
+- **Live sessions.** `/admin/live` schedules sessions (Sofia time, Zoom/YouTube link, recording link later).
+  Members with access see the next one on Начало with „Добави в календара“ (.ics) and „Влизам“ from 15 minutes
+  before the start until the end (5 points once per session); recordings and recipes (`articles.category`) are
+  filterable in „Полезно“.
 - **Gift vouchers.** `/podari` sells 1/3/12-month vouchers through Stripe Checkout (one-time payment, prices from
   `src/lib/site/gift.ts`, no Stripe products to create); the webhook creates the code and e-mails the buyer (needs
   Brevo). The buyer's thank-you page and the printable card live at `/podari/blagodarya` and `/podari/karta/<code>`.

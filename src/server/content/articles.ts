@@ -3,13 +3,15 @@ import type { Level } from "@/lib/program/types";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
 
-const LIST_COLUMNS = "id, slug, title, excerpt, cover_url, level, published_at" as const;
+const LIST_COLUMNS = "id, slug, title, excerpt, cover_url, level, published_at, category" as const;
 
 type ArticleRow = Database["public"]["Tables"]["articles"]["Row"];
 export type ArticleSummary = Pick<
   ArticleRow,
-  "id" | "slug" | "title" | "excerpt" | "cover_url" | "level" | "published_at"
+  "id" | "slug" | "title" | "excerpt" | "cover_url" | "level" | "published_at" | "category"
 >;
+
+export type ArticleCategory = "article" | "recipe";
 
 /**
  * Published articles for a member of `level`: untargeted ones plus those aimed at her level,
@@ -20,6 +22,7 @@ export async function listArticlesFor(
   db: TypedClient,
   level: Level,
   limit?: number,
+  category?: ArticleCategory,
 ): Promise<ArticleSummary[]> {
   let query = db
     .from("articles")
@@ -28,6 +31,7 @@ export async function listArticlesFor(
     .lte("published_at", new Date().toISOString())
     .or(`level.is.null,level.eq.${level}`)
     .order("published_at", { ascending: false });
+  if (category) query = query.eq("category", category);
   if (limit !== undefined) query = query.limit(limit);
   const { data, error } = await query;
   if (error) throw new Error(`list articles failed: ${error.message}`);

@@ -26,7 +26,7 @@ export function RedeemGiftForm() {
           <Gift size={20} aria-hidden="true" />
           Ваучерът е активиран
         </p>
-        <p className="text-ink-soft">Членството ти е активно до {until}.</p>
+        <p className="text-ink-soft">Членството ти е активно до {until}</p>
         <Link href="/app" className={`${buttonClass("primary", "md")} w-full`}>
           Към тренировките
         </Link>

@@ -26,6 +26,7 @@ export type Database = {
       articles: {
         Row: {
           body: string;
+          category: string;
           cover_url: string | null;
           created_at: string;
           excerpt: string;
@@ -40,6 +41,7 @@ export type Database = {
         ComputedFields: never;
         Insert: {
           body?: string;
+          category?: string;
           cover_url?: string | null;
           created_at?: string;
           excerpt?: string;
@@ -53,6 +55,7 @@ export type Database = {
         };
         Update: {
           body?: string;
+          category?: string;
           cover_url?: string | null;
           created_at?: string;
           excerpt?: string;
@@ -492,6 +495,80 @@ export type Database = {
           marketing_consent_at?: string | null;
           name?: string;
           source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      live_attendance: {
+        Row: {
+          joined_at: string;
+          session_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          joined_at?: string;
+          session_id: string;
+          user_id: string;
+        };
+        Update: {
+          joined_at?: string;
+          session_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "live_attendance_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "live_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "live_attendance_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      live_sessions: {
+        Row: {
+          created_at: string;
+          description: string;
+          duration_min: number;
+          id: string;
+          join_url: string;
+          published: boolean;
+          recording_url: string | null;
+          starts_at: string;
+          title: string;
+          updated_at: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          description?: string;
+          duration_min?: number;
+          id?: string;
+          join_url: string;
+          published?: boolean;
+          recording_url?: string | null;
+          starts_at: string;
+          title: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string;
+          duration_min?: number;
+          id?: string;
+          join_url?: string;
+          published?: boolean;
+          recording_url?: string | null;
+          starts_at?: string;
+          title?: string;
           updated_at?: string;
         };
         Relationships: [];
@@ -1417,6 +1494,7 @@ export type Database = {
         };
         Returns: string;
       };
+      attend_live: { Args: { p_session_id: string }; Returns: undefined };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       challenge_board: {
         Args: { p_id: string };

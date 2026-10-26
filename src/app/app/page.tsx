@@ -3,6 +3,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { HomeChallengeCard } from "@/components/challenges/home-card";
+import { LiveCard } from "@/components/live/live-card";
 import { LevelCard } from "@/components/home/level-card";
 import { ArticleCard } from "@/components/learn/article-card";
 import { Countdown } from "@/components/today/countdown";
@@ -23,6 +24,7 @@ import { homeChallenge } from "@/server/challenges/challenges";
 import { getMemberPoints } from "@/server/content/points";
 import { getTodayView } from "@/server/content/today";
 import type { TypedClient } from "@/server/db/types";
+import { nextLiveSession } from "@/server/live/sessions";
 import { getDiaryDay, getNutritionProfile } from "@/server/nutrition/diary";
 
 export const metadata = { title: "Начало" };
@@ -41,7 +43,7 @@ async function Home() {
   const { user, supabase } = await requireUser();
   const view = await getTodayView(supabase, user.id);
   // Level and article are extras: if their reads fail the day's workout must still show.
-  const [progress, article, nutrition, challenge] = await Promise.all([
+  const [progress, article, nutrition, challenge, live] = await Promise.all([
     getMemberPoints(supabase, user.id).then(
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
@@ -56,6 +58,7 @@ async function Home() {
     homeChallenge(supabase, user.id, sofiaToday()).catch((error: unknown) =>
       logSkipped("challenge", user.id, error, null),
     ),
+    homeLive(supabase, user.id).catch((error: unknown) => logSkipped("live", user.id, error, null)),
   ]);
   const firstName = view.name.split(" ")[0];
 
@@ -160,6 +163,8 @@ async function Home() {
         </div>
 
         <div className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-start-2">
+          {live && <LiveCard session={live.session} attended={live.attended} />}
+
           <Link
             href="/app/progress"
             className="flex min-h-14 items-center gap-3 rounded-2xl bg-sand p-4 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
@@ -239,4 +244,18 @@ async function nutritionToday(supabase: TypedClient, userId: string) {
 function logSkipped<T>(what: string, userId: string, error: unknown, fallback: T): T {
   console.error(`home ${what} skipped`, { userId }, error instanceof Error ? error.message : error);
   return fallback;
+}
+
+/** The next live session and whether she already tapped „Влизам" for it. */
+async function homeLive(db: TypedClient, userId: string) {
+  const session = await nextLiveSession(db);
+  if (!session) return null;
+  const { data, error } = await db
+    .from("live_attendance")
+    .select("session_id")
+    .eq("user_id", userId)
+    .eq("session_id", session.id)
+    .maybeSingle();
+  if (error) throw new Error(`load live attendance failed: ${error.message}`);
+  return { session, attended: data !== null };
 }
