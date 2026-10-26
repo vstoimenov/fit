@@ -18,6 +18,9 @@ alter table public.leads enable row level security;
 create policy leads_admin_select on public.leads for select to authenticated
   using ((select public.is_admin()));
 -- No insert/update/delete policies: the app never writes directly, only via submit_lead().
+-- Tighten the default grants too: anon touches the table only through the function.
+revoke all on public.leads from anon;
+revoke insert, update, delete on public.leads from authenticated;
 
 -- Upsert by e-mail (normalised), refuse more than 10 new leads per ip hash per hour.
 create function public.submit_lead(
