@@ -1,3 +1,5 @@
+import type { VideoProvider } from "./parse-video-url";
+
 /** Clock text for the player bar: `m:ss`, or `h:mm:ss` from one hour on. */
 export function formatClock(seconds: number): string {
   const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
@@ -12,4 +14,16 @@ export function formatClock(seconds: number): string {
 export function progressPercent(current: number, duration: number): number {
   if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(current)) return 0;
   return Math.min(100, Math.max(0, (current / duration) * 100));
+}
+
+/**
+ * Whether this second counts toward „Завърших". YouTube reports playback, so only a playing,
+ * visible video counts; the other embeds cannot report it, so they count while visible.
+ */
+export function countsTime(
+  provider: VideoProvider,
+  state: { playing: boolean; visible: boolean },
+): boolean {
+  if (!state.visible) return false;
+  return provider === "youtube" ? state.playing : true;
 }

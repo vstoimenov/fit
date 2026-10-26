@@ -15,7 +15,10 @@ describe("workout_watches", () => {
     // Idempotent: a second mark is a no-op through upsert.
     const again = await mine
       .from("workout_watches")
-      .upsert({ workout_id: workoutId }, { onConflict: "user_id,workout_id", ignoreDuplicates: true });
+      .upsert(
+        { workout_id: workoutId },
+        { onConflict: "user_id,workout_id", ignoreDuplicates: true },
+      );
     expect(again.error).toBeNull();
 
     const seenByMe = await mine.from("workout_watches").select("workout_id");
@@ -42,7 +45,10 @@ describe("workout_watches", () => {
     const db = await signedInClient(user);
     const { error } = await db.from("workout_completions").insert({ workout_id: workoutId });
     expect(error).toBeNull();
-    const { data } = await db.from("workout_watches").select("workout_id").eq("workout_id", workoutId);
+    const { data } = await db
+      .from("workout_watches")
+      .select("workout_id")
+      .eq("workout_id", workoutId);
     expect(data).toEqual([{ workout_id: workoutId }]);
   });
 });

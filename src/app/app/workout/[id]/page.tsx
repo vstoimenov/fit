@@ -11,6 +11,7 @@ import { LEVEL_LABEL } from "@/lib/labels";
 import { exclusiveLockLevel } from "@/lib/points/levels";
 import { requireUser } from "@/server/auth/require-user";
 import { getMemberPointsOrNull } from "@/server/content/points";
+import { isWatched } from "@/server/content/watches";
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировка" };
@@ -118,10 +119,12 @@ async function WorkoutScreen({
     );
   }
 
+  const watched = await isWatched(supabase, user.id, id);
   return (
     <Player
       workout={result.workout}
-      embedUrl={result.embedUrl}
+      video={result.video}
+      watched={watched}
       first={first === "1"}
       unlockAfterSec={Math.round(result.workout.durationMin * 60 * 0.7)}
       name={profile?.name.split(" ")[0] || null}

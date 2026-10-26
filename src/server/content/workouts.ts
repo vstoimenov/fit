@@ -1,5 +1,5 @@
 import type { Level } from "@/lib/program/types";
-import { parseVideoUrl } from "@/lib/video/parse-video-url";
+import { parseVideoUrl, type VideoRef } from "@/lib/video/parse-video-url";
 import type { TypedClient } from "@/server/db/types";
 import { getMemberLevel } from "./member";
 import { toSummary, WORKOUT_COLUMNS, type WorkoutSummary } from "./today";
@@ -7,7 +7,7 @@ import { toSummary, WORKOUT_COLUMNS, type WorkoutSummary } from "./today";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type PlayerView =
-  | { workout: WorkoutSummary; state: "ok"; embedUrl: string }
+  | { workout: WorkoutSummary; state: "ok"; video: VideoRef }
   | { workout: WorkoutSummary; state: "locked" }
   | { workout: WorkoutSummary; state: "broken" };
 
@@ -27,7 +27,7 @@ export async function getWorkoutForPlayer(
   const workout = toSummary(row);
   if (!media) return { workout, state: "locked" };
   const ref = parseVideoUrl(media.video_url);
-  return ref ? { workout, state: "ok", embedUrl: ref.embedUrl } : { workout, state: "broken" };
+  return ref ? { workout, state: "ok", video: ref } : { workout, state: "broken" };
 }
 
 /**

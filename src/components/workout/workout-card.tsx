@@ -1,4 +1,4 @@
-import { Lock } from "lucide-react";
+import { Check, Lock } from "lucide-react";
 import Link from "next/link";
 import { Chip } from "@/components/ui/chip";
 import { LEVEL_LABEL } from "@/lib/labels";
@@ -8,17 +8,19 @@ import { WorkoutCover } from "./workout-cover";
 /**
  * Library card: photo cover, title and level + duration chips. Locked cards lead to the plans.
  * An exclusive workout she has not reached yet (`unlockLevel`) shows its level and opens the
- * workout page, which explains the lock, whatever her subscription.
+ * workout page, which explains the lock, whatever her subscription. `watched` is her own mark.
  */
 export function WorkoutCard({
   workout,
   locked,
   unlockLevel = null,
+  watched = false,
   href = locked && unlockLevel === null ? "/app/plan" : `/app/workout/${workout.id}`,
 }: {
   workout: WorkoutSummary;
   locked: boolean;
   unlockLevel?: number | null;
+  watched?: boolean;
   href?: string;
 }) {
   return (
@@ -35,6 +37,12 @@ export function WorkoutCard({
           sizes="(min-width:1024px) 320px, (min-width:640px) 50vw, 100vw"
           className="h-44"
         />
+        {watched && (
+          <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-ink px-3 py-1.5 text-xs font-extrabold text-white">
+            <Check size={14} strokeWidth={2.5} aria-hidden="true" />
+            Гледано
+          </span>
+        )}
         {(unlockLevel !== null || locked) && (
           <span className="absolute right-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-extrabold text-ink">
             <Lock size={14} strokeWidth={2.25} aria-hidden="true" />

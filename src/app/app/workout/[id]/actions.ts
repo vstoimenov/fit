@@ -12,6 +12,7 @@ import {
   type CompletionStats,
 } from "@/server/content/completion";
 import { getMemberPoints, type MemberPoints } from "@/server/content/points";
+import { setWatched } from "@/server/content/watches";
 
 /** Presentation only: a failed points read must never fail (or hide) a saved completion. */
 async function readPoints(
@@ -83,6 +84,21 @@ export async function rateWorkout(
       z.uuid().parse(completionId),
       z.enum(["easy", "right", "hard"]).parse(feeling),
     );
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „Гледано" on/off; independent of the completion, so it never touches points. */
+export async function setWorkoutWatched(
+  workoutId: string,
+  watched: boolean,
+): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireUser();
+    await setWatched(supabase, z.uuid().parse(workoutId), Boolean(watched));
+    revalidatePath("/app/library");
     return actionOk(null);
   } catch (error) {
     return actionFail(error);

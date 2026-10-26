@@ -110,6 +110,11 @@ No name, weight, measurements or e-mail ever go into the image.
   **The sender address must be verified in Brevo**, otherwise Brevo rejects the send. Without Brevo (or with a
   rejected send) the message is recorded on the client as **NOT sent**; nothing is delivered.
 - Workouts that clients completed cannot be deleted (RLS plus a restricting foreign key). "Скрий" turns them back into drafts.
+- **Video player.** YouTube videos play inside our own player (poster, play/pause, seek, mute, fullscreen; YouTube's
+  controls, title bar and related videos are never shown). The video must allow embedding on YouTube (default for
+  public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout
+  as „Гледано" by hand; the mark is also set when the video ends or when „Завърших" is saved. It is a personal note,
+  separate from completions and points.
 - "Preview as client" needs the admin's own profile to be onboarded.
 
 ## Payments (Stripe)

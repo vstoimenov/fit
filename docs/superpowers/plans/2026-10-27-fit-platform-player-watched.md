@@ -20,3 +20,12 @@
 3. **Server** `src/server/content/watches.ts` (`setWatched`, `listWatchedIds`) + action `setWorkoutWatched` in `src/app/app/workout/[id]/actions.ts`; `getWorkoutForPlayer` returns `video: VideoRef`.
 4. **Player** `src/components/workout/youtube-player.tsx` (IFrame API, overlay controls) + `player.tsx` wiring (playing-time gate, watched toggle, auto-mark on end); `WorkoutCard` badge; library passes watched ids.
 5. **Verify** in the browser (mobile + desktop), commit, deploy.
+
+## Ledger
+- Task 1–2 complete: `player-time` helpers + `workout_watches` migration, RLS, trigger; unit 3/3, DB 6/6 (commit 1bebb2a).
+- Task 3–4 complete: `watches.ts` service (6/6), `setWorkoutWatched` action, `getWorkoutForPlayer` → `video: VideoRef`, `YouTubePlayer`, `Player` wiring, library badge.
+- Ruling: the paused/ended screens are opaque (poster + dim) rather than the frozen frame — the only way to cover YouTube's title bar and related-videos shelf. Cost if wrong: she loses the paused frame; nothing functional.
+- Ruling: Vimeo/Bunny keep the plain iframe and count watch time while the tab is visible (they do not report playback). Cost if wrong: none today — every workout is on YouTube.
+- Ruling: no `preload` on the poster inside the player. A preloaded image inside the streamed Suspense boundary held the boundary's reveal back for 5–30 s (React 19.2 / Next 16.4); without it hydration takes 200 ms. Cost if wrong: the poster is not LCP-prioritised on the player page.
+- Ruling: iOS fallback — when a play call on a touch device gets no answer within 1.2 s, the centre of the poster passes one tap through to YouTube's own play button (edges stay ours so the title-bar links are unreachable). Verified only by code path; no iOS device in this session. Cost if wrong: an iPhone needs a second tap to start; nothing breaks.
+- Deferred minor: the locked workout view still renders `WorkoutCover preload` inside the same Suspense boundary; check its reveal time on a device (pre-existing).
