@@ -1,5 +1,6 @@
 import { FactsStrip } from "@/components/site/facts-strip";
 import { FinalCta } from "@/components/site/final-cta";
+import { First14 } from "@/components/site/first-14";
 import { Hero } from "@/components/site/hero";
 import { HowItWorks } from "@/components/site/how-it-works";
 import { InsideTabs } from "@/components/site/inside-tabs";
@@ -7,6 +8,8 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { Situations } from "@/components/site/situations";
 import { StickyCta } from "@/components/site/sticky-cta";
+import { TimePlanCalculator } from "@/components/site/time-plan";
+import { Trainer } from "@/components/site/trainer";
 import { TryWorkout } from "@/components/site/try-workout";
 import { getFreeWorkout, getSiteFlags, getSiteLinks } from "@/server/site/content";
 
@@ -33,6 +36,9 @@ export default async function HomePage() {
         <HowItWorks />
         {freeWorkout && <TryWorkout workout={freeWorkout} />}
         <InsideTabs />
+        <TimePlanCalculator />
+        <Trainer video={links.trainerVideo} />
+        <First14 />
         <FinalCta />
       </main>
       <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />
