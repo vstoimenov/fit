@@ -1,0 +1,15 @@
+/** Clock text for the player bar: `m:ss`, or `h:mm:ss` from one hour on. */
+export function formatClock(seconds: number): string {
+  const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const mm = h > 0 ? String(m).padStart(2, "0") : String(m);
+  return `${h > 0 ? `${h}:` : ""}${mm}:${String(s).padStart(2, "0")}`;
+}
+
+/** Played share of the video in percent, clamped to 0–100 (0 when the duration is unknown). */
+export function progressPercent(current: number, duration: number): number {
+  if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(current)) return 0;
+  return Math.min(100, Math.max(0, (current / duration) * 100));
+}

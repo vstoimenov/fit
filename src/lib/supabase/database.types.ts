@@ -1080,6 +1080,40 @@ export type Database = {
           },
         ];
       };
+      workout_watches: {
+        Row: {
+          user_id: string;
+          watched_at: string;
+          workout_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          user_id?: string;
+          watched_at?: string;
+          workout_id: string;
+        };
+        Update: {
+          user_id?: string;
+          watched_at?: string;
+          workout_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "workout_watches_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "workout_watches_workout_id_fkey";
+            columns: ["workout_id"];
+            isOneToOne: false;
+            referencedRelation: "workouts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       workouts: {
         Row: {
           created_at: string;
