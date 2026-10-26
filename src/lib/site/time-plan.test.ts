@@ -14,11 +14,13 @@ describe("timePlan", () => {
     });
   });
 
-  it("maps minutes to the library's length buckets at the boundaries", () => {
+  it("maps the slider's 5-minute steps to the library's length buckets", () => {
+    expect(timePlan(10, 4).length).toBe("short");
     expect(timePlan(15, 4).length).toBe("short");
-    expect(timePlan(16, 4).length).toBe("mid");
+    expect(timePlan(20, 4).length).toBe("mid");
     expect(timePlan(25, 4).length).toBe("mid");
-    expect(timePlan(26, 4).length).toBe("long");
+    expect(timePlan(30, 4).length).toBe("long");
+    expect(timePlan(40, 4).length).toBe("long");
   });
 
   it("maps days to a starting level", () => {
