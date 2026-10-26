@@ -21,8 +21,15 @@ import { getFreeWorkout, getPublicPlans, getSiteFlags, getSiteLinks } from "@/se
 
 export const metadata = {
   title: { absolute: "I AM STRONG — тренировки у дома за 20 минути на ден" },
-  description:
-    "Онлайн клуб за тренировки у дома за жени. 20 минути на ден, без зала, с Аксения Михайлова.",
+  description: brand.description,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "I AM STRONG — тренировки у дома за 20 минути на ден",
+    description: brand.description,
+    type: "website",
+    locale: "bg_BG",
+    siteName: brand.name,
+  },
 };
 
 /** The public home page. Signed-in members never reach it: the proxy sends them to /app. */

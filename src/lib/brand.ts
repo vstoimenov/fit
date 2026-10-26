@@ -3,9 +3,10 @@ export const brand = {
   name: "I AM STRONG",
   shortName: "I AM STRONG",
   tagline: "Тренировки у дома, които пасват в деня ти.",
-  description: "Видео тренировки за жени, по програма и с проследяване на прогреса.",
+  description:
+    "Онлайн клуб за тренировки у дома за жени. 20 минути на ден, без зала, с Аксения Михайлова.",
   themeColor: "#111111",
   backgroundColor: "#FFFFFF",
   accentColor: "#E5A9AE",
-  supportEmail: "hello@example.com",
+  supportEmail: "info@iamstrong.bg",
 } as const;

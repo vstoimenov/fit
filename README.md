@@ -24,17 +24,19 @@ pnpm db:types        # regenerate src/lib/supabase/database.types.ts after a mig
 
 Create `.env.local` from `.env.example`, filling the keys from `pnpm exec supabase status`:
 
-| Variable                        | Where it comes from                                               |
-| ------------------------------- | ----------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | `API_URL` (local: `http://127.0.0.1:55321`)                       |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `ANON_KEY`                                                        |
-| `SUPABASE_SERVICE_ROLE_KEY`     | `SERVICE_ROLE_KEY` (server only, never `NEXT_PUBLIC_`)            |
-| `APP_URL`                       | public URL of the app (local: `http://localhost:3120`)            |
-| `NEXT_PUBLIC_GOOGLE_AUTH`       | `1` shows the Google button (needs the Google provider), else `0` |
-| `STRIPE_SECRET_KEY`             | optional, payments: see "Payments (Stripe)"                       |
-| `STRIPE_WEBHOOK_SECRET`         | optional, payments: see "Payments (Stripe)"                       |
-| `ANTHROPIC_API_KEY`             | optional, nutrition diary: calories from words                    |
-| `NUTRITION_AI_MODEL`            | optional, model override; must accept the fallback beta           |
+| Variable                        | Where it comes from                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------ |
+| `NEXT_PUBLIC_SUPABASE_URL`      | `API_URL` (local: `http://127.0.0.1:55321`)                                    |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `ANON_KEY`                                                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`     | `SERVICE_ROLE_KEY` (server only, never `NEXT_PUBLIC_`)                         |
+| `APP_URL`                       | public URL of the app (local: `http://localhost:3120`)                         |
+| `NEXT_PUBLIC_GOOGLE_AUTH`       | `1` shows the Google button (needs the Google provider), else `0`              |
+| `STRIPE_SECRET_KEY`             | optional, payments: see "Payments (Stripe)"                                    |
+| `STRIPE_WEBHOOK_SECRET`         | optional, payments: see "Payments (Stripe)"                                    |
+| `ANTHROPIC_API_KEY`             | optional, nutrition diary: calories from words                                 |
+| `LEADS_SALT`                    | required, ≥ 16 random chars: hashes visitor IPs for the lead form's rate limit |
+| `BREVO_LEADS_LIST_ID`           | optional, numeric Brevo list that receives leads from the free workout form    |
+| `NUTRITION_AI_MODEL`            | optional, model override; must accept the fallback beta                        |
 
 ```bash
 pnpm dev             # http://localhost:3120
@@ -161,4 +163,16 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
    `update public.security_flags set enabled = true, updated_at = now() where key = 'admin_mfa_required';`
 6. **Legal, before any traffic:** a privacy-policy page linked from the health-data consent checkbox in the
    onboarding wizard is still required. The legal text is pending; the consent wording and the deletion/export
-   flows exist, the policy page does not.
+   flows exist, the policy page does not. `/terms` and `/privacy` currently render a placeholder paragraph
+   (`src/components/site/legal-placeholder.tsx`) — replace it with the final documents.
+7. **Public site (`/`):**
+   - `LEADS_SALT` must be set (the server refuses to start without it); `BREVO_LEADS_LIST_ID` is optional.
+   - Ads and bio links must point to `/osnovatelki` (the founders landing moved there); `/` is the home page.
+   - Stripe prices for the base plans are €29 / month and €257 / year (`plans.price_cents` = 2900 / 25700):
+     create matching Stripe prices and store their ids in `plans.provider_price_ids`.
+   - In `/admin/settings` → „Сайт“ set the trainer's 60-second video URL and the Instagram profile; both are
+     cached for up to an hour.
+   - Replace the owner placeholders: the trainer photo and three paragraphs in `src/components/site/trainer.tsx`
+     (`TODO owner copy`), the stock photos in `public/photos`, and re-capture `public/screens` after UI changes.
+   - `/podari` shows the gift voucher options with a disabled „Купи ваучер“; the voucher purchase/redemption is a
+     separate sub-project that must land before Stripe goes live.
