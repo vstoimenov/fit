@@ -389,6 +389,79 @@ export type Database = {
           },
         ];
       };
+      gift_vouchers: {
+        Row: {
+          amount_cents: number;
+          buyer_email: string | null;
+          code: string;
+          created_at: string;
+          currency: string;
+          expires_at: string;
+          id: string;
+          issued_by: string | null;
+          kind: string;
+          message: string | null;
+          months: number;
+          note: string | null;
+          recipient_name: string | null;
+          redeemed_at: string | null;
+          redeemed_by: string | null;
+          stripe_session_id: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          amount_cents?: number;
+          buyer_email?: string | null;
+          code: string;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string;
+          id?: string;
+          issued_by?: string | null;
+          kind: string;
+          message?: string | null;
+          months: number;
+          note?: string | null;
+          recipient_name?: string | null;
+          redeemed_at?: string | null;
+          redeemed_by?: string | null;
+          stripe_session_id?: string | null;
+        };
+        Update: {
+          amount_cents?: number;
+          buyer_email?: string | null;
+          code?: string;
+          created_at?: string;
+          currency?: string;
+          expires_at?: string;
+          id?: string;
+          issued_by?: string | null;
+          kind?: string;
+          message?: string | null;
+          months?: number;
+          note?: string | null;
+          recipient_name?: string | null;
+          redeemed_at?: string | null;
+          redeemed_by?: string | null;
+          stripe_session_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gift_vouchers_issued_by_fkey";
+            columns: ["issued_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "gift_vouchers_redeemed_by_fkey";
+            columns: ["redeemed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       leads: {
         Row: {
           created_at: string;
@@ -1365,8 +1438,13 @@ export type Database = {
       claim_nutrition_ai_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
+      gift_code: { Args: Record<PropertyKey, never>; Returns: string };
       has_active_access: { Args: { uid: string }; Returns: boolean };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
+      issue_gift_voucher: {
+        Args: { p_months: number; p_note: string; p_recipient_name: string };
+        Returns: string;
+      };
       join_challenge: { Args: { p_id: string }; Returns: undefined };
       level_for_points: { Args: { p: number }; Returns: number };
       meal_ingredients_valid: { Args: { p_items: Json }; Returns: boolean };
@@ -1397,6 +1475,7 @@ export type Database = {
         }[];
       };
       public_site_links: { Args: Record<PropertyKey, never>; Returns: Json };
+      redeem_gift_voucher: { Args: { p_code: string }; Returns: string };
       submit_lead: {
         Args: {
           p_email: string;
