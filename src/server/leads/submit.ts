@@ -24,7 +24,8 @@ export async function submitLead(
     p_email: input.email,
     p_marketing: input.marketing,
     p_source: source,
-    p_ip_hash: ipHash,
+    // The generated RPC types take a string; SQL treats "" as "no ip".
+    p_ip_hash: ipHash ?? "",
   });
   if (!error) return { ok: true };
   if (error.message.includes("rate_limited")) return { ok: false, error: "rate_limited" };

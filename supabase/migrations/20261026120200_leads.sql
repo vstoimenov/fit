@@ -31,16 +31,17 @@ language plpgsql security definer set search_path = '' as $$
 declare
   v_email text := lower(btrim(p_email));
   v_name text := btrim(p_name);
+  v_ip text := nullif(p_ip_hash, '');  -- the app sends '' when it has no ip
 begin
-  if p_ip_hash is not null and (
+  if v_ip is not null and (
     select count(*) from public.leads
-    where ip_hash = p_ip_hash and created_at > now() - interval '1 hour'
+    where ip_hash = v_ip and created_at > now() - interval '1 hour'
   ) >= 10 then
     raise exception 'rate_limited' using errcode = 'P0001';
   end if;
 
   insert into public.leads (name, email, marketing_consent_at, source, ip_hash)
-  values (v_name, v_email, case when p_marketing then now() end, btrim(p_source), p_ip_hash)
+  values (v_name, v_email, case when p_marketing then now() end, btrim(p_source), v_ip)
   on conflict (email) do update set
     name = excluded.name,
     source = excluded.source,
