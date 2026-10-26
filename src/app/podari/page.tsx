@@ -6,7 +6,9 @@ import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import { GIFT_OPTIONS, giftMonthsLabel } from "@/lib/site/gift";
+import { serverEnv } from "@/env";
 import { getSiteFlags, getSiteLinks } from "@/server/site/content";
+import { GiftOrderForm } from "./gift-order-form";
 
 export const metadata = {
   title: "Подари членство",
@@ -21,9 +23,11 @@ const INCLUDED = [
   "Кодът се активира, когато тя е готова; важи 12 месеца",
 ];
 
-/** Gift voucher showcase. Purchase arrives with the payments sub-project; until then „Скоро". */
+/** Gift voucher: the three options and, once Stripe is configured, the order form. */
 export default async function GiftPage() {
   const [links, flags] = await Promise.all([getSiteLinks(), getSiteFlags()]);
+  // Build-time: adding the keys means a redeploy anyway. The action re-checks the live provider.
+  const ready = Boolean(serverEnv.STRIPE_SECRET_KEY && serverEnv.STRIPE_WEBHOOK_SECRET);
   return (
     <>
       <SiteHeader showFounders={flags.showFounders} />
@@ -77,28 +81,48 @@ export default async function GiftPage() {
                   ))}
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
-                  <button
-                    type="button"
-                    disabled
-                    aria-describedby="gift-soon"
-                    className={cn(
-                      CTA,
-                      best ? "bg-white text-ink" : CTA_PRIMARY,
-                      "disabled:cursor-not-allowed disabled:opacity-50",
-                    )}
-                  >
-                    Купи ваучер
-                  </button>
-                  <Chip tone="powder" className="w-fit">
-                    Скоро
-                  </Chip>
+                  {ready ? (
+                    <a
+                      href="#porachka"
+                      className={cn(CTA, best ? "bg-white text-ink" : CTA_PRIMARY)}
+                    >
+                      Купи ваучер
+                    </a>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        disabled
+                        aria-describedby="gift-soon"
+                        className={cn(
+                          CTA,
+                          best ? "bg-white text-ink" : CTA_PRIMARY,
+                          "disabled:cursor-not-allowed disabled:opacity-50",
+                        )}
+                      >
+                        Купи ваучер
+                      </button>
+                      <Chip tone="powder" className="w-fit">
+                        Скоро
+                      </Chip>
+                    </>
+                  )}
                 </div>
               </div>
             );
           })}
         </div>
-        <p id="gift-soon" className="mt-6 text-[15px] text-ink-soft">
-          Плащанията се включват скоро. Дотогава пиши ни на имейла в долния край на страницата.
+        {ready ? (
+          <div className="mt-12">
+            <GiftOrderForm />
+          </div>
+        ) : (
+          <p id="gift-soon" className="mt-6 text-[15px] text-ink-soft">
+            Плащанията се включват скоро. Дотогава пиши ни на имейла в долния край на страницата.
+          </p>
+        )}
+        <p className="mt-8 text-[15px] text-ink-soft">
+          Вече имаш код? Влез в профила си и го въведи в „Моят план“.
         </p>
       </main>
       <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />

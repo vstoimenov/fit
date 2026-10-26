@@ -12,6 +12,7 @@ export function createRevolutProvider(): PaymentProvider {
     name: "revolut",
     ready: false,
     createCheckout: unavailable,
+    createGiftCheckout: unavailable,
     createPortal: unavailable,
     cancelNow: unavailable,
     async parseWebhook() {

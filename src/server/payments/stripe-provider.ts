@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import { normalizeStripeEvent } from "@/lib/payments/stripe-normalize";
+import { giftFromStripeSession } from "@/server/gift/purchase";
 import { ProviderUnavailableError, WebhookSignatureError, type PaymentProvider } from "./provider";
 
 /** The slice of the Stripe client we use; tests pass a fake. */
@@ -103,6 +104,39 @@ export function createStripeProvider(
       if (!session.url) throw new Error("stripe returned no checkout url");
       return { url: session.url };
     },
+    async createGiftCheckout(i) {
+      const minute = Math.floor(Date.now() / 60_000);
+      const session = await need().checkout.sessions.create(
+        {
+          mode: "payment",
+          line_items: [
+            {
+              price_data: {
+                currency: i.currency.toLowerCase(),
+                unit_amount: i.amountCents,
+                product_data: { name: i.productName },
+              },
+              quantity: 1,
+            },
+          ],
+          success_url: i.successUrl,
+          cancel_url: i.cancelUrl,
+          customer_email: i.buyerEmail,
+          customer_creation: "always",
+          metadata: {
+            kind: "gift",
+            months: String(i.months),
+            recipient_name: i.recipientName ?? "",
+            message: i.message ?? "",
+          },
+          locale: "bg",
+          expires_at: (minute + 36) * 60,
+        },
+        { idempotencyKey: `gift-${i.buyerEmail}-${i.months}-${minute}` },
+      );
+      if (!session.url) throw new Error("stripe returned no checkout url");
+      return { url: session.url };
+    },
     async createPortal(i) {
       const session = await need().billingPortal.sessions.create({
         customer: i.customerId,
@@ -146,6 +180,7 @@ export function createStripeProvider(
       const current = await withCurrentSubscription(event);
       return {
         event: normalizeStripeEvent(current),
+        gift: giftFromStripeSession(event),
         eventId: event.id,
         type: event.type,
         payload: event,

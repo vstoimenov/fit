@@ -114,6 +114,11 @@ No name, weight, measurements or e-mail ever go into the image.
   `BREVO_API_KEY` and `EMAIL_FROM_ADDRESS` are set (and the sender is verified in Brevo); without them the
   lead is still stored and the workout still unlocks, nothing is mailed. `LEADS_SALT` (≥16 chars) is required
   in every Vercel environment the form runs in — Preview deployments too, or the action fails.
+- **Gift vouchers.** `/podari` sells 1/3/12-month vouchers through Stripe Checkout (one-time payment, prices from
+  `src/lib/site/gift.ts`, no Stripe products to create); the webhook creates the code and e-mails the buyer (needs
+  Brevo). The buyer's thank-you page and the printable card live at `/podari/blagodarya` and `/podari/karta/<code>`.
+  Members redeem on `/app/plan`; the owner issues free vouchers and sees all of them at `/admin/vouchers`.
+  Without Stripe keys the buy buttons show „Скоро“; redemption and admin vouchers work regardless.
 - **Push notifications (Web Push).** Members turn them on from Профил → Известия (daily reminder at a chosen
   hour when she has not trained, „Нова тренировка“ when a workout with „известие“ is published, and
   broadcasts from `/admin/notifications`). Setup: `npx web-push generate-vapid-keys`, then set

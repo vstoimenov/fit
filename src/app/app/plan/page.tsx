@@ -12,6 +12,7 @@ import { needsCardUpdate, priceIdFor } from "@/server/payments/checkout";
 import { getActiveProvider } from "@/server/payments/registry";
 import { ManageSubscriptionButton } from "../profile/manage-subscription-button";
 import { PlanPicker } from "./plan-picker";
+import { RedeemGiftForm } from "./redeem-gift-form";
 
 export const metadata = { title: "Твоят план" };
 
@@ -145,7 +146,10 @@ async function Plan({ searchParams }: { searchParams: SearchParams }) {
             <ManageSubscriptionButton label="Обнови картата" />
           </Card>
         ) : (
-          <PlanPicker plans={pickerPlans} ready={provider.ready} />
+          <div className="space-y-6">
+            <PlanPicker plans={pickerPlans} ready={provider.ready} />
+            <RedeemGiftForm />
+          </div>
         )}
       </div>
     </main>

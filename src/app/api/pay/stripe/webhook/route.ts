@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { serverEnv } from "@/env";
+import { createMailer } from "@/server/admin/mailer";
 import { createAdminSupabaseClient } from "@/server/db/admin";
+import { applyGiftPurchase } from "@/server/gift/purchase";
 import { createStripeProvider } from "@/server/payments/stripe-provider";
 import { handleWebhook } from "@/server/payments/webhook";
 
@@ -21,6 +23,9 @@ export async function POST(request: NextRequest) {
   if (declared > MAX_BODY) return new NextResponse("too large", { status: 413 });
   const body = await request.text();
   if (body.length > MAX_BODY) return new NextResponse("too large", { status: 413 });
-  const result = await handleWebhook(provider, body, request.headers, createAdminSupabaseClient());
+  const admin = createAdminSupabaseClient();
+  const result = await handleWebhook(provider, body, request.headers, admin, {
+    onGift: (gift) => applyGiftPurchase(admin, gift, createMailer(serverEnv), serverEnv.APP_URL),
+  });
   return new NextResponse(result.body, { status: result.status });
 }

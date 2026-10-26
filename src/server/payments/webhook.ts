@@ -7,6 +7,7 @@ import {
   recordPaymentEvent,
   type PreviousSubscription,
 } from "./apply-event";
+import type { GiftPurchase } from "@/server/gift/purchase";
 import { WebhookSignatureError, type ParsedWebhook, type PaymentProvider } from "./provider";
 
 /** Verify → store once → apply → mark processed. A 500 makes the provider retry later. */
@@ -15,6 +16,7 @@ export async function handleWebhook(
   rawBody: string,
   headers: Headers,
   admin: TypedClient,
+  hooks: { onGift?: (gift: GiftPurchase) => Promise<unknown> } = {},
 ): Promise<{ status: number; body: string }> {
   let parsed: ParsedWebhook;
   try {
@@ -37,6 +39,11 @@ export async function handleWebhook(
       payload: parsed.payload,
     });
     if (state === "seen") return { status: 200, body: "duplicate" };
+    if (parsed.gift && hooks.onGift) {
+      await hooks.onGift(parsed.gift);
+      await markPaymentEvent(admin, provider.name, parsed.eventId, null);
+      return { status: 200, body: "gift" };
+    }
     if (!parsed.event) {
       await markPaymentEvent(admin, provider.name, parsed.eventId, null);
       return { status: 200, body: "ignored" };

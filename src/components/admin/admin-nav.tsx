@@ -14,6 +14,7 @@ const ITEMS = [
   { href: "/admin/clients", label: "Клиентки" },
   { href: "/admin/leads", label: "Лийдове" },
   { href: "/admin/notifications", label: "Известия" },
+  { href: "/admin/vouchers", label: "Ваучери" },
   { href: "/admin/rewards", label: "Награди" },
   { href: "/admin/activity", label: "Активност" },
   { href: "/admin/at-risk", label: "Изостават" },

@@ -23,7 +23,11 @@ describe("gift vouchers", () => {
       .from("gift_vouchers")
       .insert({ code: "ABCDEFGH23", months: 1, amount_cents: 0, kind: "manual" });
     expect(insert.error).not.toBeNull();
-    const notAdmin = await member.rpc("issue_gift_voucher", { p_months: 1, p_recipient_name: null, p_note: null });
+    const notAdmin = await member.rpc("issue_gift_voucher", {
+      p_months: 1,
+      p_recipient_name: "",
+      p_note: "",
+    });
     expect(notAdmin.error?.code).toBe("42501");
   });
 
@@ -32,7 +36,9 @@ describe("gift vouchers", () => {
     const user = await createUser(admin, "gift-redeemer");
     const db = await signedInClient(user);
     const before = Date.now();
-    const { data: end, error } = await db.rpc("redeem_gift_voucher", { p_code: `iam-${code.slice(0, 5)}-${code.slice(5)}` });
+    const { data: end, error } = await db.rpc("redeem_gift_voucher", {
+      p_code: `iam-${code.slice(0, 5)}-${code.slice(5)}`,
+    });
     expect(error).toBeNull();
     const months = (new Date(end as string).getTime() - before) / (30 * 86_400_000);
     expect(months).toBeGreaterThan(2.9);
@@ -40,7 +46,11 @@ describe("gift vouchers", () => {
     expect((await db.rpc("my_access")).data).toBe(true);
     const again = await db.rpc("redeem_gift_voucher", { p_code: code });
     expect(again.error?.message).toMatch(/used/);
-    const { data: row } = await admin.from("gift_vouchers").select("redeemed_by").eq("code", code).single();
+    const { data: row } = await admin
+      .from("gift_vouchers")
+      .select("redeemed_by")
+      .eq("code", code)
+      .single();
     expect(row?.redeemed_by).toBe(user.id);
   });
 
@@ -48,7 +58,11 @@ describe("gift vouchers", () => {
     const { admin, code } = await issued(1);
     const user = await createUser(admin, "gift-extend");
     await grantAccess(admin, user.id); // manual access, some days ahead
-    const { data: sub } = await admin.from("subscriptions").select("current_period_end").eq("user_id", user.id).single();
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("current_period_end")
+      .eq("user_id", user.id)
+      .single();
     const db = await signedInClient(user);
     const { data: end, error } = await db.rpc("redeem_gift_voucher", { p_code: code });
     expect(error).toBeNull();
@@ -60,8 +74,12 @@ describe("gift vouchers", () => {
     const { admin, code } = await issued(1);
     await admin.from("gift_vouchers").update({ expires_at: "2020-01-01" }).eq("code", code);
     const db = await signedInClient(await createUser(admin, "gift-expired"));
-    expect((await db.rpc("redeem_gift_voucher", { p_code: code })).error?.message).toMatch(/expired/);
-    expect((await db.rpc("redeem_gift_voucher", { p_code: "NOPE" })).error?.message).toMatch(/not found/);
+    expect((await db.rpc("redeem_gift_voucher", { p_code: code })).error?.message).toMatch(
+      /expired/,
+    );
+    expect((await db.rpc("redeem_gift_voucher", { p_code: "NOPE" })).error?.message).toMatch(
+      /not found/,
+    );
     expect((await db.rpc("my_access")).data).toBe(false);
   });
 
@@ -76,7 +94,11 @@ describe("gift vouchers", () => {
     });
     const db = await signedInClient(user);
     expect((await db.rpc("redeem_gift_voucher", { p_code: code })).error?.message).toMatch(/paid/);
-    const { data: row } = await admin.from("gift_vouchers").select("redeemed_at").eq("code", code).single();
+    const { data: row } = await admin
+      .from("gift_vouchers")
+      .select("redeemed_at")
+      .eq("code", code)
+      .single();
     expect(row?.redeemed_at).toBeNull();
   });
 });
