@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { APP_NAV, activeNavHref, navHidden } from "@/lib/app-nav";
-import { brand } from "@/lib/brand";
+import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/cn";
 import { NAV_ICON } from "./nav-icons";
 
@@ -17,8 +17,8 @@ export function SidebarNav() {
       aria-label="Основна навигация"
       className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-8 border-r border-line bg-white px-4 py-8 lg:flex"
     >
-      <Link href="/app" className="px-3 text-2xl font-extrabold tracking-tight">
-        {brand.name}
+      <Link href="/app" className="px-3">
+        <Logo size="md" />
       </Link>
       <ul className="space-y-1">
         {APP_NAV.map((item) => {

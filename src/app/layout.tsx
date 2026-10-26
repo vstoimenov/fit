@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+import { Bad_Script, Manrope } from "next/font/google";
 import { Suspense } from "react";
 import { SwRegister } from "@/components/app/sw-register";
 import { VisitBeacon } from "@/components/app/visit-beacon";
@@ -10,6 +10,13 @@ const sans = Manrope({
   subsets: ["latin", "cyrillic"],
   weight: ["400", "600", "800"],
   variable: "--font-manrope",
+});
+
+// Handwritten accent: only the logo's „Strong" and a few notes on the public site.
+const script = Bad_Script({
+  subsets: ["latin", "cyrillic"],
+  weight: "400",
+  variable: "--font-script",
 });
 
 export const metadata: Metadata = {
@@ -28,7 +35,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="bg" className={sans.variable}>
+    <html lang="bg" className={`${sans.variable} ${script.variable}`}>
       <body className="min-h-dvh antialiased">
         {children}
         <Suspense>

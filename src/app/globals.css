@@ -22,6 +22,8 @@
   /* Manrope only. `font-display` stays as an alias so existing classes keep working. */
   --font-display: var(--font-manrope), system-ui, sans-serif;
   --font-sans: var(--font-manrope), system-ui, sans-serif;
+  /* Handwritten accent (Bad Script): the logo and at most a few notes on the public site. */
+  --font-script: var(--font-script), cursive;
 }
 
 html {
