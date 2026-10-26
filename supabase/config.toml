@@ -414,3 +414,20 @@ enabled = true
 # formatted with uppercase keywords, indent 2, max width 180, trailing commas,
 # and column/key alignment. Set to "null" to emit raw, unformatted SQL.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}"
+
+# Hosted project (info@iamstrong.bg): only the values that differ from local, applied with
+# `pnpm exec supabase config push --project-ref pogqujifjusfikwurwqe`.
+[remotes.production]
+project_id = "pogqujifjusfikwurwqe"
+
+[remotes.production.auth]
+site_url = "https://iamstrong.bg"
+additional_redirect_urls = ["https://iamstrong.bg/auth/callback", "https://www.iamstrong.bg/auth/callback"]
+
+[remotes.production.auth.email]
+# Keep the hosted rate limit; "1s" is only for local testing.
+max_frequency = "1m0s"
+
+[remotes.production.storage.vector]
+# Vector buckets are a paid-tier feature; keep them off on the hosted project.
+enabled = false
