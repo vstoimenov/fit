@@ -6,7 +6,7 @@ import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
 import { GIFT_OPTIONS, giftMonthsLabel } from "@/lib/site/gift";
-import { getSiteFlags, safeSiteLinks } from "@/server/site/content";
+import { getSiteFlags, getSiteLinks } from "@/server/site/content";
 
 export const metadata = {
   title: "Подари членство",
@@ -23,7 +23,7 @@ const INCLUDED = [
 
 /** Gift voucher showcase. Purchase arrives with the payments sub-project; until then „Скоро". */
 export default async function GiftPage() {
-  const [links, flags] = await Promise.all([safeSiteLinks(), getSiteFlags()]);
+  const [links, flags] = await Promise.all([getSiteLinks(), getSiteFlags()]);
   return (
     <>
       <SiteHeader showFounders={flags.showFounders} />

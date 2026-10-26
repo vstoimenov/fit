@@ -11,6 +11,11 @@ import { mapFreeWorkout, mapSiteLinks, type FreeWorkout, type SiteLinks } from "
 /**
  * Reads for the public site. Everything goes through the anon key with no cookies, so the
  * result is identical for every visitor and can live in the shared cache for an hour.
+ *
+ * The marketing pages must render even while the database is unreachable (a paused project, a
+ * network blip while Vercel prerenders). An error thrown inside a `"use cache"` scope fails the
+ * prerender even if the caller catches it, so each reader catches its own failure, returns a
+ * fallback and shortens the cache life to minutes, so the next revalidation retries soon.
  */
 function anonDb() {
   return createClient<Database>(
@@ -20,20 +25,36 @@ function anonDb() {
   );
 }
 
+function unavailable(label: string, error: unknown) {
+  // The shortest cacheLife call wins, so a failure is cached only briefly.
+  cacheLife("minutes");
+  console.error(`site: ${label} unavailable:`, error instanceof Error ? error.message : error);
+}
+
 export async function getFreeWorkout(): Promise<FreeWorkout | null> {
   "use cache";
   cacheLife("hours");
-  const { data, error } = await anonDb().rpc("public_free_workout");
-  if (error) throw new Error(`load free workout failed: ${error.message}`);
-  return mapFreeWorkout(data?.[0] ?? null);
+  try {
+    const { data, error } = await anonDb().rpc("public_free_workout");
+    if (error) throw new Error(error.message);
+    return mapFreeWorkout(data?.[0] ?? null);
+  } catch (error) {
+    unavailable("free workout", error);
+    return null;
+  }
 }
 
 export async function getSiteLinks(): Promise<SiteLinks> {
   "use cache";
   cacheLife("hours");
-  const { data, error } = await anonDb().rpc("public_site_links");
-  if (error) throw new Error(`load site links failed: ${error.message}`);
-  return mapSiteLinks(data);
+  try {
+    const { data, error } = await anonDb().rpc("public_site_links");
+    if (error) throw new Error(error.message);
+    return mapSiteLinks(data);
+  } catch (error) {
+    unavailable("site links", error);
+    return { trainerVideo: null, instagramUrl: null };
+  }
 }
 
 /**
@@ -51,27 +72,13 @@ export async function getSiteFlags(): Promise<{ showFounders: boolean; year: num
 export async function getPublicPlans(): Promise<PublicPlan[]> {
   "use cache";
   cacheLife("hours");
-  return fetchPublicPlans({
-    url: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
-    anonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  });
-}
-
-/**
- * The marketing pages must render even while the database is unreachable (a paused project, a
- * network blip at build time): the section simply falls back. A failed read is not cached by
- * `"use cache"`, so the next revalidation retries.
- */
-async function orFallback<T>(label: string, read: Promise<T>, fallback: T): Promise<T> {
   try {
-    return await read;
+    return await fetchPublicPlans({
+      url: clientEnv.NEXT_PUBLIC_SUPABASE_URL,
+      anonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    });
   } catch (error) {
-    console.error(`site: ${label} unavailable:`, error instanceof Error ? error.message : error);
-    return fallback;
+    unavailable("plans", error);
+    return [];
   }
 }
-
-export const safeFreeWorkout = () => orFallback("free workout", getFreeWorkout(), null);
-export const safeSiteLinks = () =>
-  orFallback<SiteLinks>("site links", getSiteLinks(), { trainerVideo: null, instagramUrl: null });
-export const safePublicPlans = () => orFallback<PublicPlan[]>("plans", getPublicPlans(), []);

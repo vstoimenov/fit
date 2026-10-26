@@ -17,12 +17,7 @@ import { Pricing } from "@/components/site/pricing";
 import { serverEnv } from "@/env";
 import { brand } from "@/lib/brand";
 import { faqJsonLd } from "@/lib/site/faq";
-import {
-  getSiteFlags,
-  safeFreeWorkout,
-  safePublicPlans,
-  safeSiteLinks,
-} from "@/server/site/content";
+import { getSiteFlags, getFreeWorkout, getPublicPlans, getSiteLinks } from "@/server/site/content";
 
 export const metadata = {
   title: { absolute: "I AM STRONG — тренировки у дома за 20 минути на ден" },
@@ -40,10 +35,10 @@ export const metadata = {
 /** The public home page. Signed-in members never reach it: the proxy sends them to /app. */
 export default async function HomePage() {
   const [freeWorkout, links, flags, plans] = await Promise.all([
-    safeFreeWorkout(),
-    safeSiteLinks(),
+    getFreeWorkout(),
+    getSiteLinks(),
     getSiteFlags(),
-    safePublicPlans(),
+    getPublicPlans(),
   ]);
   return (
     <>
