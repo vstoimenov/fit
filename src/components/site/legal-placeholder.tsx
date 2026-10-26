@@ -1,5 +1,5 @@
 import { brand } from "@/lib/brand";
-import { getSiteFlags, getSiteLinks } from "@/server/site/content";
+import { getSiteFlags, safeSiteLinks } from "@/server/site/content";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 import { DISPLAY, WRAP } from "./styles";
@@ -9,7 +9,7 @@ import { DISPLAY, WRAP } from "./styles";
  * Better than a 404 behind the footer links and the consent checkbox.
  */
 export async function LegalPlaceholder({ title }: { title: string }) {
-  const [links, flags] = await Promise.all([getSiteLinks(), getSiteFlags()]);
+  const [links, flags] = await Promise.all([safeSiteLinks(), getSiteFlags()]);
   return (
     <>
       <SiteHeader showFounders={flags.showFounders} />

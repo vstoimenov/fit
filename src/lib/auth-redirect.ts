@@ -1,6 +1,6 @@
 const PROTECTED = [/^\/app(\/|$)/, /^\/admin(\/|$)/];
 /** Marketing pages a signed-in member never sees: she goes straight to the app. */
-const MARKETING = new Set(["/", "/osnovatelki", "/login"]);
+const MARKETING = new Set(["/", "/landing", "/login"]);
 
 /** Optimistic redirect decided in the proxy; real checks live in requireUser() and RLS. */
 export function decideAuthRedirect(input: {

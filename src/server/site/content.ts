@@ -56,3 +56,22 @@ export async function getPublicPlans(): Promise<PublicPlan[]> {
     anonKey: clientEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   });
 }
+
+/**
+ * The marketing pages must render even while the database is unreachable (a paused project, a
+ * network blip at build time): the section simply falls back. A failed read is not cached by
+ * `"use cache"`, so the next revalidation retries.
+ */
+async function orFallback<T>(label: string, read: Promise<T>, fallback: T): Promise<T> {
+  try {
+    return await read;
+  } catch (error) {
+    console.error(`site: ${label} unavailable:`, error instanceof Error ? error.message : error);
+    return fallback;
+  }
+}
+
+export const safeFreeWorkout = () => orFallback("free workout", getFreeWorkout(), null);
+export const safeSiteLinks = () =>
+  orFallback<SiteLinks>("site links", getSiteLinks(), { trainerVideo: null, instagramUrl: null });
+export const safePublicPlans = () => orFallback<PublicPlan[]>("plans", getPublicPlans(), []);

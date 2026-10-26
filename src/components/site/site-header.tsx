@@ -62,7 +62,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
         <div className="flex items-center gap-2">
           {showFounders && (
             <Link
-              href="/osnovatelki"
+              href="/landing"
               className="hidden min-h-11 items-center px-2 text-[15px] font-semibold text-rose-deep underline-offset-4 hover:underline sm:inline-flex"
             >
               Основателки
@@ -119,7 +119,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
           ))}
           {showFounders && (
             <Link
-              href="/osnovatelki"
+              href="/landing"
               onClick={closeMenu}
               className="rounded-xl px-3 py-4 text-2xl font-extrabold tracking-[-0.02em] text-rose-deep hover:bg-sand"
             >

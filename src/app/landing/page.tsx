@@ -18,7 +18,7 @@ export const metadata = {
   title: { absolute: "I AM STRONG · онлайн клубът на Аксения" },
   description:
     "Силно тяло. 20 минути на ден. Без зала. Онлайн клубът на Аксения Михайлова за заети жени и майки.",
-  alternates: { canonical: "/osnovatelki" },
+  alternates: { canonical: "/landing" },
 };
 
 const wrap = "mx-auto max-w-[1200px] px-[18px] sm:px-8";

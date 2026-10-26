@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { CTA, CTA_PRIMARY, DISPLAY, WRAP } from "@/components/site/styles";
 import { VideoFacade } from "@/components/site/video-facade";
-import { getFreeWorkout, getSiteFlags, getSiteLinks } from "@/server/site/content";
+import { getSiteFlags, safeFreeWorkout, safeSiteLinks } from "@/server/site/content";
 
 export const metadata = {
   title: "Безплатна тренировка",
@@ -14,8 +14,8 @@ export const metadata = {
 /** The free workout, reached from the e-mail a lead receives. No form here. */
 export default async function FreeWorkoutPage() {
   const [workout, links, flags] = await Promise.all([
-    getFreeWorkout(),
-    getSiteLinks(),
+    safeFreeWorkout(),
+    safeSiteLinks(),
     getSiteFlags(),
   ]);
   if (!workout) notFound();

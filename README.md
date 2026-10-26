@@ -167,7 +167,7 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
    (`src/components/site/legal-placeholder.tsx`) — replace it with the final documents.
 7. **Public site (`/`):**
    - `LEADS_SALT` must be set (the server refuses to start without it); `BREVO_LEADS_LIST_ID` is optional.
-   - Ads and bio links must point to `/osnovatelki` (the founders landing moved there); `/` is the home page.
+   - Ads and bio links must point to `/landing` (the founders landing moved there); `/` is the home page.
    - Stripe prices for the base plans are €29 / month and €257 / year (`plans.price_cents` = 2900 / 25700):
      create matching Stripe prices and store their ids in `plans.provider_price_ids`.
    - In `/admin/settings` → „Сайт“ set the trainer's 60-second video URL and the Instagram profile; both are
