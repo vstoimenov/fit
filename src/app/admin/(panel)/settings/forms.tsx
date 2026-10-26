@@ -5,6 +5,7 @@ import { Field, inputClass } from "@/components/ui/field";
 import type { Settings } from "@/lib/admin/settings";
 import {
   saveCommunityAction,
+  saveSiteLinksAction,
   savePlanAction,
   saveProviderAction,
   saveRiskAction,
@@ -207,6 +208,41 @@ export function SettingsForms({ settings, plans }: { settings: Settings; plans: 
               type="url"
               defaultValue={settings.community_url}
               placeholder="https://"
+              maxLength={300}
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+        </ActionForm>
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-semibold">Сайт</h2>
+        <ActionForm
+          action={saveSiteLinksAction}
+          submitLabel="Запази"
+          className="max-w-xl space-y-3"
+        >
+          <Field
+            label="Видео на Аксения (60 секунди)"
+            hint="YouTube или Vimeo линк за бутона „Чуй я за 60 секунди“ на началната страница. Празно = няма бутон."
+          >
+            <input
+              name="trainerVideoUrl"
+              type="url"
+              defaultValue={settings.trainer_video_url}
+              placeholder="https://"
+              maxLength={300}
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Instagram" hint="Профилът в Instagram, показва се в долния край на сайта.">
+            <input
+              name="instagramUrl"
+              type="url"
+              defaultValue={settings.instagram_url}
+              placeholder="https://instagram.com/…"
               maxLength={300}
               autoComplete="off"
               className={inputClass}

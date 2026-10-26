@@ -1228,6 +1228,17 @@ export type Database = {
         Args: { p_level: Database["public"]["Enums"]["workout_level"] };
         Returns: string;
       };
+      public_free_workout: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          duration_min: number;
+          id: string;
+          thumbnail_url: string;
+          title: string;
+          video_url: string;
+        }[];
+      };
+      public_site_links: { Args: Record<PropertyKey, never>; Returns: Json };
     };
     Enums: {
       activity_level: "sedentary" | "light" | "moderate" | "active";

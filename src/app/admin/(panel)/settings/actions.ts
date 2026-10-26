@@ -50,6 +50,13 @@ export async function saveCommunityAction(_prev: unknown, form: FormData) {
   return run((db) => saveSetting(db, "community_url", formString(form, "communityUrl")));
 }
 
+export async function saveSiteLinksAction(_prev: unknown, form: FormData) {
+  return run(async (db) => {
+    await saveSetting(db, "trainer_video_url", formString(form, "trainerVideoUrl"));
+    await saveSetting(db, "instagram_url", formString(form, "instagramUrl"));
+  });
+}
+
 export async function saveTemplatesAction(_prev: unknown, form: FormData) {
   return run((db) =>
     saveSetting(db, "email_templates", {

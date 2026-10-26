@@ -26,7 +26,14 @@ export const SETTINGS = {
     nudgeSubject: z.string().trim().min(1, "Нужна е тема").max(150),
     nudgeBody: z.string().trim().min(1, "Нужен е текст").max(4000),
   }),
-  community_url: z.union(
+  community_url: httpsUrlOrEmpty(),
+  // Public site: the trainer's 60-second video and the Instagram profile (empty = hidden).
+  trainer_video_url: httpsUrlOrEmpty(),
+  instagram_url: httpsUrlOrEmpty(),
+} as const;
+
+function httpsUrlOrEmpty() {
+  return z.union(
     [
       z.literal(""),
       z
@@ -36,8 +43,8 @@ export const SETTINGS = {
         .regex(/^https:\/\/\S+$/, "Адресът трябва да започва с https://"),
     ],
     "Адресът трябва да започва с https://",
-  ),
-} as const;
+  );
+}
 
 export type SettingKey = keyof typeof SETTINGS;
 export type SettingValue<K extends SettingKey> = z.infer<(typeof SETTINGS)[K]>;
@@ -53,6 +60,8 @@ export const SETTING_DEFAULTS: Settings = {
       "Здравей, {{name}}!\n\nНе сме те виждали от няколко дни. Днешната тренировка те чака — 20 минути стигат.\n\nДо скоро!",
   },
   community_url: "",
+  trainer_video_url: "",
+  instagram_url: "",
 };
 
 export function parseSetting<K extends SettingKey>(key: K, raw: unknown): SettingValue<K> {
