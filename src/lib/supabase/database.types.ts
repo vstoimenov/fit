@@ -717,6 +717,8 @@ export type Database = {
           phone: string | null;
           phone_call_consent: boolean;
           problems: string[];
+          push_hour: number | null;
+          push_reminded_on: string | null;
           role: Database["public"]["Enums"]["user_role"];
           starter_week_done_at: string | null;
           target_weight_kg: number | null;
@@ -751,6 +753,8 @@ export type Database = {
           phone?: string | null;
           phone_call_consent?: boolean;
           problems?: string[];
+          push_hour?: number | null;
+          push_reminded_on?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           starter_week_done_at?: string | null;
           target_weight_kg?: number | null;
@@ -784,6 +788,8 @@ export type Database = {
           phone?: string | null;
           phone_call_consent?: boolean;
           problems?: string[];
+          push_hour?: number | null;
+          push_reminded_on?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           starter_week_done_at?: string | null;
           target_weight_kg?: number | null;
@@ -820,6 +826,90 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "progress_photos_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      push_sends: {
+        Row: {
+          body: string;
+          created_at: string;
+          created_by: string | null;
+          id: string;
+          kind: string;
+          recipients: number;
+          title: string;
+          url: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          body: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          kind: string;
+          recipients?: number;
+          title: string;
+          url?: string | null;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          created_by?: string | null;
+          id?: string;
+          kind?: string;
+          recipients?: number;
+          title?: string;
+          url?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_sends_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      push_subscriptions: {
+        Row: {
+          auth: string;
+          created_at: string;
+          endpoint: string;
+          id: string;
+          last_used_at: string | null;
+          p256dh: string;
+          user_agent: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          auth: string;
+          created_at?: string;
+          endpoint: string;
+          id?: string;
+          last_used_at?: string | null;
+          p256dh: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Update: {
+          auth?: string;
+          created_at?: string;
+          endpoint?: string;
+          id?: string;
+          last_used_at?: string | null;
+          p256dh?: string;
+          user_agent?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey";
             columns: ["user_id"];
             isOneToOne: false;
             referencedRelation: "profiles";

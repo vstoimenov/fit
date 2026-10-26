@@ -4,6 +4,8 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
 import { HealthSyncCard } from "@/components/profile/health-sync-card";
+import { PushCard } from "@/components/profile/push-card";
+import { clientEnv } from "@/env";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { GOALS, LEVEL_LABEL, PROBLEMS } from "@/lib/labels";
@@ -37,7 +39,7 @@ async function Profile() {
     supabase
       .from("profiles")
       .select(
-        "name, email, level, weight_kg, target_weight_kg, height_cm, goal, problems, phone, phone_call_consent, marketing_consent",
+        "name, email, level, weight_kg, target_weight_kg, height_cm, goal, problems, phone, phone_call_consent, marketing_consent, push_hour",
       )
       .eq("id", user.id)
       .single(),
@@ -132,6 +134,10 @@ async function Profile() {
             </Card>
           )}
 
+          <PushCard
+            pushHour={profile?.push_hour ?? null}
+            publicKey={clientEnv.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY ?? null}
+          />
           <HealthSyncCard />
 
           <Card className="space-y-4 p-5">

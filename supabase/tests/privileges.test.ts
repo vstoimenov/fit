@@ -10,6 +10,8 @@ const TABLES = [
   "workout_media",
   "plans",
   "subscriptions",
+  "push_sends",
+  "push_subscriptions",
   "workout_completions",
   "workout_watches",
   "check_ins",

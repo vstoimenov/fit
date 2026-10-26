@@ -32,6 +32,13 @@ export const serverEnvSchema = z.object({
   LEADS_SALT: z.string().min(16),
   // Optional: the Brevo list that receives leads from the free workout form (numeric id).
   BREVO_LEADS_LIST_ID: optionalFromEnv(z.string().regex(/^\d+$/, "numeric Brevo list id")),
+  // Optional: Web Push (VAPID). Without all three the notifications card says „скоро" and nothing sends.
+  // Generate once with `npx web-push generate-vapid-keys`; the public key is also NEXT_PUBLIC_….
+  WEB_PUSH_PUBLIC_KEY: trimmedOptional(z.string().min(32)),
+  WEB_PUSH_PRIVATE_KEY: trimmedOptional(z.string().min(32)),
+  WEB_PUSH_SUBJECT: trimmedOptional(z.string().regex(/^(mailto:|https:)/, "mailto: or https:")),
+  // Optional: shared secret Vercel Cron sends as `Authorization: Bearer …` to /api/cron/push.
+  CRON_SECRET: trimmedOptional(z.string().min(16)),
   // Optional, temporary testing only: the exact public tunnel host on which testers sign in
   // without a password into their own fresh account (see src/app/dev/login/route.ts). Unset = off.
   TEST_SHARE_HOST: optionalFromEnv(z.string().min(1)),
@@ -42,6 +49,8 @@ export const clientEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   // "1" shows the Google button; needs the Google provider configured in Supabase.
   NEXT_PUBLIC_GOOGLE_AUTH: z.enum(["0", "1"]).default("0"),
+  // Optional: the VAPID public key the browser subscribes with (same value as WEB_PUSH_PUBLIC_KEY).
+  NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY: trimmedOptional(z.string().min(32)),
 });
 
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
