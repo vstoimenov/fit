@@ -22,7 +22,8 @@ const script = Bad_Script({
 export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
-  icons: { apple: "/pwa-icon/180" },
+  // Browser tab: src/app/icon.tsx; home screen: the pwa-icon route (also used by the manifest).
+  icons: { icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }], apple: "/pwa-icon/180" },
   appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: "default" },
 };
 
