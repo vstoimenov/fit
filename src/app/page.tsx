@@ -1,6 +1,8 @@
 import { FactsStrip } from "@/components/site/facts-strip";
 import { FinalCta } from "@/components/site/final-cta";
 import { Hero } from "@/components/site/hero";
+import { HowItWorks } from "@/components/site/how-it-works";
+import { InsideTabs } from "@/components/site/inside-tabs";
 import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { Situations } from "@/components/site/situations";
@@ -28,7 +30,9 @@ export default async function HomePage() {
         <Hero hasFreeWorkout={freeWorkout !== null} />
         <FactsStrip />
         <Situations />
+        <HowItWorks />
         {freeWorkout && <TryWorkout workout={freeWorkout} />}
+        <InsideTabs />
         <FinalCta />
       </main>
       <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />
