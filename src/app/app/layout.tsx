@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { BottomNav } from "@/components/app/bottom-nav";
 import { HideOnPlayer } from "@/components/app/hide-on-player";
+import { InstallPrompt } from "@/components/app/install-prompt";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { pastDueNotice } from "@/lib/subscription-text";
 import { createServerSupabaseClient } from "@/server/db/server";
@@ -60,6 +61,9 @@ async function AppGate({ children }: { children: React.ReactNode }) {
         </div>
       </div>
       <BottomNav />
+      <HideOnPlayer>
+        <InstallPrompt />
+      </HideOnPlayer>
     </div>
   );
 }
