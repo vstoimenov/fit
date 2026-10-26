@@ -123,7 +123,7 @@ export function TimePlanCalculator() {
             href={`/start?minutes=${plan.minutes}&days=${plan.days}`}
             className={`${CTA} ${CTA_PRIMARY} mt-8`}
           >
-            Вземи плана си <span aria-hidden>→</span>
+            Вземи плана си
           </Link>
         </div>
       </div>

@@ -43,7 +43,7 @@ export default async function FreeWorkoutPage() {
             Хареса ли ти? Във въпросника получаваш план с още такива.
           </p>
           <Link href="/start" className={`${CTA} ${CTA_PRIMARY}`}>
-            Вземи плана си <span aria-hidden>→</span>
+            Вземи плана си
           </Link>
         </div>
       </main>

@@ -1,9 +1,11 @@
 "use client";
 
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/ui/logo";
 import { cn } from "@/lib/cn";
+import { ScrollProgress } from "./scroll-progress";
 
 // Absolute hashes, so the links also work from /podari, /trenirovka and the legal pages.
 const LINKS = [
@@ -42,6 +44,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
         solid ? "border-b border-line bg-white" : "bg-transparent",
       )}
     >
+      <ScrollProgress />
       <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-6 py-4 lg:px-10">
         <Link href="/" className="shrink-0">
           <Logo size="md" />
@@ -83,10 +86,11 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
           <button
             type="button"
             onClick={() => menu.current?.showModal()}
-            className={cn(BTN, "bg-ink text-white lg:hidden")}
+            className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink lg:hidden"
             aria-haspopup="dialog"
+            aria-label="Меню"
           >
-            Меню
+            <Menu size={26} strokeWidth={2.2} aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -101,9 +105,10 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
           <button
             type="button"
             onClick={closeMenu}
-            className={cn(BTN, "border-[1.5px] border-ink text-ink")}
+            className="inline-flex size-11 items-center justify-center rounded-full text-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            aria-label="Затвори менюто"
           >
-            Затвори
+            <X size={26} strokeWidth={2.2} aria-hidden="true" />
           </button>
         </div>
         <nav aria-label="Секции" className="flex flex-col gap-1 px-6 pt-6">
@@ -133,7 +138,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
             onClick={closeMenu}
             className={cn(BTN, "min-h-14 bg-ink text-lg text-white")}
           >
-            Започни безплатно →
+            Започни безплатно
           </Link>
           <Link
             href="/login"

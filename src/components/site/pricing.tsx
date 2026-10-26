@@ -78,7 +78,7 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
               )}
             </div>
             <Link href="/start" className={`${CTA} bg-white text-ink hover:bg-sand`}>
-              Започни <span aria-hidden>→</span>
+              Започни
             </Link>
           </div>
         )}

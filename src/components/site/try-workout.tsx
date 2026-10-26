@@ -64,7 +64,7 @@ export function TryWorkout({ workout }: { workout: FreeWorkout }) {
                   Хареса ли ти? Във въпросника получаваш план с още такива.
                 </p>
                 <Link href="/start" className={`${CTA} ${CTA_SECONDARY} w-fit`}>
-                  Вземи плана си <span aria-hidden>→</span>
+                  Вземи плана си
                 </Link>
               </div>
             ) : (

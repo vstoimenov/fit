@@ -14,6 +14,7 @@ import { TryWorkout } from "@/components/site/try-workout";
 import { Faq } from "@/components/site/faq";
 import { JsonLd } from "@/components/site/json-ld";
 import { Pricing } from "@/components/site/pricing";
+import { ScrollReveal } from "@/components/site/scroll-reveal";
 import { serverEnv } from "@/env";
 import { brand } from "@/lib/brand";
 import { faqJsonLd } from "@/lib/site/faq";
@@ -56,16 +57,38 @@ export default async function HomePage() {
       <main>
         <Hero hasFreeWorkout={freeWorkout !== null} />
         <FactsStrip />
-        <Situations />
-        <HowItWorks />
-        {freeWorkout && <TryWorkout workout={freeWorkout} />}
-        <InsideTabs />
-        <TimePlanCalculator />
-        <Trainer video={links.trainerVideo} />
-        <First14 />
-        <Pricing plans={plans} />
-        <Faq />
-        <FinalCta />
+        <ScrollReveal>
+          <Situations />
+        </ScrollReveal>
+        <ScrollReveal>
+          <HowItWorks />
+        </ScrollReveal>
+        {freeWorkout && (
+          <ScrollReveal>
+            <TryWorkout workout={freeWorkout} />
+          </ScrollReveal>
+        )}
+        <ScrollReveal>
+          <InsideTabs />
+        </ScrollReveal>
+        <ScrollReveal>
+          <TimePlanCalculator />
+        </ScrollReveal>
+        <ScrollReveal>
+          <Trainer video={links.trainerVideo} />
+        </ScrollReveal>
+        <ScrollReveal>
+          <First14 />
+        </ScrollReveal>
+        <ScrollReveal>
+          <Pricing plans={plans} />
+        </ScrollReveal>
+        <ScrollReveal>
+          <Faq />
+        </ScrollReveal>
+        <ScrollReveal>
+          <FinalCta />
+        </ScrollReveal>
       </main>
       <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />
       <StickyCta />

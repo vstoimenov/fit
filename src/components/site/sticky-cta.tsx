@@ -42,7 +42,7 @@ export function StickyCta() {
           tabIndex={visible ? 0 : -1}
           className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-ink text-base font-bold text-white"
         >
-          Започни безплатно <span aria-hidden>→</span>
+          Започни безплатно
         </Link>
         <Link
           href="/login"

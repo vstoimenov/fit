@@ -48,6 +48,20 @@
   }
 }
 
+/* Scroll reveals on the public site: added by ScrollReveal only after hydration, never for
+   visitors who prefer reduced motion. */
+.site-pre-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 0.6s ease-out,
+    transform 0.6s ease-out;
+}
+.site-pre-reveal.site-revealed {
+  opacity: 1;
+  transform: none;
+}
+
 html {
   -webkit-tap-highlight-color: transparent;
 }

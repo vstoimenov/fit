@@ -1,8 +1,13 @@
+import { Check } from "lucide-react";
 import { WRAP } from "./styles";
 
-const FACTS = ["20 минути", "3 нива", "вкъщи, с килимче", "с Аксения на живо всяка седмица"];
+const FACTS = [
+  "Нови тренировки всяка седмица",
+  "Лекция всеки месец с Аксения и гост-лектори",
+  "Доказана методика: 3 нива, стартова седмица, план ден по ден",
+];
 
-/** Four plain facts under the hero. Horizontal snap scroll on phones, one row on desktop. */
+/** Three proof points under the hero. Horizontal snap scroll on phones, one row on desktop. */
 export function FactsStrip() {
   return (
     <section aria-label="Накратко" className="border-y border-line">
@@ -11,7 +16,9 @@ export function FactsStrip() {
       >
         {FACTS.map((fact) => (
           <li key={fact} className="flex snap-start items-center gap-3">
-            <span aria-hidden className="size-2 shrink-0 rounded-full bg-powder" />
+            <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-powder text-ink">
+              <Check size={14} strokeWidth={3} aria-hidden="true" />
+            </span>
             {fact}
           </li>
         ))}

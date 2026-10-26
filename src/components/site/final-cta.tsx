@@ -15,7 +15,7 @@ export function FinalCta() {
         </h2>
         <div className="flex flex-col gap-3">
           <Link href="/start" className={`${CTA} ${CTA_WHITE}`}>
-            Започни безплатно <span aria-hidden>→</span>
+            Започни безплатно
           </Link>
           <p className="font-script -rotate-2 pl-2 text-2xl text-powder">
             първата тренировка е без карта
