@@ -11,6 +11,7 @@ const TABLES = [
   "plans",
   "subscriptions",
   "workout_completions",
+  "workout_watches",
   "check_ins",
   "visits",
   "audit_log",

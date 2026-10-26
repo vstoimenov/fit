@@ -13,6 +13,7 @@ import {
 } from "@/lib/program/library-filter";
 import { requireUser } from "@/server/auth/require-user";
 import { getMemberPointsOrNull } from "@/server/content/points";
+import { listWatchedIds } from "@/server/content/watches";
 import { getLibrary } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировки" };
@@ -78,11 +79,13 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
   await connection();
   const filter = parseLibraryFilter(await searchParams);
   const { supabase, user } = await requireUser();
-  const [{ level, workouts }, { data: hasAccess, error: accessError }, points] = await Promise.all([
-    getLibrary(supabase, user.id),
-    supabase.rpc("my_access"),
-    getMemberPointsOrNull(supabase, user.id),
-  ]);
+  const [{ level, workouts }, { data: hasAccess, error: accessError }, points, watchedIds] =
+    await Promise.all([
+      getLibrary(supabase, user.id),
+      supabase.rpc("my_access"),
+      getMemberPointsOrNull(supabase, user.id),
+      listWatchedIds(supabase, user.id),
+    ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
   const shown = filterLibrary(workouts, filter);
 
@@ -118,6 +121,7 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
               workout={w}
               locked={!hasAccess && w.kind !== "free"}
               unlockLevel={points ? exclusiveLockLevel(w.minMemberLevel, points.level) : null}
+              watched={watchedIds.has(w.id)}
             />
           ))}
         </div>

@@ -38,7 +38,7 @@ describe("getWorkoutForPlayer", () => {
     const db = await signedInClient(await createUser(admin, "player"));
     const free = await getWorkoutForPlayer(db, freeId);
     expect(free?.state).toBe("ok");
-    expect(free?.state === "ok" && free.embedUrl).toMatch(
+    expect(free?.state === "ok" && free.video.embedUrl).toMatch(
       /^https:\/\/www\.youtube-nocookie\.com\/embed\//,
     );
     const paid = await getWorkoutForPlayer(db, paidId);

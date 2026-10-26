@@ -1,16 +1,20 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { completeWorkout, rateWorkout } from "@/app/app/workout/[id]/actions";
+import { completeWorkout, rateWorkout, setWorkoutWatched } from "@/app/app/workout/[id]/actions";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { cn } from "@/lib/cn";
 import { LEVEL_LABEL, type FEELING_LABEL } from "@/lib/labels";
 import type { CompletionPoints } from "@/lib/points/copy";
+import type { VideoRef } from "@/lib/video/parse-video-url";
+import { countsTime, unlockThreshold } from "@/lib/video/player-time";
 import type { CompletionStats } from "@/server/content/completion";
 import type { WorkoutSummary } from "@/server/content/today";
 import { AfterWorkout } from "./after-workout";
+import { YouTubePlayer } from "./youtube-player";
 
 interface Completed {
   completionId: string;
@@ -19,41 +23,52 @@ interface Completed {
 }
 
 /**
- * „Завърших" unlocks after `unlockAfterSec` of visible playback time (70% of the
- * workout length). Time only counts while the tab is visible.
+ * „Завърших" unlocks after `unlockAfterSec` of watched time (70% of the typed workout length,
+ * capped at 70% of the real video once known). A YouTube video counts only while it plays and the
+ * tab is visible; the other embeds cannot report playback, so they count while the tab is visible. „Гледано" is her own mark, separate from the
+ * points-earning completion: set by hand, when the video ends, or by the completion itself.
  */
 export function Player({
   workout,
-  embedUrl,
+  video,
+  watched,
   first,
   unlockAfterSec,
   name,
 }: {
   workout: WorkoutSummary;
-  embedUrl: string;
+  video: VideoRef;
+  watched: boolean;
   first: boolean;
   unlockAfterSec: number;
   /** First name for the celebration; null when she has none. */
   name: string | null;
 }) {
   const [elapsed, setElapsed] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  // Real length from YouTube; 0 until known (the other embeds never report it).
+  const [videoSeconds, setVideoSeconds] = useState(0);
   const [completed, setCompleted] = useState<Completed | null>(null);
   const [error, setError] = useState("");
   // The ref blocks a second tap in the same tick; state disables the button for the user.
   const busy = useRef(false);
   const [pending, setPending] = useState(false);
+  const [mark, setMark] = useState(watched);
+  const markBusy = useRef(false);
   // Ratings are sent one after another so a quick change of mind cannot land out of order.
   const ratings = useRef<Promise<unknown>>(Promise.resolve());
 
   useEffect(() => {
     const timer = setInterval(() => {
-      if (document.visibilityState === "visible") setElapsed((s) => s + 1);
+      const visible = document.visibilityState === "visible";
+      if (countsTime(video.provider, { playing, visible })) setElapsed((s) => s + 1);
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [video.provider, playing]);
 
-  const unlocked = elapsed >= unlockAfterSec;
-  const remainingMin = Math.max(1, Math.ceil((unlockAfterSec - elapsed) / 60));
+  const threshold = unlockThreshold(unlockAfterSec, videoSeconds);
+  const unlocked = elapsed >= threshold;
+  const remainingMin = Math.max(1, Math.ceil((threshold - elapsed) / 60));
 
   async function finish() {
     if (busy.current) return;
@@ -66,12 +81,34 @@ export function Player({
         setError(result.message);
         return;
       }
+      // The database marks a completed workout as watched too.
+      setMark(true);
       setCompleted(result.data);
     } catch {
       setError("Нещо се обърка. Опитай отново.");
     } finally {
       busy.current = false;
       setPending(false);
+    }
+  }
+
+  /** Optimistic: the mark flips at once and flips back if the server says no. */
+  async function setWatched(next: boolean) {
+    if (markBusy.current || next === mark) return;
+    markBusy.current = true;
+    setMark(next);
+    setError("");
+    try {
+      const result = await setWorkoutWatched(workout.id, next);
+      if (!result.ok) {
+        setMark(!next);
+        setError(result.message);
+      }
+    } catch {
+      setMark(!next);
+      setError("Нещо се обърка. Опитай отново.");
+    } finally {
+      markBusy.current = false;
     }
   }
 
@@ -106,15 +143,28 @@ export function Player({
         Назад
       </Link>
       <div className="lg:grid lg:grid-cols-5 lg:items-start lg:gap-8">
-        <div className="aspect-video w-full overflow-hidden bg-black lg:col-span-3 lg:rounded-2xl">
-          <iframe
-            src={embedUrl}
-            title={workout.title}
-            className="h-full w-full"
-            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
+        <div className="w-full overflow-hidden bg-ink lg:col-span-3 lg:rounded-2xl">
+          {video.provider === "youtube" ? (
+            <YouTubePlayer
+              videoId={video.id}
+              title={workout.title}
+              focus={workout.focus[0] ?? null}
+              onPlayingChange={setPlaying}
+              onEnded={() => void setWatched(true)}
+              onDuration={setVideoSeconds}
+            />
+          ) : (
+            <div className="aspect-video w-full">
+              <iframe
+                src={video.embedUrl}
+                title={workout.title}
+                className="h-full w-full"
+                allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+                allowFullScreen
+                referrerPolicy="strict-origin-when-cross-origin"
+              />
+            </div>
+          )}
         </div>
         <section className="space-y-5 px-5 pb-6 pt-5 lg:col-span-2 lg:px-0 lg:pt-0">
           <div className="space-y-3">
@@ -133,6 +183,23 @@ export function Player({
             <Button onClick={finish} disabled={!unlocked || pending} className="w-full">
               {unlocked ? "Завърших тренировката" : `Завърших (след ~${remainingMin} мин)`}
             </Button>
+            <Button
+              variant="secondary"
+              onClick={() => void setWatched(!mark)}
+              aria-pressed={mark}
+              className={cn("w-full", mark && "text-moss ring-moss")}
+            >
+              <Check
+                size={18}
+                strokeWidth={2.5}
+                aria-hidden="true"
+                className={mark ? undefined : "opacity-40"}
+              />
+              {mark ? "Гледано" : "Отбележи като гледано"}
+            </Button>
+            <p className="text-center text-xs text-ink-soft">
+              „Гледано“ е бележка за теб. Точки печелиш със „Завърших“.
+            </p>
             {error && (
               <p role="alert" className="text-center text-sm font-semibold text-brick">
                 {error}
