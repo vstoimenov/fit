@@ -11,17 +11,37 @@ export type Lead = {
 
 const COLUMNS = "id, name, email, source, marketing_consent_at, created_at";
 
-/** Newest leads first; `q` narrows by e-mail (case-insensitive substring). RLS: admins only. */
-export async function listLeads(db: TypedClient, q: string | null, limit = 500): Promise<Lead[]> {
+export const LEADS_PAGE_SIZE = 100;
+
+/**
+ * One page of leads, newest first; `q` narrows by e-mail (case-insensitive substring). Asks for
+ * one row beyond the page so the caller knows whether a next page exists. RLS: admins only.
+ */
+export async function listLeads(
+  db: TypedClient,
+  q: string | null,
+  { page = 1, pageSize = LEADS_PAGE_SIZE }: { page?: number; pageSize?: number } = {},
+): Promise<{ rows: Lead[]; hasMore: boolean }> {
+  const from = (Math.max(1, page) - 1) * pageSize;
   let query = db
     .from("leads")
     .select(COLUMNS)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(from, from + pageSize);
   if (q) query = query.ilike("email", `%${q.replace(/[%_\\]/g, "\\$&")}%`);
   const { data, error } = await query;
   if (error) throw new Error(`load leads failed: ${error.message}`);
-  return data;
+  return { rows: data.slice(0, pageSize), hasMore: data.length > pageSize };
+}
+
+/** Every lead, for the CSV export: walks the pages so PostgREST's row cap never truncates it. */
+export async function listAllLeads(db: TypedClient, pageSize = 1000): Promise<Lead[]> {
+  const all: Lead[] = [];
+  for (let page = 1; ; page++) {
+    const { rows, hasMore } = await listLeads(db, null, { page, pageSize });
+    all.push(...rows);
+    if (!hasMore) return all;
+  }
 }
 
 /** Leads created in the last 7 days, for the dashboard tile. */

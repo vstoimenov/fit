@@ -15,6 +15,8 @@ describe("addBrevoContact", () => {
     const [url, init] = fetchImpl.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://api.brevo.com/v3/contacts");
     expect((init.headers as Record<string, string>)["api-key"]).toBe("key");
+    // A hung Brevo must not hold the serverless function open.
+    expect(init.signal).toBeInstanceOf(AbortSignal);
     expect(JSON.parse(init.body as string)).toEqual({
       email: "maria@example.com",
       updateEnabled: true,

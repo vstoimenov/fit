@@ -42,3 +42,34 @@ export async function isWatched(
   if (error) throw new Error(`read watch failed: ${error.message}`);
   return data !== null;
 }
+
+/** Display-only read: a failed read logs and shows nothing watched instead of failing the page. */
+export async function listWatchedIdsOrEmpty(db: TypedClient, userId: string): Promise<Set<string>> {
+  try {
+    return await listWatchedIds(db, userId);
+  } catch (error) {
+    console.error(
+      "watched list failed",
+      { userId },
+      error instanceof Error ? error.message : error,
+    );
+    return new Set();
+  }
+}
+
+export async function isWatchedOrFalse(
+  db: TypedClient,
+  userId: string,
+  workoutId: string,
+): Promise<boolean> {
+  try {
+    return await isWatched(db, userId, workoutId);
+  } catch (error) {
+    console.error(
+      "watched read failed",
+      { userId },
+      error instanceof Error ? error.message : error,
+    );
+    return false;
+  }
+}

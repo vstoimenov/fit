@@ -79,7 +79,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
           </Link>
           <Link
             href="/start"
-            className={cn(BTN, "hidden bg-ink text-white hover:bg-[#2A2A2A] sm:inline-flex")}
+            className={cn(BTN, "hidden bg-ink text-white hover:bg-ink/85 sm:inline-flex")}
           >
             Започни
           </Link>

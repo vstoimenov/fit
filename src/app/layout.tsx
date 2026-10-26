@@ -16,7 +16,7 @@ const sans = Manrope({
 const script = Bad_Script({
   subsets: ["latin", "cyrillic"],
   weight: "400",
-  variable: "--font-script",
+  variable: "--font-bad-script",
 });
 
 export const metadata: Metadata = {

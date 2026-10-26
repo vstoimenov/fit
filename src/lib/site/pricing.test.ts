@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { GIFT_OPTIONS } from "./gift";
 import { pickPlan, yearlySavings } from "./pricing";
+import { nextPeriod } from "./pricing";
 
 const month = {
   id: "m",
@@ -47,5 +48,21 @@ describe("GIFT_OPTIONS", () => {
       [12, 25700],
     ]);
     expect(GIFT_OPTIONS[1].regularCents).toBe(8700);
+  });
+});
+
+describe("nextPeriod", () => {
+  it("moves with the arrow keys and wraps, like a native radio group", () => {
+    expect(nextPeriod("month", "ArrowRight")).toBe("year");
+    expect(nextPeriod("year", "ArrowRight")).toBe("month");
+    expect(nextPeriod("month", "ArrowLeft")).toBe("year");
+    expect(nextPeriod("year", "ArrowUp")).toBe("month");
+    expect(nextPeriod("month", "ArrowDown")).toBe("year");
+    expect(nextPeriod("year", "Home")).toBe("month");
+    expect(nextPeriod("month", "End")).toBe("year");
+  });
+
+  it("ignores other keys", () => {
+    expect(nextPeriod("month", "Enter")).toBeNull();
   });
 });

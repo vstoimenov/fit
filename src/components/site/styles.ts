@@ -5,7 +5,7 @@ export const DISPLAY = "font-extrabold tracking-[-0.03em] leading-[1.05]";
 
 export const CTA =
   "inline-flex min-h-14 items-center justify-center gap-3 rounded-full px-7 text-lg font-bold transition-[color,background-color,transform] duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink";
-export const CTA_PRIMARY = "bg-ink text-white hover:bg-[#2A2A2A]";
+export const CTA_PRIMARY = "bg-ink text-white hover:bg-ink/85";
 export const CTA_SECONDARY = "border-[1.5px] border-ink text-ink hover:bg-sand";
 export const CTA_WHITE = "bg-white text-ink hover:bg-sand";
 

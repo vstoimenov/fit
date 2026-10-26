@@ -50,7 +50,7 @@ export function First14() {
             type="button"
             onClick={() => by(-1)}
             aria-label="Назад"
-            className="inline-flex size-12 items-center justify-center rounded-full border-[1.5px] border-ink hover:bg-sand"
+            className="inline-flex size-12 items-center justify-center rounded-full border-[1.5px] border-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <ChevronLeft size={20} aria-hidden="true" />
           </button>
@@ -58,7 +58,7 @@ export function First14() {
             type="button"
             onClick={() => by(1)}
             aria-label="Напред"
-            className="inline-flex size-12 items-center justify-center rounded-full border-[1.5px] border-ink hover:bg-sand"
+            className="inline-flex size-12 items-center justify-center rounded-full border-[1.5px] border-ink hover:bg-sand focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
             <ChevronRight size={20} aria-hidden="true" />
           </button>

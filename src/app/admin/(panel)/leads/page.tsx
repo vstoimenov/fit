@@ -8,7 +8,7 @@ import { requireAdmin } from "@/server/admin/require-admin";
 
 export const metadata = { title: "Лийдове" };
 
-type Search = Promise<{ q?: string | string[] }>;
+type Search = Promise<{ q?: string | string[]; page?: string | string[] }>;
 
 export default function LeadsPage({ searchParams }: { searchParams: Search }) {
   return (
@@ -20,10 +20,13 @@ export default function LeadsPage({ searchParams }: { searchParams: Search }) {
 
 async function Leads({ searchParams }: { searchParams: Search }) {
   await connection();
-  const { q } = await searchParams;
+  const { q, page: p } = await searchParams;
   const query = typeof q === "string" ? q.trim().slice(0, 100) : "";
+  const page = Math.max(1, Number.parseInt(typeof p === "string" ? p : "1", 10) || 1);
   const { supabase } = await requireAdmin();
-  const leads = await listLeads(supabase, query || null);
+  const { rows: leads, hasMore } = await listLeads(supabase, query || null, { page });
+  const pageHref = (n: number) =>
+    `/admin/leads?${new URLSearchParams({ ...(query ? { q: query } : {}), ...(n > 1 ? { page: String(n) } : {}) })}`;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -47,6 +50,7 @@ async function Leads({ searchParams }: { searchParams: Search }) {
       </form>
       <p className="text-sm text-ink-soft">
         {leads.length} {leads.length === 1 ? "запис" : "записа"}
+        {page > 1 || hasMore ? ` на страница ${page}` : ""}
         {query ? ` за „${query}“` : ""} · от формата за безплатната тренировка
       </p>
       {leads.length === 0 ? (
@@ -83,6 +87,20 @@ async function Leads({ searchParams }: { searchParams: Search }) {
             </tbody>
           </table>
         </div>
+      )}
+      {(page > 1 || hasMore) && (
+        <nav aria-label="Страници" className="flex gap-2">
+          {page > 1 && (
+            <a href={pageHref(page - 1)} className={buttonClass("secondary", "md")}>
+              Предишна
+            </a>
+          )}
+          {hasMore && (
+            <a href={pageHref(page + 1)} className={buttonClass("secondary", "md")}>
+              Следваща
+            </a>
+          )}
+        </nav>
       )}
     </div>
   );

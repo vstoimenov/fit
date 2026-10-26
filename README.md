@@ -110,6 +110,10 @@ No name, weight, measurements or e-mail ever go into the image.
   **The sender address must be verified in Brevo**, otherwise Brevo rejects the send. Without Brevo (or with a
   rejected send) the message is recorded on the client as **NOT sent**; nothing is delivered.
 - Workouts that clients completed cannot be deleted (RLS plus a restricting foreign key). "Скрий" turns them back into drafts.
+- **Free-workout form (home page).** The copy promises an e-mail with the link, which is sent only when
+  `BREVO_API_KEY` and `EMAIL_FROM_ADDRESS` are set (and the sender is verified in Brevo); without them the
+  lead is still stored and the workout still unlocks, nothing is mailed. `LEADS_SALT` (≥16 chars) is required
+  in every Vercel environment the form runs in — Preview deployments too, or the action fails.
 - **Video player.** YouTube videos play inside our own player (poster, play/pause, seek, mute, fullscreen; YouTube's
   controls, title bar and related videos are never shown). The video must allow embedding on YouTube (default for
   public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout

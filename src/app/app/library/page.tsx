@@ -13,7 +13,7 @@ import {
 } from "@/lib/program/library-filter";
 import { requireUser } from "@/server/auth/require-user";
 import { getMemberPointsOrNull } from "@/server/content/points";
-import { listWatchedIds } from "@/server/content/watches";
+import { listWatchedIdsOrEmpty } from "@/server/content/watches";
 import { getLibrary } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировки" };
@@ -84,7 +84,7 @@ async function Library({ searchParams }: { searchParams: SearchParams }) {
       getLibrary(supabase, user.id),
       supabase.rpc("my_access"),
       getMemberPointsOrNull(supabase, user.id),
-      listWatchedIds(supabase, user.id),
+      listWatchedIdsOrEmpty(supabase, user.id),
     ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
   const shown = filterLibrary(workouts, filter);

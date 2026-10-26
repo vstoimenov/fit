@@ -2,20 +2,19 @@
 
 import { Gift } from "lucide-react";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
-import { pickPlan, yearlySavings } from "@/lib/site/pricing";
+import { nextPeriod, pickPlan, yearlySavings, type PricingPeriod } from "@/lib/site/pricing";
 import type { PublicPlan } from "@/server/content/public-plans";
 import { CTA, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
-
-type Period = "month" | "year";
 
 /** Monthly / yearly card from the live `plans` table, plus the gift voucher card. */
 export function Pricing({ plans }: { plans: PublicPlan[] }) {
   const month = plans.find((p) => p.interval === "month");
   const year = plans.find((p) => p.interval === "year");
-  const [period, setPeriod] = useState<Period>("month");
+  const [period, setPeriod] = useState<PricingPeriod>("month");
+  const group = useRef<HTMLDivElement>(null);
   const id = useId();
   const savings = yearlySavings(month?.price_cents, year?.price_cents);
   const shown = pickPlan(plans, period);
@@ -27,8 +26,16 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
         <h2 className={`${DISPLAY} text-4xl sm:text-[56px]`}>Прости цени</h2>
         {month && year && (
           <div
+            ref={group}
             role="radiogroup"
             aria-labelledby={`${id}-toggle`}
+            onKeyDown={(event) => {
+              const next = nextPeriod(period, event.key);
+              if (!next) return;
+              event.preventDefault();
+              setPeriod(next);
+              group.current?.querySelector<HTMLButtonElement>(`[data-period="${next}"]`)?.focus();
+            }}
             className="inline-flex rounded-full bg-sand p-1"
           >
             <span id={`${id}-toggle`} className="sr-only">
@@ -40,6 +47,8 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
                 type="button"
                 role="radio"
                 aria-checked={period === v}
+                tabIndex={period === v ? 0 : -1}
+                data-period={v}
                 onClick={() => setPeriod(v)}
                 className={cn(
                   "min-h-11 rounded-full px-5 text-[15px] font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
@@ -57,12 +66,12 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
         {shown && (
           <div className="flex flex-col gap-6 rounded-3xl bg-ink p-8 text-white lg:col-span-2 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className={cn(EYEBROW, "text-[#BDBBB4]")}>
+              <p className={cn(EYEBROW, "text-white/70")}>
                 {shown.interval === "month" ? "Месечно членство" : "Годишно членство"}
               </p>
               <p className="mt-3 text-5xl font-extrabold tracking-[-0.03em] sm:text-6xl">
                 {formatPrice(shown.price_cents, currency)}
-                <span className="ml-2 text-lg font-semibold text-[#BDBBB4]">
+                <span className="ml-2 text-lg font-semibold text-white/70">
                   / {shown.interval === "month" ? "месец" : "година"}
                 </span>
               </p>
@@ -74,7 +83,7 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
                   </span>
                 </p>
               ) : (
-                <p className="mt-3 text-lg text-[#DDD]">Спираш когато искаш.</p>
+                <p className="mt-3 text-lg text-white/85">Спираш когато искаш.</p>
               )}
             </div>
             <Link href="/start" className={`${CTA} bg-white text-ink hover:bg-sand`}>

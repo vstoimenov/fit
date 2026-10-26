@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { FreeWorkout } from "@/server/site/map";
 import { LEAD_STORAGE_KEY, LeadForm } from "./lead-form";
 import { CTA, CTA_SECONDARY, DISPLAY, WRAP } from "./styles";
@@ -23,7 +23,13 @@ export function TryWorkout({ workout }: { workout: FreeWorkout }) {
   const [unlockedNow, setUnlockedNow] = useState(false);
   const [name, setName] = useState<string | null>(null);
   const formBox = useRef<HTMLDivElement>(null);
+  const videoBox = useRef<HTMLDivElement>(null);
   const unlocked = remembered || unlockedNow;
+
+  // The form she just submitted is gone; put her on the play button it unlocked.
+  useEffect(() => {
+    if (unlockedNow) videoBox.current?.querySelector("button")?.focus();
+  }, [unlockedNow]);
 
   const onUnlocked = useCallback((n: string) => {
     setName(n);
@@ -44,7 +50,7 @@ export function TryWorkout({ workout }: { workout: FreeWorkout }) {
         </p>
 
         <div className="mt-10 grid items-start gap-8 lg:grid-cols-12 lg:gap-12">
-          <div className="lg:col-span-7">
+          <div ref={videoBox} className="lg:col-span-7">
             <VideoFacade
               video={workout.video}
               posterSrc={workout.posterSrc}

@@ -14,7 +14,13 @@ const IDLE: LeadState = { status: "idle" };
 /** Name + e-mail in exchange for the free workout. Calls `onUnlocked` once the lead is stored. */
 export function LeadForm({ onUnlocked }: { onUnlocked: (name: string) => void }) {
   const [state, action, pending] = useActionState(submitLeadAction, IDLE);
-  const nameRef = useRef<HTMLInputElement>(null);
+  const alertRef = useRef<HTMLParagraphElement>(null);
+  // After an error the form keeps what she typed (React resets uncontrolled fields after an action).
+  const values = state.status === "error" ? state.values : undefined;
+
+  useEffect(() => {
+    if (state.status === "error") alertRef.current?.focus();
+  }, [state]);
 
   useEffect(() => {
     if (state.status !== "ok") return;
@@ -30,13 +36,13 @@ export function LeadForm({ onUnlocked }: { onUnlocked: (name: string) => void })
     <form action={action} className="flex flex-col gap-4" aria-describedby="lead-help">
       <Field label="Име">
         <input
-          ref={nameRef}
           name="name"
           type="text"
           autoComplete="given-name"
           required
           minLength={2}
           maxLength={60}
+          defaultValue={values?.name}
           className={inputClass}
         />
       </Field>
@@ -47,6 +53,7 @@ export function LeadForm({ onUnlocked }: { onUnlocked: (name: string) => void })
           autoComplete="email"
           inputMode="email"
           required
+          defaultValue={values?.email}
           className={inputClass}
         />
       </Field>
@@ -58,13 +65,23 @@ export function LeadForm({ onUnlocked }: { onUnlocked: (name: string) => void })
         </label>
       </div>
       <label className="flex items-start gap-3 text-[15px] leading-snug">
-        <input name="marketing" type="checkbox" className="mt-1 size-4 shrink-0 accent-ink" />
+        <input
+          name="marketing"
+          type="checkbox"
+          defaultChecked={values?.marketing}
+          className="mt-1 size-4 shrink-0 accent-ink"
+        />
         <span>
           Искам и съветите на Аксения за старта (1–2 имейла седмично; отписване с един клик).
         </span>
       </label>
       {state.status === "error" && (
-        <p role="alert" className="text-sm font-semibold text-brick">
+        <p
+          ref={alertRef}
+          role="alert"
+          tabIndex={-1}
+          className="text-sm font-semibold text-brick focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
+        >
           {state.message}
         </p>
       )}

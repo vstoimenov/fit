@@ -21,7 +21,7 @@ export function Trainer({ video }: { video: VideoRef | null }) {
   return (
     <section id="aksenia" className="scroll-mt-20 bg-ink py-20 text-white lg:py-28">
       <div className={`${WRAP} grid items-center gap-10 lg:grid-cols-12 lg:gap-12`}>
-        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-[#1E1E1E] lg:col-span-5">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-3xl bg-ink lg:col-span-5">
           {/* TODO owner photo: replace the stock image with a real photo of Аксения. */}
           <Image
             src={PHOTOS.step2.src}
@@ -32,10 +32,10 @@ export function Trainer({ video }: { video: VideoRef | null }) {
           />
         </div>
         <div className="lg:col-span-6 lg:col-start-7">
-          <p className={cn(EYEBROW, "text-[#BDBBB4]")}>Треньорката</p>
+          <p className={cn(EYEBROW, "text-white/70")}>Треньорката</p>
           <h2 className={`${DISPLAY} mt-3 text-4xl sm:text-[56px]`}>Аксения Михайлова</h2>
           {/* TODO owner copy: the three paragraphs below are working text in Аксения's voice. */}
-          <div className="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-[#DDD]">
+          <div className="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-white/85">
             <p>
               Тренирам жени от години и знам кога се отказват: не когато е трудно, а когато няма
               време. Затова всичко тук е 20 минути.

@@ -36,6 +36,12 @@ export function TimePlanCalculator() {
   const [days, setDays] = useState<number>(DAYS.start);
   const id = useId();
   const plan = timePlan(minutes, days);
+  // Screen readers hear the settled result once per change, not every tween frame.
+  const [settled, setSettled] = useState(plan);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(timePlan(minutes, days)), 400);
+    return () => clearTimeout(timer);
+  }, [minutes, days]);
 
   return (
     <section id="vreme" className={`${WRAP} scroll-mt-20 py-20 lg:py-28`}>
@@ -86,8 +92,12 @@ export function TimePlanCalculator() {
           </div>
         </div>
 
-        <div className="rounded-3xl bg-sand p-7 sm:p-9 lg:col-span-7" aria-live="polite">
-          <dl className="grid gap-6 sm:grid-cols-2">
+        <div className="rounded-3xl bg-sand p-7 sm:p-9 lg:col-span-7">
+          <p aria-live="polite" className="sr-only">
+            Около {settled.weeklyMinutes} минути на седмица, {settled.workoutsPer30Days} тренировки
+            за 30 дни, тренировки {settled.lengthLabel}, ниво {settled.levelLabel}.
+          </p>
+          <dl className="grid gap-6 sm:grid-cols-2" aria-hidden="true">
             <div>
               <dt className="text-[13px] font-semibold tracking-[0.14em] text-rose-deep uppercase">
                 На седмица

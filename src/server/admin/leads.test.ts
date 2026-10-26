@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { leadsCsv } from "./leads";
+import type { TypedClient } from "@/server/db/types";
+import { leadsCsv, listAllLeads, listLeads } from "./leads";
 
 describe("leadsCsv", () => {
   it("writes a BOM, a header and RFC 4180 quoted rows", () => {
@@ -48,5 +49,65 @@ describe("leadsCsv", () => {
 
   it("is just the header for no rows", () => {
     expect(leadsCsv([])).toBe("﻿name,email,source,marketing,created_at\r\n");
+  });
+});
+
+/** Answers every query with `rows` and records the chain. */
+function fakeDb(rows: unknown[], calls: string[] = []) {
+  const chain: Record<string, unknown> = {};
+  const record =
+    (name: string) =>
+    (...args: unknown[]) => {
+      calls.push(`${name}(${args.map((a) => JSON.stringify(a)).join(",")})`);
+      return chain;
+    };
+  for (const name of ["from", "select", "order", "range", "ilike"]) chain[name] = record(name);
+  chain.then = (resolve: (r: unknown) => unknown) =>
+    Promise.resolve({ data: rows, error: null }).then(resolve);
+  return { db: chain as unknown as TypedClient, calls };
+}
+
+const row = (i: number) => ({
+  id: String(i),
+  name: "N",
+  email: `${i}@x.bg`,
+  source: "free-workout",
+  marketing_consent_at: null,
+  created_at: "2026-10-26T10:00:00Z",
+});
+
+describe("listLeads pages", () => {
+  it("asks for one row more than the page to know whether there is a next page", async () => {
+    const { db, calls } = fakeDb([row(1), row(2), row(3)]);
+    const page = await listLeads(db, null, { page: 2, pageSize: 2 });
+    expect(calls).toContain("range(2,4)");
+    expect(page.rows.map((r) => r.id)).toEqual(["1", "2"]);
+    expect(page.hasMore).toBe(true);
+  });
+
+  it("reports the last page", async () => {
+    const { db } = fakeDb([row(1)]);
+    expect((await listLeads(db, "x", { page: 1, pageSize: 2 })).hasMore).toBe(false);
+  });
+});
+
+describe("listAllLeads", () => {
+  it("walks the pages until the last one", async () => {
+    const pages = [
+      [row(1), row(2), row(3)],
+      [row(3), row(4)],
+    ];
+    let n = 0;
+    const db = {
+      from: () => ({
+        select: () => ({
+          order: () => ({
+            range: async () => ({ data: pages[n++] ?? [], error: null }),
+          }),
+        }),
+      }),
+    } as unknown as TypedClient;
+    const all = await listAllLeads(db, 2);
+    expect(all.map((r) => r.id)).toEqual(["1", "2", "3", "4"]);
   });
 });

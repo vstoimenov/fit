@@ -101,7 +101,7 @@ export function HowItWorks() {
                 exit={reduced ? undefined : { opacity: 0 }}
                 transition={{ duration: 0.25 }}
               >
-                <PhoneFrame src={STEPS[active]!.screen} alt={STEPS[active]!.alt} priority />
+                <PhoneFrame src={STEPS[active]!.screen} alt={STEPS[active]!.alt} />
               </motion.div>
             </AnimatePresence>
           </div>

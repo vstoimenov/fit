@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { isAppError } from "@/lib/app-error";
 import type { TypedClient } from "@/server/db/types";
-import { isWatched, listWatchedIds, setWatched } from "./watches";
+import {
+  isWatched,
+  isWatchedOrFalse,
+  listWatchedIds,
+  listWatchedIdsOrEmpty,
+  setWatched,
+} from "./watches";
 
 type Result = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -63,5 +69,16 @@ describe("listWatchedIds / isWatched", () => {
     );
     const no = fakeDb({ data: null, error: null });
     expect(await isWatched(no.db, "u", "a")).toBe(false);
+  });
+});
+
+describe("degrading reads", () => {
+  it("fall back to nothing watched when the read fails, so the page still renders", async () => {
+    const broken = fakeDb({ data: null, error: { message: "boom" } });
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    expect(await listWatchedIdsOrEmpty(broken.db, "u")).toEqual(new Set());
+    expect(await isWatchedOrFalse(broken.db, "u", "a")).toBe(false);
+    expect(quiet).toHaveBeenCalledTimes(2);
+    quiet.mockRestore();
   });
 });

@@ -9,7 +9,21 @@ import { addBrevoContact } from "./brevo";
 import { leadSchema, readLeadForm } from "./schema";
 import { hashIp, submitLead } from "./submit";
 
-export type LeadState = { status: "idle" | "ok" | "error"; message?: string; name?: string };
+export type LeadState = {
+  status: "idle" | "ok" | "error";
+  message?: string;
+  name?: string;
+  /** What she typed, so a server error does not wipe the form. */
+  values?: { name: string; email: string; marketing: boolean };
+};
+
+function typed(form: FormData) {
+  return {
+    name: String(form.get("name") ?? ""),
+    email: String(form.get("email") ?? ""),
+    marketing: form.get("marketing") === "on",
+  };
+}
 
 const MESSAGES = {
   rate_limited: "Твърде много опити от тази мрежа. Опитай пак след малко.",
@@ -28,7 +42,11 @@ export async function submitLeadAction(_prev: LeadState, form: FormData): Promis
   }
   const parsed = leadSchema.safeParse(read.input);
   if (!parsed.success) {
-    return { status: "error", message: parsed.error.issues[0]?.message ?? "Провери полетата" };
+    return {
+      status: "error",
+      message: parsed.error.issues[0]?.message ?? "Провери полетата",
+      values: typed(form),
+    };
   }
   const lead = parsed.data;
 
@@ -40,7 +58,7 @@ export async function submitLeadAction(_prev: LeadState, form: FormData): Promis
     hashIp(ip, serverEnv.LEADS_SALT),
     "free-workout",
   );
-  if (!result.ok) return { status: "error", message: MESSAGES[result.error] };
+  if (!result.ok) return { status: "error", message: MESSAGES[result.error], values: typed(form) };
 
   if (result.inserted) {
     // Best effort, after the response (a serverless function may freeze once it has answered).

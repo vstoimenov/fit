@@ -5,12 +5,10 @@ import { cn } from "@/lib/cn";
 export function PhoneFrame({
   src,
   alt,
-  priority = false,
   className,
 }: {
   src: string;
   alt: string;
-  priority?: boolean;
   className?: string;
 }) {
   return (
@@ -24,7 +22,7 @@ export function PhoneFrame({
         src={src}
         alt={alt}
         fill
-        priority={priority}
+        // Never preloaded: on phones this column is hidden and the preload would only cost data.
         sizes="300px"
         className="object-cover object-top"
       />

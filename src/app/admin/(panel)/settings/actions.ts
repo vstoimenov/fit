@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
+import { AppError } from "@/lib/app-error";
 import { formBool, formInt, formString } from "@/lib/form-data";
+import { parseSiteLinks } from "@/lib/site/links";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { savePlan, saveSetting } from "@/server/admin/settings";
 
@@ -52,8 +54,13 @@ export async function saveCommunityAction(_prev: unknown, form: FormData) {
 
 export async function saveSiteLinksAction(_prev: unknown, form: FormData) {
   return run(async (db) => {
-    await saveSetting(db, "trainer_video_url", formString(form, "trainerVideoUrl"));
-    await saveSetting(db, "instagram_url", formString(form, "instagramUrl"));
+    const parsed = parseSiteLinks({
+      trainerVideoUrl: formString(form, "trainerVideoUrl"),
+      instagramUrl: formString(form, "instagramUrl"),
+    });
+    if (!parsed.ok) throw new AppError("INVALID", parsed.message);
+    await saveSetting(db, "trainer_video_url", parsed.links.trainerVideoUrl);
+    await saveSetting(db, "instagram_url", parsed.links.instagramUrl);
   });
 }
 

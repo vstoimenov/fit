@@ -32,7 +32,7 @@ export function StickyCta() {
     <div
       aria-hidden={!visible}
       className={cn(
-        "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-transform duration-300 md:hidden",
+        "fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] transition-transform duration-300 motion-reduce:transition-none md:hidden",
         visible ? "translate-y-0" : "translate-y-full",
       )}
     >

@@ -11,7 +11,7 @@ import { LEVEL_LABEL } from "@/lib/labels";
 import { exclusiveLockLevel } from "@/lib/points/levels";
 import { requireUser } from "@/server/auth/require-user";
 import { getMemberPointsOrNull } from "@/server/content/points";
-import { isWatched } from "@/server/content/watches";
+import { isWatchedOrFalse } from "@/server/content/watches";
 import { getWorkoutForPlayer } from "@/server/content/workouts";
 
 export const metadata = { title: "Тренировка" };
@@ -119,7 +119,7 @@ async function WorkoutScreen({
     );
   }
 
-  const watched = await isWatched(supabase, user.id, id);
+  const watched = await isWatchedOrFalse(supabase, user.id, id);
   return (
     <Player
       workout={result.workout}
