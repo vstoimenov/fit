@@ -42,7 +42,7 @@ export function SiteHeader({ showFounders }: { showFounders: boolean }) {
       )}
     >
       <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-4 px-6 py-4 lg:px-10">
-        <Link href="/" aria-label="Начало" className="shrink-0">
+        <Link href="/" className="shrink-0">
           <Logo size="md" />
         </Link>
 

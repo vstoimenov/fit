@@ -60,7 +60,7 @@ export function VideoFacade({
       <button
         type="button"
         onClick={() => (locked ? onLockedClick?.() : setPlaying(true))}
-        aria-label={locked ? `${title}: отключи с име и имейл` : `${title}: ${label}`}
+        aria-label={locked ? `${label}: отключи с име и имейл · ${title}` : `${label} · ${title}`}
         className="absolute inset-0 flex items-center justify-center focus-visible:outline-2 focus-visible:-outline-offset-4 focus-visible:outline-white"
       >
         <span className="inline-flex min-h-14 items-center gap-3 rounded-full bg-white px-6 text-lg font-bold text-ink">

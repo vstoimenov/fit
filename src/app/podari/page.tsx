@@ -47,7 +47,7 @@ export default async function GiftPage() {
                 )}
               >
                 <div>
-                  <p className={cn(EYEBROW, best && "text-[#BDBBB4]")}>
+                  <p className={cn(EYEBROW, best ? "text-[#BDBBB4]" : "text-ink-soft")}>
                     {giftMonthsLabel(o.months)}
                   </p>
                   <p className="mt-3 flex items-baseline gap-3">

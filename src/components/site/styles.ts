@@ -9,4 +9,5 @@ export const CTA_PRIMARY = "bg-ink text-white hover:bg-[#2A2A2A]";
 export const CTA_SECONDARY = "border-[1.5px] border-ink text-ink hover:bg-sand";
 export const CTA_WHITE = "bg-white text-ink hover:bg-sand";
 
-export const EYEBROW = "text-[13px] font-semibold tracking-[0.14em] uppercase text-ink-soft";
+/** Small caps label; set its colour at the use site (`text-ink-soft`, `text-rose-deep`, …). */
+export const EYEBROW = "text-[13px] font-semibold tracking-[0.14em] uppercase";

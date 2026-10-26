@@ -25,6 +25,7 @@ export function Logo({
 }) {
   return (
     <span
+      role="img"
       aria-label="I AM STRONG"
       className={cn(
         "inline-flex items-center gap-[0.4em] leading-none font-extrabold tracking-[-0.01em] whitespace-nowrap",

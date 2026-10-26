@@ -45,7 +45,8 @@ export function Hero({ hasFreeWorkout }: { hasFreeWorkout: boolean }) {
               src={PHOTOS.hero.src}
               alt={PHOTOS.hero.alt}
               fill
-              priority
+              preload
+              fetchPriority="high"
               sizes="(min-width:1024px) 680px, 100vw"
               className="object-cover"
             />

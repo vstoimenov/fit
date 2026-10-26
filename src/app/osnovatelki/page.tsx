@@ -115,7 +115,7 @@ export default function Home() {
 
       {/* Хедър */}
       <header className={`${wrap} flex items-center justify-between gap-4 py-5`}>
-        <Link href="/" aria-label="Начало">
+        <Link href="/">
           <Logo size="md" />
         </Link>
         <nav className="flex items-center gap-1 sm:gap-2">

@@ -37,7 +37,7 @@ export function First14() {
   };
 
   return (
-    <section id="14-dni" className="scroll-mt-20 py-20 lg:py-28">
+    <section id="parvite-14" className="scroll-mt-20 py-20 lg:py-28">
       <div className={`${WRAP} flex items-end justify-between gap-6`}>
         <div>
           <h2 className={`${DISPLAY} text-4xl sm:text-[56px]`}>Има план от първия ден</h2>
