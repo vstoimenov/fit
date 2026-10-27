@@ -6,6 +6,7 @@ import { z } from "zod";
 import { serverEnv } from "@/env";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
+import { parsePasswordChange } from "@/lib/auth/password-change";
 import { profileFormToAnswers } from "@/lib/onboarding/profile-form";
 import { requireUser } from "@/server/auth/require-user";
 import { createAdminSupabaseClient } from "@/server/db/admin";
@@ -37,6 +38,26 @@ export async function saveAnswers(_prev: unknown, form: FormData): Promise<Actio
     const { user, supabase } = await requireUser();
     await updateProfileAnswers(supabase, user.id, profileFormToAnswers(form));
     revalidatePath("/app", "layout");
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „Смени паролата“ in Профил: the session client updates its own user; no e-mail round trip. */
+export async function changePassword(_prev: unknown, form: FormData): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireUser();
+    const parsed = parsePasswordChange(form);
+    if (!parsed.ok) throw new AppError("INVALID", parsed.message);
+    const { error } = await supabase.auth.updateUser({ password: parsed.password });
+    if (error) {
+      // Supabase refuses the previous password and leaked ones with a 422; say so in her words.
+      if (error.status === 422) {
+        throw new AppError("INVALID", "Тази парола не може да се ползва. Избери друга.");
+      }
+      throw new Error(`change password failed: ${error.message}`);
+    }
     return actionOk(null);
   } catch (error) {
     return actionFail(error);

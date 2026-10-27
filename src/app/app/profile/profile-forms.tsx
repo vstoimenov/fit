@@ -10,7 +10,7 @@ import { Field, inputClass, inputOnCardClass } from "@/components/ui/field";
 import { GOAL_LABEL, GOALS, LEVEL_LABEL, PROBLEM_LABEL, PROBLEMS } from "@/lib/labels";
 import type { Goal, Problem } from "@/lib/labels";
 import type { Level } from "@/lib/program/types";
-import { deleteMyAccount, saveAnswers, saveProfile } from "./actions";
+import { changePassword, deleteMyAccount, saveAnswers, saveProfile } from "./actions";
 
 export interface SavedAnswers {
   goal: Goal | "";
@@ -77,6 +77,76 @@ export function PersonalData({
 }
 
 /** Deleting the account: a text link first, then the typed confirmation word. */
+/** New password + confirmation; the fields clear after a successful change. */
+export function ChangePassword() {
+  const [state, action, pending] = useActionState(changePassword, null);
+  const [open, setOpen] = useState(false);
+  const [token, setToken] = useState(0);
+  const [seen, setSeen] = useState<ActionResult<null> | null>(null);
+  // A fresh success empties the fields by remounting them (uncontrolled inputs keep their text otherwise).
+  if (state && state !== seen) {
+    setSeen(state);
+    if (state.ok) setToken((t) => t + 1);
+  }
+
+  if (!open) {
+    return (
+      <Button
+        type="button"
+        variant="secondary"
+        size="md"
+        onClick={() => setOpen(true)}
+        className="w-full"
+      >
+        Смени паролата
+      </Button>
+    );
+  }
+  return (
+    <form
+      key={token}
+      action={action}
+      className="space-y-3 rounded-2xl bg-white p-4 ring-1 ring-line"
+    >
+      <Field label="Нова парола (поне 10 знака)">
+        <input
+          name="password"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={10}
+          maxLength={72}
+          className={inputClass}
+        />
+      </Field>
+      <Field label="Още веднъж">
+        <input
+          name="confirm"
+          type="password"
+          autoComplete="new-password"
+          required
+          minLength={10}
+          maxLength={72}
+          className={inputClass}
+        />
+      </Field>
+      {state && !state.ok && (
+        <p role="alert" className="text-sm font-semibold text-brick">
+          {state.message}
+        </p>
+      )}
+      {state?.ok && (
+        <p role="status" className="text-sm font-semibold text-moss">
+          Паролата е сменена ✓
+        </p>
+      )}
+      <Button type="submit" size="md" disabled={pending} className="w-full">
+        {pending ? "Запазвам…" : "Запази новата парола"}
+      </Button>
+    </form>
+  );
+}
+
 export function DeleteAccount() {
   const [deleteState, remove, removing] = useActionState(deleteMyAccount, null);
   const [showDelete, setShowDelete] = useState(false);

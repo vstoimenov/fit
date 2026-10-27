@@ -14,7 +14,7 @@ import { endNotice, subscriptionText } from "@/lib/subscription-text";
 import { requireUser } from "@/server/auth/require-user";
 import { getNutritionProfile } from "@/server/nutrition/diary";
 import { ManageSubscriptionButton } from "./manage-subscription-button";
-import { DeleteAccount, PersonalData } from "./profile-forms";
+import { ChangePassword, DeleteAccount, PersonalData } from "./profile-forms";
 import { SignOutButton } from "./sign-out-button";
 
 export const metadata = { title: "Профил" };
@@ -147,6 +147,7 @@ async function Profile() {
           <Card className="space-y-4 p-5">
             <h2 className="font-semibold">Акаунт</h2>
             <div className="space-y-3">
+              <ChangePassword />
               <a href="/api/me/export" className={buttonClass("secondary", "md") + " w-full"}>
                 Изтегли моите данни
               </a>
