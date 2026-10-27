@@ -1,9 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { AuthCard } from "@/components/ui/auth-card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClass } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -36,6 +37,11 @@ export default function ResetPasswordPage() {
         <Button type="submit" className="w-full">
           Запази
         </Button>
+        {error && error !== "Поне 10 символа." && (
+          <Link href="/forgot-password" className={buttonClass("link") + " w-full"}>
+            Поискай нов линк
+          </Link>
+        )}
       </form>
     </AuthCard>
   );

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bad_Script, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import { Suspense } from "react";
 import { SwRegister } from "@/components/app/sw-register";
 import { VisitBeacon } from "@/components/app/visit-beacon";
@@ -7,17 +7,22 @@ import { brand } from "@/lib/brand";
 import { iconUrl } from "@/lib/site/icon-variant";
 import "./globals.css";
 
-const sans = Manrope({
-  subsets: ["latin", "cyrillic"],
-  weight: ["400", "600", "800"],
+// Self-hosted (see src/app/fonts/README.md): builds and cold starts never wait on Google Fonts.
+const sans = localFont({
+  src: "./fonts/manrope-latin-cyrillic.woff2",
+  weight: "200 800",
   variable: "--font-manrope",
+  display: "swap",
+  fallback: ["system-ui", "Arial", "sans-serif"],
 });
 
 // Handwritten accent: only the logo's „Strong" and a few notes on the public site.
-const script = Bad_Script({
-  subsets: ["latin", "cyrillic"],
+const script = localFont({
+  src: "./fonts/bad-script-latin-cyrillic.woff2",
   weight: "400",
   variable: "--font-bad-script",
+  display: "swap",
+  fallback: ["cursive"],
 });
 
 export const metadata: Metadata = {

@@ -244,6 +244,12 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Password reset: a token_hash link (verified by /auth/callback) instead of the default PKCE link,
+# which only works in the browser that asked for it (not from Mail into the home-screen app).
+[auth.email.template.recovery]
+subject = "Нова парола за I AM STRONG"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

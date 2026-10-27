@@ -182,6 +182,15 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
 
 ## Hosted go-live checklist
 
+- **Auth e-mail templates live in the repo** (`supabase/templates/recovery.html`, wired in `supabase/config.toml`).
+  They reach the hosted project with `pnpm exec supabase config push --project-ref pogqujifjusfikwurwqe`
+  (answer **No** to the vector-buckets question). The recovery link is a `token_hash` link verified by
+  `/auth/callback`, so it works from Mail into any browser or the home-screen app. **SMTP is set in the
+  dashboard** (Authentication → Emails → SMTP, e.g. Brevo): config.toml has no SMTP section, so after SMTP is
+  set do not run `config push` again until an `[remotes.production.auth.email.smtp]` block with
+  `pass = "env(...)"` is added, or the push would switch the hosted project back to Supabase's own mailer
+  (about 2 e-mails an hour).
+
 - **Keep the functions next to the database.** `vercel.json` pins the Vercel function region to `dub1`, the
   same region as the Supabase project (eu-west-1). Every page of the app makes a dozen or more round trips to
   the database, so a function in another region costs about 70 ms per round trip. If the Supabase project ever

@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -9,6 +10,7 @@ const nextConfig: NextConfig = {
   experimental: { staleTimes: { dynamic: 30 } },
   // The founders landing lived at /osnovatelki before it became /landing.
   redirects: async () => [{ source: "/osnovatelki", destination: "/landing", permanent: true }],
+  headers: async () => [{ source: "/:path*", headers: securityHeaders }],
   turbopack: {
     rules: {
       "*.css": {
