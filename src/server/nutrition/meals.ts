@@ -51,7 +51,8 @@ export async function listPublishedMeals(db: TypedClient): Promise<Meal[]> {
 }
 
 /**
- * The menu dishes that are full recipes (they have steps), newest first, for Полезно → Рецепти.
+ * The menu dishes that are full recipes (they have steps) for Полезно → Рецепти: those with a photo
+ * first, then the newest.
  * RLS shows members with access published meals only, so without access this is empty.
  */
 export async function listRecipeMeals(db: TypedClient, limit = 24): Promise<Meal[]> {
@@ -60,6 +61,8 @@ export async function listRecipeMeals(db: TypedClient, limit = 24): Promise<Meal
     .select("*")
     .eq("published", true)
     .neq("steps", "")
+    // Recipes with a photo lead, so a batch of new photo-less dishes cannot push them off the list.
+    .order("photo_url", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`load recipes failed: ${error.message}`);
