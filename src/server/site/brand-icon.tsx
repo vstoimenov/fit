@@ -3,6 +3,7 @@ import "server-only";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { brand } from "@/lib/brand";
+import type { IconVariant } from "@/lib/site/icon-variant";
 
 /**
  * The app icon: „I AM" (Manrope) over a handwritten „Strong" (Bad Script) on powder — the logo
@@ -42,8 +43,21 @@ export async function loadIconFonts() {
 
 const scriptFamily = (hasScript: boolean) => (hasScript ? "Bad Script" : "Manrope");
 
-/** Full-bleed square for the home screen (iOS rounds it, Android masks it). */
-export function HomeScreenIcon({ size, hasScript }: { size: number; hasScript: boolean }) {
+/**
+ * Full-bleed square for the home screen (iOS rounds it, Android masks it). The member app is the
+ * logo on powder; the admin app inverts it (powder on ink) and adds an „АДМИН“ pill so the owner
+ * tells the two icons apart at a glance.
+ */
+export function HomeScreenIcon({
+  size,
+  hasScript,
+  variant = "member",
+}: {
+  size: number;
+  hasScript: boolean;
+  variant?: IconVariant;
+}) {
+  const admin = variant === "admin";
   return (
     <div
       style={{
@@ -53,8 +67,8 @@ export function HomeScreenIcon({ size, hasScript }: { size: number; hasScript: b
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: brand.accentColor,
-        color: brand.themeColor,
+        background: admin ? brand.themeColor : brand.accentColor,
+        color: admin ? brand.accentColor : brand.themeColor,
         lineHeight: 1,
       }}
     >
@@ -63,7 +77,7 @@ export function HomeScreenIcon({ size, hasScript }: { size: number; hasScript: b
           display: "flex",
           fontFamily: "Manrope",
           fontWeight: 800,
-          fontSize: size * 0.15,
+          fontSize: size * (admin ? 0.13 : 0.15),
           letterSpacing: size * 0.012,
           marginBottom: size * 0.02,
         }}
@@ -76,12 +90,30 @@ export function HomeScreenIcon({ size, hasScript }: { size: number; hasScript: b
           fontFamily: scriptFamily(hasScript),
           fontWeight: 800,
           // Android may mask the icon to a circle: keep the word inside the central 80 %.
-          fontSize: hasScript ? size * 0.3 : size * 0.24,
+          fontSize: hasScript ? size * (admin ? 0.26 : 0.3) : size * (admin ? 0.21 : 0.24),
           letterSpacing: hasScript ? 0 : -size * 0.01,
         }}
       >
         Strong
       </div>
+      {admin && (
+        <div
+          style={{
+            display: "flex",
+            marginTop: size * 0.06,
+            padding: `${size * 0.025}px ${size * 0.06}px`,
+            borderRadius: size * 0.08,
+            background: brand.accentColor,
+            color: brand.themeColor,
+            fontFamily: "Manrope",
+            fontWeight: 800,
+            fontSize: size * 0.085,
+            letterSpacing: size * 0.012,
+          }}
+        >
+          АДМИН
+        </div>
+      )}
     </div>
   );
 }

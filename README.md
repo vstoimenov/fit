@@ -146,6 +146,11 @@ CRON_SECRET>', 'cron_secret');` — until then the job runs and does nothing. `s
   public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout
   as „Гледано" by hand; the mark is also set when the video ends or when „Завърших" is saved. It is a personal note,
   separate from completions and points.
+- **Admin as its own home-screen app.** Every `/admin` page links `/admin/manifest.webmanifest` (scope `/admin`,
+  dark icon with an „АДМИН“ pill) and its own apple-touch-icon, so „Add to Home Screen“ from `/admin` installs a
+  second app next to the member one. Icon URLs carry `?v=<ICON_VERSION>` (`src/lib/site/icon-variant.ts`): bump
+  it whenever the artwork changes, because phones cache the image for a day and iOS keeps whatever it fetched at
+  install time. A phone that already shows an old icon must remove the shortcut and add the site again.
 - "Preview as client" needs the admin's own profile to be onboarded.
 
 ## Payments (Stripe)

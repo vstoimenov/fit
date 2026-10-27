@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { SwRegister } from "@/components/app/sw-register";
 import { VisitBeacon } from "@/components/app/visit-beacon";
 import { brand } from "@/lib/brand";
+import { iconUrl } from "@/lib/site/icon-variant";
 import "./globals.css";
 
 const sans = Manrope({
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
   title: { default: brand.name, template: `%s · ${brand.name}` },
   description: brand.description,
   // Browser tab: src/app/icon.tsx; home screen: the pwa-icon route (also used by the manifest).
-  icons: { icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }], apple: "/pwa-icon/180" },
+  icons: { icon: [{ url: "/icon", type: "image/png", sizes: "64x64" }], apple: iconUrl(180) },
   appleWebApp: { capable: true, title: brand.shortName, statusBarStyle: "default" },
 };
 

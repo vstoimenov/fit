@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { brand } from "@/lib/brand";
+import { iconUrl } from "@/lib/site/icon-variant";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -14,9 +15,9 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: brand.themeColor,
     lang: "bg",
     icons: [
-      { src: "/pwa-icon/192", sizes: "192x192", type: "image/png" },
-      { src: "/pwa-icon/512", sizes: "512x512", type: "image/png" },
-      { src: "/pwa-icon/512", sizes: "512x512", type: "image/png", purpose: "maskable" },
+      { src: iconUrl(192), sizes: "192x192", type: "image/png" },
+      { src: iconUrl(512), sizes: "512x512", type: "image/png" },
+      { src: iconUrl(512), sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
