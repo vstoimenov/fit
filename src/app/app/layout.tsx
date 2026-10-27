@@ -42,7 +42,9 @@ async function AppGate({ children }: { children: React.ReactNode }) {
   ]);
   // A failed query must not look like "not onboarded" (that would bounce her into the funnel).
   if (error) throw new Error(`load onboarding state failed: ${error.message}`);
-  if (!profile.onboarding_done) redirect("/start/finish");
+  // Signed up but not through the questions yet (she left after the profile screen): back to them.
+  // The wizard keeps her saved answers and asks for the phone first if it is still missing.
+  if (!profile.onboarding_done) redirect("/start");
   // The banner is a nudge, not an access rule: a failed read only hides it.
   if (subError) console.error("load subscription for banner failed", subError.message);
   // Failed renewal, still in grace. The portal is always Stripe's (see openPortalAction).

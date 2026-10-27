@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { pickToday } from "./pick-today";
+import { pickToday, todayWorkoutHref } from "./pick-today";
 import type { WorkoutLite } from "./types";
 
 const now = new Date("2026-10-14T10:00:00Z");
@@ -97,5 +97,18 @@ describe("pickToday", () => {
       kind: "regular",
       workoutId: "new",
     });
+  });
+});
+
+describe("todayWorkoutHref", () => {
+  it("opens the free workout as her first one, so its end screen leads to the plans", () => {
+    expect(todayWorkoutHref({ kind: "free", workoutId: "w1" })).toBe("/app/workout/w1?first=1");
+  });
+
+  it("opens every other workout plainly", () => {
+    expect(todayWorkoutHref({ kind: "regular", workoutId: "w2" })).toBe("/app/workout/w2");
+    expect(todayWorkoutHref({ kind: "starter", workoutId: "w3", index: 0, total: 5 })).toBe(
+      "/app/workout/w3",
+    );
   });
 });

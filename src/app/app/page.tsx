@@ -16,6 +16,7 @@ import { WorkoutCover } from "@/components/workout/workout-cover";
 import { formatTodayDate } from "@/lib/format";
 import { formatLiveStart } from "@/lib/live/format";
 import { seriesParts } from "@/lib/program/completion-stats";
+import { todayWorkoutHref } from "@/lib/program/pick-today";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { formatNumber } from "@/lib/nutrition/format";
 import { levelProgress } from "@/lib/points/levels";
@@ -96,7 +97,14 @@ async function Home() {
           <section aria-label="Днешната тренировка" className="space-y-4">
             {view.workout ? (
               <div className="overflow-hidden rounded-2xl bg-sand">
-                <Link href={`/app/workout/${view.workout.id}`} className="block active:opacity-95">
+                <Link
+                  href={
+                    "workoutId" in view.pick
+                      ? todayWorkoutHref(view.pick)
+                      : `/app/workout/${view.workout.id}`
+                  }
+                  className="block active:opacity-95"
+                >
                   <div className="relative">
                     <WorkoutCover
                       focus={view.workout.focus[0] ?? null}

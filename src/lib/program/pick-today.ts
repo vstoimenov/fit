@@ -52,3 +52,12 @@ export function pickToday(input: {
     .sort((a, b) => Date.parse(b.publishAt!) - Date.parse(a.publishAt!))[0];
   return next ? { kind: "regular", workoutId: next.id } : { kind: "rest" };
 }
+
+/**
+ * Where today's card opens the workout. The free one only shows before she has done it, so it opens
+ * as her first workout: its end screen then leads to the plans instead of back home.
+ */
+export function todayWorkoutHref(pick: Extract<TodayPick, { workoutId: string }>): string {
+  const base = `/app/workout/${pick.workoutId}`;
+  return pick.kind === "free" ? `${base}?first=1` : base;
+}
