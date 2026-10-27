@@ -180,8 +180,10 @@ Revolut: the provider slot exists (`src/server/payments/revolut-provider.ts`) bu
 - **Keep the functions next to the database.** `vercel.json` pins the Vercel function region to `dub1`, the
   same region as the Supabase project (eu-west-1). Every page of the app makes a dozen or more round trips to
   the database, so a function in another region costs about 70 ms per round trip. If the Supabase project ever
-  moves, move the region with it. The proxy (`src/proxy.ts`) runs only on the routes in its `matcher` and
-  verifies the session JWT locally with `getClaims()`; static files and public pages never touch Supabase Auth.
+  moves, move the region with it. The proxy (`src/proxy.ts`) runs only on the routes in its `matcher`, so static files and
+  public pages never touch Supabase Auth. It keeps `getUser()` (a round trip, cheap from the same region): a local
+  JWT check let a revoked session through and looped `/app` ↔ `/login`. `/auth/signout` clears a dead session's
+  cookies on the device.
 
 1. **Schema:** `supabase link --project-ref <ref>` then `supabase db push`.
 2. **Auth settings:** `supabase config push` (or set them in the dashboard) so the hosted project matches

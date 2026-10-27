@@ -32,10 +32,13 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  // getClaims() verifies the JWT locally against the project's signing keys (cached per process)
-  // and refreshes an expired session; getUser() would be a network round trip on every request.
-  const { data: claims } = await supabase.auth.getClaims();
-  const user = claims?.claims ?? null;
+  // getUser() asks Supabase Auth, so a revoked session (signed out elsewhere, refresh token reused)
+  // is caught here and never reaches a page. A local JWT check (getClaims) trusted such a token
+  // until it expired and sent the member round in a /app ↔ /login loop. The function runs next to
+  // the database, so this round trip is cheap; the matcher keeps it off static files and public pages.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // Testing only: a signed-out visit signs in as a test account instead of showing /login —
   // locally (client or admin) or on the test-share tunnel host (member app only, a fresh tester).

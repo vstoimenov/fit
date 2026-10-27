@@ -27,7 +27,8 @@ async function AppGate({ children }: { children: React.ReactNode }) {
   try {
     session = await requireUser();
   } catch (error) {
-    if (isAppError(error) && error.code === "UNAUTHORIZED") redirect("/login?next=/app");
+    // Clears this device's dead cookies on the way, so the proxy cannot bounce her back here.
+    if (isAppError(error) && error.code === "UNAUTHORIZED") redirect("/auth/signout?next=/login");
     throw error;
   }
   const { user, supabase } = session;
