@@ -51,7 +51,7 @@ describe("listArticlesFor", () => {
     expect(mine.map((r) => r.id)).not.toContain(advanced.id);
     expect(mine.map((r) => r.id)).not.toContain(draft.id);
     expect(Object.keys(mine[0]).sort()).toEqual(
-      ["cover_url", "excerpt", "id", "level", "published_at", "slug", "title"].sort(),
+      ["category", "cover_url", "excerpt", "id", "level", "published_at", "slug", "title"].sort(),
     );
   });
 });
