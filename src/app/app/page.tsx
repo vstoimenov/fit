@@ -25,6 +25,7 @@ import { homeChallenge } from "@/server/challenges/challenges";
 import { getMemberPoints } from "@/server/content/points";
 import { getTodayView } from "@/server/content/today";
 import type { TypedClient } from "@/server/db/types";
+import { listFeed } from "@/server/community/feed";
 import { nextLiveSession } from "@/server/live/sessions";
 import { getDiaryDay, getNutritionProfile } from "@/server/nutrition/diary";
 
@@ -44,7 +45,7 @@ async function Home() {
   const { user, supabase } = await requireUser();
   const view = await getTodayView(supabase, user.id);
   // Level and article are extras: if their reads fail the day's workout must still show.
-  const [progress, article, nutrition, challenge, live] = await Promise.all([
+  const [progress, article, nutrition, challenge, live, community] = await Promise.all([
     getMemberPoints(supabase, user.id).then(
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
@@ -60,6 +61,12 @@ async function Home() {
       logSkipped("challenge", user.id, error, null),
     ),
     homeLive(supabase, user.id).catch((error: unknown) => logSkipped("live", user.id, error, null)),
+    view.hasAccess
+      ? listFeed(supabase, null, 2).then(
+          (r) => r.posts,
+          (error: unknown) => logSkipped("community", user.id, error, []),
+        )
+      : Promise.resolve([]),
   ]);
   const firstName = view.name.split(" ")[0];
 
@@ -219,6 +226,35 @@ async function Home() {
               </span>
               <ChevronRight size={20} strokeWidth={2} aria-hidden="true" className="shrink-0" />
             </Link>
+          )}
+
+          {community.length > 0 && (
+            <section aria-labelledby="home-community-heading" className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <h2 id="home-community-heading" className="text-xl font-extrabold tracking-tight">
+                  От общността
+                </h2>
+                <Link
+                  href="/app/community"
+                  className="min-h-11 py-3 text-sm font-semibold text-ink underline underline-offset-2"
+                >
+                  Всички
+                </Link>
+              </div>
+              <ul className="space-y-2">
+                {community.map((p) => (
+                  <li key={p.id}>
+                    <Link
+                      href={`/app/community/${p.id}`}
+                      className="block rounded-2xl bg-sand p-4 active:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+                    >
+                      <span className="block text-sm font-extrabold">{p.authorName}</span>
+                      <span className="line-clamp-2 block text-sm text-ink-soft">{p.body}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
 
           {article && (

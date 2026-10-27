@@ -126,7 +126,12 @@ export function AfterWorkout({
 
       <div className="space-y-3">
         <ShareButton completionId={completionId} text={text} />
-        {/* Community share („Сподели в общността") goes here once the community exists. */}
+        <Link
+          href={`/app/community?share=${completionId}&title=${encodeURIComponent(workoutTitle)}`}
+          className={cn(buttonClass("secondary", "lg"), "w-full")}
+        >
+          Сподели в общността
+        </Link>
       </div>
 
       <Link

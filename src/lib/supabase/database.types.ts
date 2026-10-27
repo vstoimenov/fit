@@ -332,6 +332,202 @@ export type Database = {
           },
         ];
       };
+      community_comments: {
+        Row: {
+          body: string;
+          created_at: string;
+          hidden_at: string | null;
+          hidden_by: string | null;
+          id: string;
+          post_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          body: string;
+          created_at?: string;
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: string;
+          post_id: string;
+          user_id: string;
+        };
+        Update: {
+          body?: string;
+          created_at?: string;
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: string;
+          post_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "community_comments_hidden_by_fkey";
+            columns: ["hidden_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_comments_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "community_posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_comments_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      community_hearts: {
+        Row: {
+          created_at: string;
+          post_id: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          post_id: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          post_id?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "community_hearts_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "community_posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_hearts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      community_posts: {
+        Row: {
+          body: string;
+          completion_id: string | null;
+          created_at: string;
+          hidden_at: string | null;
+          hidden_by: string | null;
+          id: string;
+          photo_path: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          body: string;
+          completion_id?: string | null;
+          created_at?: string;
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: string;
+          photo_path?: string | null;
+          user_id: string;
+        };
+        Update: {
+          body?: string;
+          completion_id?: string | null;
+          created_at?: string;
+          hidden_at?: string | null;
+          hidden_by?: string | null;
+          id?: string;
+          photo_path?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "community_posts_completion_id_fkey";
+            columns: ["completion_id"];
+            isOneToOne: false;
+            referencedRelation: "workout_completions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_posts_hidden_by_fkey";
+            columns: ["hidden_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_posts_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      community_reports: {
+        Row: {
+          comment_id: string | null;
+          created_at: string;
+          id: string;
+          post_id: string | null;
+          reason: string;
+          resolved_at: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          comment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          post_id?: string | null;
+          reason: string;
+          resolved_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          comment_id?: string | null;
+          created_at?: string;
+          id?: string;
+          post_id?: string | null;
+          reason?: string;
+          resolved_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "community_reports_comment_id_fkey";
+            columns: ["comment_id"];
+            isOneToOne: false;
+            referencedRelation: "community_comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_reports_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "community_posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "community_reports_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       food_entries: {
         Row: {
           batch_id: string;
@@ -1465,8 +1661,12 @@ export type Database = {
       };
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
       admin_delete_challenge: { Args: { p_id: string }; Returns: undefined };
+      admin_delete_post: { Args: { p_id: string }; Returns: undefined };
+      admin_dismiss_report: { Args: { p_id: string }; Returns: undefined };
       admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
       admin_mfa_required: { Args: Record<PropertyKey, never>; Returns: boolean };
+      admin_moderate_comment: { Args: { p_hidden: boolean; p_id: string }; Returns: undefined };
+      admin_moderate_post: { Args: { p_hidden: boolean; p_id: string }; Returns: undefined };
       admin_reorder_starters: { Args: { p_ids: string[] }; Returns: undefined };
       admin_save_challenge: {
         Args: {
@@ -1498,6 +1698,15 @@ export type Database = {
         Returns: string;
       };
       attend_live: { Args: { p_session_id: string }; Returns: undefined };
+      award_community_points: {
+        Args: {
+          p_points: number;
+          p_ref: string;
+          p_source: Database["public"]["Enums"]["points_source"];
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       can_watch: { Args: { p_workout_id: string }; Returns: boolean };
       challenge_board: {
         Args: { p_id: string };
@@ -1517,7 +1726,18 @@ export type Database = {
       };
       claim_meal_draft_call: { Args: Record<PropertyKey, never>; Returns: boolean };
       claim_nutrition_ai_call: { Args: Record<PropertyKey, never>; Returns: boolean };
+      community_display_name: { Args: { p_name: string }; Returns: string };
+      community_feed: { Args: { p_before: string; p_limit: number }; Returns: Json };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
+      community_post: { Args: { p_id: string }; Returns: Json };
+      community_reports: { Args: Record<PropertyKey, never>; Returns: Json };
+      create_comment: { Args: { p_body: string; p_post_id: string }; Returns: string };
+      create_post: {
+        Args: { p_body: string; p_completion_id: string; p_photo_path: string };
+        Returns: string;
+      };
+      delete_own_comment: { Args: { p_id: string }; Returns: undefined };
+      delete_own_post: { Args: { p_id: string }; Returns: undefined };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       gift_code: { Args: Record<PropertyKey, never>; Returns: string };
       has_active_access: { Args: { uid: string }; Returns: boolean };
@@ -1558,6 +1778,10 @@ export type Database = {
       public_site_links: { Args: Record<PropertyKey, never>; Returns: Json };
       push_cron_status: { Args: Record<PropertyKey, never>; Returns: Json };
       redeem_gift_voucher: { Args: { p_code: string }; Returns: string };
+      report_content: {
+        Args: { p_comment_id: string; p_post_id: string; p_reason: string };
+        Returns: undefined;
+      };
       run_push_cron: { Args: Record<PropertyKey, never>; Returns: undefined };
       submit_lead: {
         Args: {
@@ -1569,6 +1793,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      toggle_heart: { Args: { p_post_id: string }; Returns: boolean };
       void_gift_voucher: { Args: { p_id: string }; Returns: undefined };
     };
     Enums: {

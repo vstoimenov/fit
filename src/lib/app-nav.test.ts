@@ -6,7 +6,7 @@ describe("APP_NAV", () => {
     expect(APP_NAV.map((i) => [i.href, i.label])).toEqual([
       ["/app", "Начало"],
       ["/app/library", "Тренировки"],
-      ["/app/nutrition", "Хранене"],
+      ["/app/community", "Общност"],
       ["/app/learn", "Полезно"],
       ["/app/profile", "Профил"],
     ]);
@@ -20,8 +20,10 @@ describe("activeNavHref", () => {
     ["/app/library/x", "/app/library"],
     ["/app/progress", "/app/profile"],
     ["/app/check-in", "/app/profile"],
-    ["/app/nutrition", "/app/nutrition"],
-    ["/app/nutrition/history", "/app/nutrition"],
+    ["/app/nutrition", "/app"],
+    ["/app/nutrition/history", "/app"],
+    ["/app/community", "/app/community"],
+    ["/app/community/abc", "/app/community"],
     ["/app/learn", "/app/learn"],
     ["/app/learn/some-article", "/app/learn"],
     ["/app/profile", "/app/profile"],
