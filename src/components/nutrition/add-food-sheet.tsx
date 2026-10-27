@@ -15,7 +15,8 @@ import {
   parseGramsInput,
 } from "@/lib/nutrition/estimate-draft";
 import { formatNumber } from "@/lib/nutrition/format";
-import { MEAL_LABEL, type MealSlot } from "@/lib/nutrition/labels";
+import { DRINK_PRESETS, type DrinkPreset } from "@/lib/nutrition/drinks";
+import { DIARY_LABEL, type DiarySlot } from "@/lib/nutrition/labels";
 import { menuChipsFor, type MenuDish } from "@/lib/nutrition/menu-format";
 import { foodTextSchema, type EstimateItem } from "@/lib/nutrition/schema";
 import type { FoodItem } from "@/server/nutrition/diary";
@@ -51,7 +52,7 @@ export function AddFoodSheet({
   menuDishes,
   onClose,
 }: {
-  meal: MealSlot;
+  meal: DiarySlot;
   day: string;
   aiEnabled: boolean;
   /** Her latest distinct foods, newest first. */
@@ -155,7 +156,11 @@ export function AddFoodSheet({
     setDraft((d) => ({ base: without(d.base), rows: without(d.rows), texts: without(d.texts) }));
   }
 
-  async function persist(items: EstimateItem[] | FoodItem[], source: "ai" | "recent", id: string) {
+  async function persist(
+    items: EstimateItem[] | FoodItem[],
+    source: "ai" | "recent" | "preset",
+    id: string,
+  ) {
     if (busy.current) return;
     busy.current = true;
     setSaving(true);
@@ -207,11 +212,36 @@ export function AddFoodSheet({
     }
   }
 
+  const drinks = meal === "drinks";
+  const unit = drinks ? "мл" : "г";
   const menuChips = menuChipsFor(meal, menuDishes);
   const menuChipList =
     menuChips.length > 0 ? (
       <MenuChips dishes={menuChips} disabled={saving} onPick={(dish) => void eatFromMenu(dish)} />
     ) : null;
+
+  // One tap logs a usual portion of a common drink; the amount can be changed in the diary afterwards.
+  const drinkChips = drinks ? (
+    <DrinkChips
+      disabled={saving}
+      onPick={(drink) =>
+        void persist(
+          [
+            {
+              name: drink.name,
+              grams: drink.grams,
+              kcal: drink.kcal,
+              proteinG: drink.proteinG,
+              carbsG: drink.carbsG,
+              fatG: drink.fatG,
+            },
+          ],
+          "preset",
+          crypto.randomUUID(),
+        )
+      }
+    />
+  ) : null;
 
   // One tap adds the food with its last amount, as its own batch.
   const recentChips =
@@ -246,7 +276,7 @@ export function AddFoodSheet({
       >
         <header className="flex items-center justify-between gap-3 px-5 pt-3">
           <h2 id={titleId} className="text-lg font-extrabold">
-            Добави · {MEAL_LABEL[meal]}
+            Добави · {DIARY_LABEL[meal]}
           </h2>
           <button
             type="button"
@@ -262,7 +292,9 @@ export function AddFoodSheet({
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
           {mode === "manual" ? (
             <div className="space-y-4">
-              {!aiEnabled && <p className="text-sm text-ink-soft">{COMING_SOON}</p>}
+              {/* The quick drinks need no AI: they are there in the hand-typed mode too. */}
+              {drinkChips}
+              {!aiEnabled && !drinks && <p className="text-sm text-ink-soft">{COMING_SOON}</p>}
               {aiEnabled && (
                 <Button variant="link" onClick={() => setMode("describe")}>
                   Опиши с думи
@@ -282,8 +314,9 @@ export function AddFoodSheet({
               {phase === "input" && (
                 <>
                   <div className="space-y-2">
+                    {drinkChips}
                     <label htmlFor="food-text" className="block text-sm font-semibold">
-                      Какво яде?
+                      {drinks ? "Друга напитка? Опиши я" : "Какво яде?"}
                     </label>
                     <textarea
                       id="food-text"
@@ -307,14 +340,20 @@ export function AddFoodSheet({
                       maxLength={300}
                       enterKeyHint="send"
                       autoComplete="off"
-                      placeholder="пилешка салата и филия пълнозърнест хляб"
+                      placeholder={
+                        drinks
+                          ? "голямо лате с овесено мляко, 2 бири"
+                          : "пилешка салата и филия пълнозърнест хляб"
+                      }
                       aria-describedby="food-privacy"
                       aria-invalid={message !== null}
                       className={cn(inputClass, "h-auto resize-none py-3")}
                     />
                     <p id="food-privacy" className="text-xs text-ink-soft">
-                      Например „3 пържени мекици“ или „2 яйца и филия хляб“. Изпращаме само този
-                      текст, без лични данни.
+                      {drinks
+                        ? "Например „чаша прясно мляко“ или „0,5 бира“."
+                        : "Например „3 пържени мекици“ или „2 яйца и филия хляб“."}{" "}
+                      Изпращаме само този текст, без лични данни.
                     </p>
                   </div>
                   {message && (
@@ -374,6 +413,7 @@ export function AddFoodSheet({
                     </p>
                   </div>
                   <EstimateRows
+                    unit={unit}
                     rows={draft.rows}
                     base={draft.base}
                     texts={draft.texts}
@@ -421,6 +461,38 @@ export function AddFoodSheet({
         </div>
       </motion.div>
     </dialog>
+  );
+}
+
+/** The common drinks: one tap logs one usual portion (ml and ≈ kcal on the chip). */
+function DrinkChips({
+  disabled,
+  onPick,
+}: {
+  disabled: boolean;
+  onPick: (drink: DrinkPreset) => void;
+}) {
+  return (
+    <section aria-label="Бързо добавяне на напитка" className="space-y-2">
+      <h3 className="text-sm font-semibold">Бързо добавяне</h3>
+      <ul className="flex flex-wrap gap-2">
+        {DRINK_PRESETS.map((drink) => (
+          <li key={drink.name}>
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(drink)}
+              className="inline-flex min-h-11 flex-col items-start justify-center rounded-2xl px-4 py-1.5 text-left ring-[1.5px] ring-inset ring-line active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:opacity-40"
+            >
+              <span className="text-sm font-semibold">{drink.name}</span>
+              <span className="text-xs text-ink-soft">
+                {formatNumber(drink.grams)} мл · {formatNumber(drink.kcal)} ккал
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

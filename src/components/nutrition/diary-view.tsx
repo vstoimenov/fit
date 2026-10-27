@@ -13,10 +13,10 @@ import {
   sumEntries,
 } from "@/lib/nutrition/day";
 import { formatGrams, formatNumber } from "@/lib/nutrition/format";
-import { MEAL_SLOTS, type MealSlot } from "@/lib/nutrition/labels";
+import { DIARY_SLOTS, type DiarySlot } from "@/lib/nutrition/labels";
 import type { MenuDish } from "@/lib/nutrition/menu-format";
 import type { Target } from "@/lib/nutrition/target";
-import type { FoodEntry, FoodItem } from "@/server/nutrition/diary";
+import type { FoodEntry, RecentFood } from "@/server/nutrition/diary";
 import { AddFoodSheet } from "./add-food-sheet";
 import { CalorieRing } from "./calorie-ring";
 import { EntryRow } from "./entry-row";
@@ -78,12 +78,12 @@ export function DiaryView({
   /** The describe-in-words estimate is available (an API key is set on the server). */
   aiEnabled: boolean;
   /** Her latest distinct foods, for one-tap adding. */
-  recent: FoodItem[];
+  recent: RecentFood[];
   /** Today's menu dishes not eaten yet (empty on other days); the add sheet offers them per meal. */
   menuDishes: MenuDish[];
 }) {
   const [shown, change] = useOptimistic(entries, applyChange);
-  const [openMeal, setOpenMeal] = useState<MealSlot | null>(null);
+  const [openMeal, setOpenMeal] = useState<DiarySlot | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -156,7 +156,7 @@ export function DiaryView({
       )}
 
       <div className="space-y-3">
-        {MEAL_SLOTS.map((meal) => {
+        {DIARY_SLOTS.map((meal) => {
           const rows = shown.filter((e) => e.meal === meal);
           // A lapsed member sees only what she logged; an empty group would just be noise.
           if (!canWrite && rows.length === 0) return null;
@@ -173,7 +173,7 @@ export function DiaryView({
                   day={day}
                   meal={meal}
                   aiEnabled={aiEnabled}
-                  recent={recent}
+                  recent={recent.filter((r) => (r.meal === "drinks") === (meal === "drinks"))}
                   menuDishes={menuDishes}
                   onClose={() => setOpenMeal(null)}
                 />

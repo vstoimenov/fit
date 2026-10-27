@@ -2,16 +2,13 @@
 
 import { Bell, BellOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import {
-  setPushHourAction,
-  subscribePushAction,
-  unsubscribePushAction,
-} from "@/app/app/profile/push-actions";
+import { setPushHourAction, unsubscribePushAction } from "@/app/app/profile/push-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { inputOnCardClass } from "@/components/ui/field";
-import { pushSupport, urlBase64ToUint8Array, type PushSupport } from "@/lib/push/support";
+import { enablePush } from "@/lib/push/enable";
+import { pushSupport, type PushSupport } from "@/lib/push/support";
 
 const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 06:00 … 22:00
 const DEFAULT_HOUR = 18;
@@ -71,30 +68,13 @@ export function PushCard({
     setPending(true);
     setError("");
     try {
-      const registration =
-        (await navigator.serviceWorker.getRegistration()) ??
-        (await navigator.serviceWorker.register("/sw.js"));
-      await navigator.serviceWorker.ready;
-      const subscription =
-        (await registration.pushManager.getSubscription()) ??
-        (await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey),
-        }));
-      const result = await subscribePushAction(subscription.toJSON(), hour);
+      const result = await enablePush(publicKey, hour);
       if (!result.ok) {
         setError(result.message);
+        if (result.denied) setStatus({ kind: "unavailable", support: "denied" });
         return;
       }
-      setStatus({ kind: "on", endpoint: subscription.endpoint });
-    } catch {
-      const denied = "Notification" in window && Notification.permission === "denied";
-      setError(
-        denied
-          ? "Известията са забранени за сайта в настройките на браузъра."
-          : "Не успяхме да включим известията. Опитай отново.",
-      );
-      if (denied) setStatus({ kind: "unavailable", support: "denied" });
+      setStatus({ kind: "on", endpoint: result.endpoint });
     } finally {
       busy.current = false;
       setPending(false);

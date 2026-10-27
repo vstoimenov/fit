@@ -1,3 +1,4 @@
+import { MEAL_SLOTS, type MealSlot } from "@/lib/nutrition/labels";
 import type { Meal, MealInput } from "@/lib/nutrition/meal-schema";
 import type { Database } from "@/lib/supabase/database.types";
 import type { TypedClient } from "@/server/db/types";
@@ -8,7 +9,10 @@ type MealRow = Database["public"]["Tables"]["meals"]["Row"];
 export const toMeal = (r: MealRow): Meal => ({
   id: r.id,
   title: r.title,
-  mealTypes: r.meal_types,
+  // The database rejects „drinks“ for meals (meal_types_valid); narrowing keeps the type honest.
+  mealTypes: r.meal_types.filter((t): t is MealSlot =>
+    (MEAL_SLOTS as readonly string[]).includes(t),
+  ),
   ingredients: r.ingredients as MealInput["ingredients"],
   kcal: r.kcal,
   proteinG: r.protein_g,

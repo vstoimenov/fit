@@ -3,7 +3,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { formatNumber } from "@/lib/nutrition/format";
-import { MEAL_LABEL, type MealSlot } from "@/lib/nutrition/labels";
+import { DIARY_LABEL, type DiarySlot } from "@/lib/nutrition/labels";
 
 /**
  * One meal of the day: title, its kcal, the entries (as children) and „+ Добави“. Which meal's add
@@ -19,7 +19,7 @@ export function MealGroup({
   addPanel,
   children,
 }: {
-  meal: MealSlot;
+  meal: DiarySlot;
   kcal: number;
   count: number;
   /** Undefined = read-only: no add button. */
@@ -44,7 +44,7 @@ export function MealGroup({
       <header className="flex min-h-11 items-center justify-between gap-3">
         <div className="min-w-0">
           <h3 id={headingId} className="font-extrabold">
-            {MEAL_LABEL[meal]}
+            {DIARY_LABEL[meal]}
           </h3>
           {count > 0 && <p className="text-xs text-ink-soft">≈ {formatNumber(kcal)} ккал</p>}
         </div>
@@ -55,7 +55,7 @@ export function MealGroup({
             onClick={onAdd}
             className={buttonClass("secondary", "md")}
           >
-            + Добави<span className="sr-only"> към {MEAL_LABEL[meal].toLowerCase()}</span>
+            + Добави<span className="sr-only"> към {DIARY_LABEL[meal].toLowerCase()}</span>
           </button>
         )}
       </header>

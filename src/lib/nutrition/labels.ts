@@ -20,11 +20,14 @@ export const DIETS = ["omnivore", "vegetarian", "vegan", "pescatarian"] as const
 export const ACTIVITY_LEVELS = ["sedentary", "light", "moderate", "active"] as const;
 
 export const MEAL_SLOTS = ["breakfast", "lunch", "dinner", "snack"] as const;
+/** The diary groups: the four meals plus „Напитки“ (liquid calories on their own; not a menu meal). */
+export const DIARY_SLOTS = [...MEAL_SLOTS, "drinks"] as const;
 
 export type Allergen = (typeof ALLERGENS)[number];
 export type Diet = (typeof DIETS)[number];
 export type ActivityLevel = (typeof ACTIVITY_LEVELS)[number];
 export type MealSlot = (typeof MEAL_SLOTS)[number];
+export type DiarySlot = (typeof DIARY_SLOTS)[number];
 
 /** Bulgarian labels for allergen codes. */
 export const ALLERGEN_LABEL: Record<Allergen, string> = {
@@ -67,3 +70,6 @@ export const MEAL_LABEL: Record<MealSlot, string> = {
   dinner: "Вечеря",
   snack: "Междинно",
 };
+
+/** Bulgarian labels for the diary groups. */
+export const DIARY_LABEL: Record<DiarySlot, string> = { ...MEAL_LABEL, drinks: "Напитки" };

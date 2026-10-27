@@ -1,7 +1,7 @@
 import { AppError } from "@/lib/app-error";
 import { GOALS, type Goal } from "@/lib/labels";
 import { sumEntries, rescale, type Totals } from "@/lib/nutrition/day";
-import type { MealSlot } from "@/lib/nutrition/labels";
+import type { DiarySlot } from "@/lib/nutrition/labels";
 import { nutritionAnswersSchema, type NutritionAnswers } from "@/lib/nutrition/schema";
 import { calorieTarget, type Target } from "@/lib/nutrition/target";
 import { sofiaToday } from "@/lib/progress-photos/today";
@@ -10,14 +10,14 @@ import type { TypedClient } from "@/server/db/types";
 export type FoodEntry = {
   id: string;
   eatenOn: string;
-  meal: MealSlot;
+  meal: DiarySlot;
   name: string;
   grams: number | null;
   kcal: number;
   proteinG: number;
   carbsG: number;
   fatG: number;
-  source: "ai" | "manual" | "recent" | "menu";
+  source: "ai" | "manual" | "recent" | "menu" | "preset";
 };
 
 export type FoodItem = {
@@ -28,6 +28,9 @@ export type FoodItem = {
   carbsG: number;
   fatG: number;
 };
+
+/** A recent food and the diary group it was logged in (drinks come back in „Напитки“ only). */
+export type RecentFood = FoodItem & { meal: DiarySlot };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
@@ -41,7 +44,7 @@ const ENTRY_COLUMNS = "id, eaten_on, meal, name, grams, kcal, protein_g, carbs_g
 type EntryRow = {
   id: string;
   eaten_on: string;
-  meal: MealSlot;
+  meal: DiarySlot;
   name: string;
   grams: number | null;
   kcal: number;
@@ -102,7 +105,7 @@ export async function addEntries(
   userId: string,
   input: {
     day: string;
-    meal: MealSlot;
+    meal: DiarySlot;
     batchId: string;
     source: FoodEntry["source"];
     items: FoodItem[];
@@ -209,17 +212,17 @@ export async function recentFoods(
   db: TypedClient,
   userId: string,
   limit = 10,
-): Promise<FoodItem[]> {
+): Promise<RecentFood[]> {
   const { data, error } = await db
     .from("food_entries")
-    .select("name, grams, kcal, protein_g, carbs_g, fat_g")
+    .select("name, grams, kcal, protein_g, carbs_g, fat_g, meal")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .order("position")
     .limit(RECENT_SCAN);
   if (error) throw new Error(`load recent foods failed: ${error.message}`);
   const seen = new Set<string>();
-  const out: FoodItem[] = [];
+  const out: RecentFood[] = [];
   for (const r of data) {
     const key = r.name.toLowerCase();
     if (seen.has(key)) continue;
@@ -231,6 +234,7 @@ export async function recentFoods(
       proteinG: r.protein_g,
       carbsG: r.carbs_g,
       fatG: r.fat_g,
+      meal: r.meal,
     });
     if (out.length >= limit) break;
   }

@@ -33,6 +33,8 @@ export function EntryRow({
   const [draft, setDraft] = useState("");
   const [invalid, setInvalid] = useState(false);
   const canEditGrams = entry.grams !== null && onGrams !== undefined;
+  // Drinks are measured in ml (stored as grams, 1 g per ml).
+  const unit = entry.meal === "drinks" ? "мл" : "г";
 
   function open() {
     setDraft(String(entry.grams ?? ""));
@@ -66,11 +68,11 @@ export function EntryRow({
               onKeyDown={(event) => event.key === "Escape" && setEditing(false)}
               inputMode="decimal"
               autoFocus
-              aria-label={`Количество в грамове: ${entry.name}`}
+              aria-label={`Количество (${unit}): ${entry.name}`}
               aria-invalid={invalid}
               className={cn(inputClass, "h-11 w-24 px-3", invalid && "border-brick")}
             />
-            <span className="text-sm text-ink-soft">г</span>
+            <span className="text-sm text-ink-soft">{unit}</span>
             <button type="submit" aria-label="Запази количеството" className={iconButton}>
               <Check size={20} strokeWidth={2} aria-hidden="true" />
             </button>
@@ -93,17 +95,19 @@ export function EntryRow({
                   aria-label={`Промени количеството: ${entry.name}`}
                   className="-my-3 inline-flex min-h-11 items-center font-semibold text-ink underline decoration-dotted underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
                 >
-                  {formatNumber(entry.grams)} г
+                  {formatNumber(entry.grams)} {unit}
                 </button>
               ) : (
-                <span>{formatNumber(entry.grams)} г</span>
+                <span>
+                  {formatNumber(entry.grams)} {unit}
+                </span>
               ))}
             {entry.grams !== null && " · "}≈ {formatNumber(entry.kcal)} ккал
           </p>
         )}
         {invalid && (
           <p role="alert" className="text-xs text-brick">
-            Количеството е между 1 и 2000 г.
+            Количеството е между 1 и 2000 {unit}.
           </p>
         )}
       </div>

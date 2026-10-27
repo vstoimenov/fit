@@ -283,6 +283,8 @@ describe("recent foods and history", () => {
       proteinG: 7,
       carbsG: 1,
       fatG: 6,
+      // The group comes along, so the add sheet can keep drinks and food apart.
+      meal: "lunch",
     });
     expect(await recentFoods(db, user.id, 1)).toHaveLength(1);
   });

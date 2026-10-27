@@ -501,3 +501,40 @@ describe("account deletion", () => {
     expect(calls.data).toEqual([]);
   });
 });
+
+describe("food_entries: drinks", () => {
+  it("stores a drink in its own diary group, picked from the quick list", async () => {
+    const { user, db } = await member("drinks-own");
+    const { data, error } = await db
+      .from("food_entries")
+      .insert(
+        entry(user.id, {
+          meal: "drinks",
+          name: "Капучино",
+          grams: 180,
+          kcal: 80,
+          protein_g: 4.5,
+          carbs_g: 6.5,
+          fat_g: 4,
+          source: "preset",
+        }),
+      )
+      .select("meal, source")
+      .single();
+    expect(error).toBeNull();
+    expect(data).toEqual({ meal: "drinks", source: "preset" });
+  });
+
+  it("is a diary group only: a menu meal cannot be typed as a drink", async () => {
+    const { data, error } = await admin.rpc(
+      "meal_types_valid" as never,
+      {
+        p_types: ["drinks"],
+      } as never,
+    );
+    expect(error).toBeNull();
+    expect(data).toBe(false);
+    const ok = await admin.rpc("meal_types_valid" as never, { p_types: ["lunch"] } as never);
+    expect(ok.data).toBe(true);
+  });
+});

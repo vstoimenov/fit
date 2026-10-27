@@ -24,7 +24,10 @@ export function EstimateRows({
   disabled,
   onGrams,
   onRemove,
+  unit = "г",
 }: {
+  /** „мл“ for drinks (stored as grams, 1 g per ml). */
+  unit?: "г" | "мл";
   rows: EstimateItem[];
   /** The rows as estimated: one portion each. */
   base: EstimateItem[];
@@ -73,12 +76,12 @@ export function EstimateRows({
                 inputMode="decimal"
                 autoComplete="off"
                 disabled={disabled}
-                aria-label={`Количество в грамове: ${row.name}`}
+                aria-label={`Количество (${unit}): ${row.name}`}
                 aria-invalid={problem !== null}
                 aria-describedby={problem ? `grams-problem-${index}` : undefined}
                 className={cn(inputClass, "h-11 w-20 px-2 text-center", problem && "border-brick")}
               />
-              <span className="text-sm text-ink-soft">г</span>
+              <span className="text-sm text-ink-soft">{unit}</span>
               <button
                 type="button"
                 onClick={() => step(1)}

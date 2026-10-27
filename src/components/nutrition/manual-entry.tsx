@@ -5,7 +5,7 @@ import { addManualEntry } from "@/app/app/nutrition/actions";
 import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import { manualEntrySchema } from "@/lib/nutrition/schema";
-import type { MealSlot } from "@/lib/nutrition/labels";
+import type { DiarySlot } from "@/lib/nutrition/labels";
 
 type Fields = { name: string; kcal: string; proteinG: string; carbsG: string; fatG: string };
 const EMPTY: Fields = { name: "", kcal: "", proteinG: "", carbsG: "", fatG: "" };
@@ -26,7 +26,7 @@ export function ManualEntry({
   onDone,
 }: {
   day: string;
-  meal: MealSlot;
+  meal: DiarySlot;
   /** Called after a successful save and on „Затвори“. */
   onDone: () => void;
 }) {

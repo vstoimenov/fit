@@ -7,7 +7,7 @@ import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
 import { nutritionFormToAnswers } from "@/lib/nutrition/answers-form";
 import { parseDayParam } from "@/lib/nutrition/day-param";
-import { MEAL_SLOTS } from "@/lib/nutrition/labels";
+import { DIARY_SLOTS } from "@/lib/nutrition/labels";
 import {
   foodTextSchema,
   manualEntrySchema,
@@ -109,14 +109,14 @@ function assertDiaryDay(day: unknown): string {
 }
 
 const manualInputSchema = manualEntrySchema.extend({
-  meal: z.enum(MEAL_SLOTS),
+  meal: z.enum(DIARY_SLOTS),
   batchId: z.guid("Невалидни данни за записа."),
 });
 
 /** Saves one hand-typed food. The batch id makes a retried request a no-op. Missing macros count as 0. */
 export async function addManualEntry(input: {
   day: string;
-  meal: (typeof MEAL_SLOTS)[number];
+  meal: (typeof DIARY_SLOTS)[number];
   batchId: string;
   name: string;
   kcal: number;
@@ -163,9 +163,9 @@ const savedFoodSchema = z.object({
 });
 
 const saveEstimateSchema = z.object({
-  meal: z.enum(MEAL_SLOTS),
+  meal: z.enum(DIARY_SLOTS),
   batchId: z.guid(),
-  source: z.enum(["ai", "recent"]),
+  source: z.enum(["ai", "recent", "preset"]),
   items: z.array(savedFoodSchema).min(1).max(12),
 });
 
@@ -176,9 +176,9 @@ const saveEstimateSchema = z.object({
  */
 export async function saveEstimate(input: {
   day: string;
-  meal: (typeof MEAL_SLOTS)[number];
+  meal: (typeof DIARY_SLOTS)[number];
   batchId: string;
-  source: "ai" | "recent";
+  source: "ai" | "recent" | "preset";
   items: {
     name: string;
     grams: number | null;

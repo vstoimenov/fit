@@ -1805,8 +1805,8 @@ export type Database = {
       activity_level: "sedentary" | "light" | "moderate" | "active";
       diet_type: "omnivore" | "vegetarian" | "vegan" | "pescatarian";
       feeling: "easy" | "right" | "hard";
-      food_source: "ai" | "manual" | "recent" | "menu";
-      meal_slot: "breakfast" | "lunch" | "dinner" | "snack";
+      food_source: "ai" | "manual" | "recent" | "menu" | "preset";
+      meal_slot: "breakfast" | "lunch" | "dinner" | "snack" | "drinks";
       note_kind: "call" | "message" | "note" | "snooze";
       payment_provider: "stripe" | "revolut" | "manual";
       plan_interval: "month" | "year";
@@ -1933,8 +1933,8 @@ export const Constants = {
       activity_level: ["sedentary", "light", "moderate", "active"],
       diet_type: ["omnivore", "vegetarian", "vegan", "pescatarian"],
       feeling: ["easy", "right", "hard"],
-      food_source: ["ai", "manual", "recent", "menu"],
-      meal_slot: ["breakfast", "lunch", "dinner", "snack"],
+      food_source: ["ai", "manual", "recent", "menu", "preset"],
+      meal_slot: ["breakfast", "lunch", "dinner", "snack", "drinks"],
       note_kind: ["call", "message", "note", "snooze"],
       payment_provider: ["stripe", "revolut", "manual"],
       plan_interval: ["month", "year"],

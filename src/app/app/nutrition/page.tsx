@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { serverEnv } from "@/env";
+import { clientEnv, serverEnv } from "@/env";
 import { DayNav } from "@/components/nutrition/day-nav";
 import { DiaryView } from "@/components/nutrition/diary-view";
+import { NutritionGate } from "@/components/nutrition/nutrition-gate";
 import { MenuView } from "@/components/nutrition/menu-view";
 import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
@@ -54,15 +55,26 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
             : getMenuDay(supabase, user.id, today, p),
         )
       : Promise.resolve(null);
-  const [profile, diary, recent, menuResult] = await Promise.all([
+  const [profile, diary, recent, menuResult, member] = await Promise.all([
     profilePromise,
     menuView ? null : getDiaryDay(supabase, user.id, day),
-    menuView ? null : recentFoods(supabase, user.id, 10),
+    menuView ? null : recentFoods(supabase, user.id, 20),
     menuPromise.then(
       (menu) => ({ menu, error: null as unknown }),
       (error: unknown) => ({ menu: null, error }),
     ),
+    // Role and reminder hour for the unlock card (the owner is never asked to install).
+    supabase.from("profiles").select("role, push_hour").eq("id", user.id).single(),
   ]);
+  const gate = {
+    isAdmin: member.data?.role === "admin",
+    publicKey: clientEnv.NEXT_PUBLIC_WEB_PUSH_PUBLIC_KEY ?? null,
+    pushHour: member.data?.push_hour ?? null,
+  };
+  // Members with access unlock Хранене by adding the app to the home screen and turning reminders on;
+  // without access the plans card below the read-only diary is what matters.
+  const gated = (content: React.ReactNode) =>
+    profile.hasAccess ? <NutritionGate {...gate}>{content}</NutritionGate> : content;
 
   // First visit: the questions come before the diary. Without access she cannot answer here (the plan
   // card below the read-only diary says why), so only members with access see the form.
@@ -76,7 +88,7 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
             Отговорите и записите за храна са здравни данни — пазим ги само за твоите изчисления.
           </p>
         </header>
-        <NutritionAnswersForm initial={null} submitLabel="Продължи" />
+        {gated(<NutritionAnswersForm initial={null} submitLabel="Продължи" />)}
       </main>
     );
   }
@@ -87,12 +99,16 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
     return (
       <main className="space-y-6 px-5 pt-8 lg:px-8">
         <Header />
-        <ViewTabs menuView />
-        <div className="space-y-1">
-          <h2 className="text-lg font-extrabold tracking-tight">Днес</h2>
-          <p className="text-xs font-semibold text-ink-soft">{historyDayLabel(today)}</p>
-        </div>
-        <MenuView data={menu} day={today} />
+        {gated(
+          <>
+            <ViewTabs menuView />
+            <div className="space-y-1">
+              <h2 className="text-lg font-extrabold tracking-tight">Днес</h2>
+              <p className="text-xs font-semibold text-ink-soft">{historyDayLabel(today)}</p>
+            </div>
+            <MenuView data={menu} day={today} />
+          </>,
+        )}
       </main>
     );
   }
@@ -114,20 +130,24 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
   return (
     <main className="space-y-6 px-5 pt-8 lg:px-8">
       <Header />
-      <ViewTabs menuView={false} />
-      <DayNav day={day} today={today}>
-        <DiaryView
-          key={day}
-          day={day}
-          entries={diary?.entries ?? []}
-          target={profile.target}
-          canWrite={profile.hasAccess}
-          showResult={showDayResult(day, today, sofiaHour())}
-          aiEnabled={Boolean(serverEnv.ANTHROPIC_API_KEY)}
-          recent={profile.hasAccess && recent ? recent : []}
-          menuDishes={menuDishes}
-        />
-      </DayNav>
+      {gated(
+        <>
+          <ViewTabs menuView={false} />
+          <DayNav day={day} today={today}>
+            <DiaryView
+              key={day}
+              day={day}
+              entries={diary?.entries ?? []}
+              target={profile.target}
+              canWrite={profile.hasAccess}
+              showResult={showDayResult(day, today, sofiaHour())}
+              aiEnabled={Boolean(serverEnv.ANTHROPIC_API_KEY)}
+              recent={profile.hasAccess && recent ? recent : []}
+              menuDishes={menuDishes}
+            />
+          </DayNav>
+        </>,
+      )}
     </main>
   );
 }

@@ -77,6 +77,6 @@ export function openMenuDishes(
 }
 
 /** The „От менюто“ chips of the add sheet for one meal: the open dishes whose slot is that meal. */
-export function menuChipsFor(meal: MealSlot, dishes: readonly MenuDish[]): MenuDish[] {
+export function menuChipsFor(meal: MealSlot | "drinks", dishes: readonly MenuDish[]): MenuDish[] {
   return dishes.filter((d) => d.meal === meal);
 }
