@@ -1,7 +1,9 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { clientEnvSchema, parseEnv, serverEnvSchema } from "./env-schema";
 
 describe("parseEnv", () => {
+  afterEach(() => vi.restoreAllMocks());
+
   it("returns parsed values with defaults", () => {
     const env = parseEnv(
       clientEnvSchema,
@@ -22,13 +24,14 @@ describe("parseEnv", () => {
     expect(() => parseEnv(serverEnvSchema, { ...base, LEADS_SALT: "short" }, "server")).toThrow(
       /LEADS_SALT/,
     );
-    expect(() =>
-      parseEnv(
-        serverEnvSchema,
-        { ...base, LEADS_SALT: "0123456789abcdef", BREVO_LEADS_LIST_ID: "abc" },
-        "server",
-      ),
-    ).toThrow(/BREVO_LEADS_LIST_ID/);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const dropped = parseEnv(
+      serverEnvSchema,
+      { ...base, LEADS_SALT: "0123456789abcdef", BREVO_LEADS_LIST_ID: "abc" },
+      "server",
+    );
+    expect(dropped.BREVO_LEADS_LIST_ID).toBeUndefined();
+    expect(String(warn.mock.calls[0]?.[0])).toContain("BREVO_LEADS_LIST_ID");
     const env = parseEnv(
       serverEnvSchema,
       { ...base, LEADS_SALT: "0123456789abcdef", BREVO_LEADS_LIST_ID: "12" },
@@ -53,18 +56,23 @@ describe("parseEnv", () => {
     expect(env.EMAIL_FROM_NAME).toBeUndefined();
   });
 
-  it("rejects an invalid EMAIL_FROM_ADDRESS", () => {
+  it("drops an invalid EMAIL_FROM_ADDRESS with a warning instead of failing the boot", () => {
     const base = {
       SUPABASE_SERVICE_ROLE_KEY: "k",
       APP_URL: "http://localhost:3120",
       LEADS_SALT: "0123456789abcdef",
     };
-    expect(() =>
-      parseEnv(serverEnvSchema, { ...base, EMAIL_FROM_ADDRESS: "not-an-email" }, "server"),
-    ).toThrow(/EMAIL_FROM_ADDRESS/);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const env = parseEnv(
+      serverEnvSchema,
+      { ...base, EMAIL_FROM_ADDRESS: "not-an-email" },
+      "server",
+    );
+    expect(env.EMAIL_FROM_ADDRESS).toBeUndefined();
+    expect(String(warn.mock.calls[0]?.[0])).toContain("EMAIL_FROM_ADDRESS");
   });
 
-  it("treats empty Stripe variables as unset and rejects the wrong key type", () => {
+  it("treats empty Stripe variables as unset and drops the wrong key type with a warning", () => {
     const base = {
       SUPABASE_SERVICE_ROLE_KEY: "k",
       APP_URL: "http://localhost:3120",
@@ -77,12 +85,19 @@ describe("parseEnv", () => {
     );
     expect(env.STRIPE_SECRET_KEY).toBeUndefined();
     expect(env.STRIPE_WEBHOOK_SECRET).toBeUndefined();
-    expect(() =>
-      parseEnv(serverEnvSchema, { ...base, STRIPE_SECRET_KEY: "pk_test_abc" }, "server"),
-    ).toThrow(/STRIPE_SECRET_KEY/);
-    expect(() =>
-      parseEnv(serverEnvSchema, { ...base, STRIPE_WEBHOOK_SECRET: "abc" }, "server"),
-    ).toThrow(/STRIPE_WEBHOOK_SECRET/);
+    // A wrong optional key must not take the whole site down: it is ignored and named in a warning.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const wrong = parseEnv(
+      serverEnvSchema,
+      { ...base, STRIPE_SECRET_KEY: "pk_test_abc", STRIPE_WEBHOOK_SECRET: "abc" },
+      "server",
+    );
+    expect(wrong.STRIPE_SECRET_KEY).toBeUndefined();
+    expect(wrong.STRIPE_WEBHOOK_SECRET).toBeUndefined();
+    expect(warn.mock.calls.map((c) => String(c[0]))).toEqual([
+      expect.stringContaining("STRIPE_SECRET_KEY"),
+      expect.stringContaining("STRIPE_WEBHOOK_SECRET"),
+    ]);
     const ok = parseEnv(
       serverEnvSchema,
       { ...base, STRIPE_SECRET_KEY: "sk_test_abc", STRIPE_WEBHOOK_SECRET: "whsec_abc" },
@@ -108,7 +123,7 @@ describe("parseEnv", () => {
     expect(blank.STRIPE_SECRET_KEY).toBeUndefined();
   });
 
-  it("treats empty Anthropic variables as unset and rejects a key without the sk-ant- prefix", () => {
+  it("treats empty Anthropic variables as unset and drops a key without the sk-ant- prefix", () => {
     const base = {
       SUPABASE_SERVICE_ROLE_KEY: "k",
       APP_URL: "http://localhost:3120",
@@ -121,9 +136,14 @@ describe("parseEnv", () => {
     );
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
     expect(env.NUTRITION_AI_MODEL).toBeUndefined();
-    expect(() =>
-      parseEnv(serverEnvSchema, { ...base, ANTHROPIC_API_KEY: "abc" }, "server"),
-    ).toThrow(/ANTHROPIC_API_KEY/);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const placeholder = parseEnv(
+      serverEnvSchema,
+      { ...base, ANTHROPIC_API_KEY: "КЛЮЧЪТ" },
+      "server",
+    );
+    expect(placeholder.ANTHROPIC_API_KEY).toBeUndefined();
+    expect(String(warn.mock.calls[0]?.[0])).toMatch(/ANTHROPIC_API_KEY.*sk-ant-/);
     const ok = parseEnv(
       serverEnvSchema,
       { ...base, ANTHROPIC_API_KEY: "sk-ant-abc\n", NUTRITION_AI_MODEL: "claude-haiku-5-5" },
