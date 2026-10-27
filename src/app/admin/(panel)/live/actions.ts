@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { formBool, formString } from "@/lib/form-data";
@@ -44,10 +45,10 @@ export async function deleteLiveAction(id: string): Promise<ActionResult<null>> 
   try {
     const { supabase } = await requireAdmin();
     await deleteLiveSession(supabase, z.uuid().parse(id));
-    revalidatePath("/admin/live");
-    revalidatePath("/app");
-    return actionOk(null);
   } catch (error) {
     return actionFail(error);
   }
+  revalidatePath("/admin/live");
+  revalidatePath("/app");
+  redirect("/admin/live");
 }

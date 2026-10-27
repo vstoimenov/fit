@@ -11,13 +11,16 @@ describe("buildIcs", () => {
         startsAt: "2026-10-30T17:00:00Z",
         durationMin: 45,
       },
-      "https://iamstrong.bg",
+      "https://iamstrong.bg/",
+      new Date("2026-10-27T08:00:00Z"),
     );
     expect(ics.endsWith("\r\n")).toBe(true);
     const lines = ics.trimEnd().split("\r\n");
     expect(lines[0]).toBe("BEGIN:VCALENDAR");
+    expect(lines).toContain("DTSTAMP:20261027T080000Z");
     expect(lines).toContain("DTSTART:20261030T170000Z");
     expect(lines).toContain("DTEND:20261030T174500Z");
+    // RFC 5545: commas and semicolons in TEXT carry a backslash.
     expect(lines).toContain("SUMMARY:На живо: кор\\, гръб\; дишане");
     expect(lines).toContain("DESCRIPTION:Вземи постелка.\\nБез уреди.");
     expect(lines).toContain("UID:6d1f0d4e-0000-4000-8000-000000000001@iamstrong.bg");

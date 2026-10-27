@@ -1,6 +1,6 @@
 import "server-only";
 
-import { endsAt } from "@/lib/live/window";
+import { endsAt, MAX_DURATION_MIN } from "@/lib/live/window";
 import type { TypedClient } from "@/server/db/types";
 
 export interface LiveSession {
@@ -51,7 +51,7 @@ export async function nextLiveSession(
   db: TypedClient,
   now = new Date(),
 ): Promise<LiveSession | null> {
-  const since = new Date(now.getTime() - 180 * 60_000).toISOString();
+  const since = new Date(now.getTime() - MAX_DURATION_MIN * 60_000).toISOString();
   const { data, error } = await db
     .from("live_sessions")
     .select(COLUMNS)
@@ -76,6 +76,8 @@ export async function listRecordings(db: TypedClient, limit = 30): Promise<LiveS
     .select(COLUMNS)
     .eq("published", true)
     .not("recording_url", "is", null)
+    // Only sessions that have happened: a link pasted ahead of time is not a recording yet.
+    .lt("starts_at", new Date().toISOString())
     .order("starts_at", { ascending: false })
     .limit(limit);
   if (error) throw new Error(`load recordings failed: ${error.message}`);
@@ -91,7 +93,6 @@ export async function attendLive(
   if (!error) return { ok: true };
   if (error.code === "P0001" || error.code === "P0002")
     return { ok: false, message: error.message };
-  if (error.code === "42501")
-    return { ok: false, message: "Сесиите на живо са за членове с абонамент." };
+  if (error.code === "42501") return { ok: false, message: "Сесиите на живо са за абонатки." };
   throw new Error(`attend live failed: ${error.message}`);
 }

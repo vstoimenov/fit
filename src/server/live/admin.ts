@@ -123,6 +123,13 @@ export async function saveLiveSession(
 }
 
 export async function deleteLiveSession(db: TypedClient, id: string): Promise<void> {
-  const { error } = await db.from("live_sessions").delete().eq("id", id);
+  const { data, error } = await db.from("live_sessions").delete().eq("id", id).select("id");
+  if (error?.code === "23503") {
+    throw new AppError(
+      "CONFLICT",
+      "Има отбелязани присъствия на тази сесия. Махни публикуването вместо да я триеш.",
+    );
+  }
   if (error) throw new Error(`delete live session failed: ${error.message}`);
+  if (data.length === 0) throw new AppError("NOT_FOUND", "Сесията не е намерена.");
 }

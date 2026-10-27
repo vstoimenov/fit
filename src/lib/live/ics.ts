@@ -13,12 +13,14 @@ const stamp = (d: Date) =>
     .toISOString()
     .replace(/[-:]/g, "")
     .replace(/\.\d{3}Z$/, "Z");
+// RFC 5545 TEXT: backslash, semicolon and comma carry a backslash; newlines become \n.
 const escape = (text: string) =>
   text.replace(/\\/g, "\\\\").replace(/;/g, "\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
 
 /** A single-event calendar file (RFC 5545): UTC times, CRLF, escaped text. */
-export function buildIcs(session: IcsSession, appUrl: string): string {
-  const host = new URL(appUrl).host;
+export function buildIcs(session: IcsSession, appUrl: string, now = new Date()): string {
+  const base = appUrl.replace(/\/+$/, "");
+  const host = new URL(base).host;
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -27,12 +29,12 @@ export function buildIcs(session: IcsSession, appUrl: string): string {
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${session.id}@${host}`,
-    `DTSTAMP:${stamp(new Date(session.startsAt))}`,
+    `DTSTAMP:${stamp(now)}`,
     `DTSTART:${stamp(new Date(session.startsAt))}`,
     `DTEND:${stamp(endsAt(session))}`,
     `SUMMARY:${escape(session.title)}`,
     `DESCRIPTION:${escape(session.description)}`,
-    `URL:${appUrl}/app`,
+    `URL:${base}/app`,
     "END:VEVENT",
     "END:VCALENDAR",
   ];

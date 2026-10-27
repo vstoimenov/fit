@@ -92,4 +92,17 @@ describe("live sessions", () => {
       .insert({ ...base, slug: `${base.slug}-x`, category: "video" });
     expect(bad.error?.code).toBe("23514");
   });
+
+  it("attendance is written by the RPC only, and a session with attendance cannot be deleted", async () => {
+    const { admin, id } = await session(minutes(5));
+    const member = await createUser(admin, "live-direct");
+    await grantAccess(admin, member.id);
+    const db = await signedInClient(member);
+    const direct = await db.from("live_attendance").insert({ session_id: id, user_id: member.id });
+    expect(direct.error?.code).toBe("42501");
+    expect((await db.rpc("attend_live", { p_session_id: id })).error).toBeNull();
+    const { db: adminDb } = await createAdminUser(admin, "live-deleter");
+    const del = await adminDb.from("live_sessions").delete().eq("id", id);
+    expect(del.error?.code).toBe("23503");
+  });
 });

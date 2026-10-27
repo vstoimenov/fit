@@ -1,4 +1,6 @@
 export const JOIN_OPENS_MIN_BEFORE = 15;
+/** Mirrors the DB check on `live_sessions.duration_min`. */
+export const MAX_DURATION_MIN = 180;
 
 export interface LiveWindow {
   startsAt: string;

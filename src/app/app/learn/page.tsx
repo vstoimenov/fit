@@ -35,7 +35,7 @@ async function Learn({ searchParams }: { searchParams: SearchParams }) {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
   const raw = (await searchParams).vid;
-  const view: View = typeof raw === "string" && raw in VIEWS ? (raw as View) : "all";
+  const view: View = typeof raw === "string" && Object.hasOwn(VIEWS, raw) ? (raw as View) : "all";
   const { user, supabase } = await requireUser();
   const level = await getMemberLevel(supabase, user.id);
   const category: ArticleCategory | undefined =
@@ -73,7 +73,7 @@ async function Learn({ searchParams }: { searchParams: SearchParams }) {
       </div>
       {view === "all" && <CommunityCard url={communityUrl} />}
 
-      {(view === "all" || view === "recording") && (
+      {(view === "recording" || (view === "all" && recordings.length > 0)) && (
         <section aria-labelledby="recordings-heading" className="space-y-4">
           <h2 id="recordings-heading" className="text-xl font-extrabold tracking-tight">
             Записи на живо
@@ -90,7 +90,7 @@ async function Learn({ searchParams }: { searchParams: SearchParams }) {
         </section>
       )}
 
-      {(view === "all" || view === "recipe") && (
+      {(view === "recipe" || (view === "all" && recipes.length > 0)) && (
         <section aria-labelledby="recipes-heading" className="space-y-4">
           <h2 id="recipes-heading" className="text-xl font-extrabold tracking-tight">
             Рецепти

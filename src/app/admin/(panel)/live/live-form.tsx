@@ -93,7 +93,7 @@ export function LiveForm({ session }: { session: AdminLiveSession | null }) {
           submitLabel="Изтрий сесията"
           submitVariant="secondary"
           successMessage="Изтрита ✓"
-          confirmMessage="Да изтрием тази сесия? Присъствията и точките от нея остават."
+          confirmMessage="Да изтрием тази сесия? Сесия с отбелязани присъствия не може да се трие — махни публикуването."
         >
           <span />
         </ActionForm>

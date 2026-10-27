@@ -17,10 +17,13 @@ create table public.live_sessions (
 create index live_sessions_starts on public.live_sessions (starts_at desc);
 create trigger live_sessions_updated_at before update on public.live_sessions
   for each row execute function public.set_updated_at();
+create trigger live_sessions_audit after insert or update or delete on public.live_sessions
+  for each row execute function public.audit_row('id');
 
 create table public.live_attendance (
   user_id uuid not null references public.profiles (id) on delete cascade,
-  session_id uuid not null references public.live_sessions (id) on delete cascade,
+  -- Attendance is history: a session with attendance cannot be deleted (unpublish it instead).
+  session_id uuid not null references public.live_sessions (id) on delete restrict,
   joined_at timestamptz not null default now(),
   primary key (user_id, session_id)
 );

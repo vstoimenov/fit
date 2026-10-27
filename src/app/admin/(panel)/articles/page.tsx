@@ -10,18 +10,27 @@ import { requireAdmin } from "@/server/admin/require-admin";
 
 export const metadata = { title: "Статии" };
 
-export default function ArticlesPage() {
+const KINDS = { all: "Всички", article: "Статии", recipe: "Рецепти" } as const;
+type Kind = keyof typeof KINDS;
+const KIND_LABEL = { article: "Статия", recipe: "Рецепта" } as const;
+
+type Props = { searchParams: Promise<{ vid?: string | string[] }> };
+
+export default function ArticlesPage(props: Props) {
   return (
     <Suspense fallback={<p aria-busy="true">Зареждане…</p>}>
-      <Articles />
+      <Articles {...props} />
     </Suspense>
   );
 }
 
-async function Articles() {
+async function Articles({ searchParams }: Props) {
   await connection();
+  const raw = (await searchParams).vid;
+  const kind: Kind = typeof raw === "string" && Object.hasOwn(KINDS, raw) ? (raw as Kind) : "all";
   const { supabase } = await requireAdmin();
-  const articles = await listArticles(supabase);
+  const all = await listArticles(supabase);
+  const articles = kind === "all" ? all : all.filter((a) => a.category === kind);
 
   return (
     <div className="space-y-6">
@@ -31,11 +40,26 @@ async function Articles() {
           Нова статия
         </Link>
       </header>
+      <div role="group" aria-label="Вид" className="flex flex-wrap gap-2">
+        {(Object.keys(KINDS) as Kind[]).map((k) => (
+          <Link
+            key={k}
+            href={k === "all" ? "/admin/articles" : `/admin/articles?vid=${k}`}
+            aria-current={kind === k ? "true" : undefined}
+            className="inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+          >
+            <Chip tone={kind === k ? "ink" : "neutral"} className="px-4 py-2 text-sm">
+              {KINDS[k]}
+            </Chip>
+          </Link>
+        ))}
+      </div>
       <div className="overflow-x-auto rounded-2xl bg-white ring-1 ring-line">
         <table className="w-full min-w-[640px] text-left text-sm">
           <thead className="text-ink-soft">
             <tr>
               <th className="p-3">Заглавие</th>
+              <th className="p-3">Вид</th>
               <th className="p-3">Ниво</th>
               <th className="p-3">Достъп</th>
               <th className="p-3">Статус</th>
@@ -53,6 +77,7 @@ async function Articles() {
                     {a.title}
                   </Link>
                 </td>
+                <td className="p-3">{KIND_LABEL[a.category]}</td>
                 <td className="p-3">{a.level ? LEVEL_LABEL[a.level] : "Всички нива"}</td>
                 <td className="p-3">{a.membersOnly ? "Само с абонамент" : "За всички"}</td>
                 <td className="p-3">

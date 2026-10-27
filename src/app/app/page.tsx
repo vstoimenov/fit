@@ -13,6 +13,7 @@ import { Chip } from "@/components/ui/chip";
 import { StatTile } from "@/components/ui/stat-tile";
 import { WorkoutCover } from "@/components/workout/workout-cover";
 import { formatTodayDate } from "@/lib/format";
+import { formatLiveStart } from "@/lib/live/format";
 import { seriesParts } from "@/lib/program/completion-stats";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { formatNumber } from "@/lib/nutrition/format";
@@ -163,7 +164,14 @@ async function Home() {
         </div>
 
         <div className="space-y-6 lg:col-span-2 lg:col-start-4 lg:row-start-2">
-          {live && <LiveCard session={live.session} attended={live.attended} />}
+          {live && (
+            <LiveCard
+              key={live.session.id}
+              session={live.session}
+              startsText={formatLiveStart(live.session.startsAt, view.timezone)}
+              attended={live.attended}
+            />
+          )}
 
           <Link
             href="/app/progress"

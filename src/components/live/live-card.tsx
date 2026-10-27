@@ -1,34 +1,28 @@
 "use client";
 
 import { CalendarPlus, Radio } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { attendLiveAction } from "@/app/app/live-actions";
+import { useEffect, useState } from "react";
 import { buttonClass } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { liveState, type LiveState } from "@/lib/live/window";
 import type { LiveSession } from "@/server/live/sessions";
 
-function startsText(startsAt: string): string {
-  return new Date(startsAt).toLocaleString("bg-BG", {
-    timeZone: "Europe/Sofia",
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
 /**
- * Начало: the next session with Аксения. „Влизам" is a real link to the room (new tab) and also
- * records attendance for the points; the door opens 15 minutes early.
+ * Начало: the next session with Аксения. „Влизам" is a link through /api/live/[id]/join, which
+ * records attendance (points once, inside the window) and sends her on to the room; the door
+ * opens 15 minutes early. The start text is formatted on the server in her own timezone.
  */
-export function LiveCard({ session, attended }: { session: LiveSession; attended: boolean }) {
+export function LiveCard({
+  session,
+  startsText,
+  attended,
+}: {
+  session: LiveSession;
+  startsText: string;
+  attended: boolean;
+}) {
   // Server and client agree on "upcoming" first; the real state arrives after hydration.
   const [state, setState] = useState<LiveState>("upcoming");
-  const [joined, setJoined] = useState(attended);
-  const [error, setError] = useState("");
-  const busy = useRef(false);
 
   useEffect(() => {
     const tick = () => setState(liveState(session, new Date()));
@@ -40,21 +34,6 @@ export function LiveCard({ session, attended }: { session: LiveSession; attended
     };
   }, [session]);
 
-  function onJoin() {
-    if (busy.current || joined) return;
-    busy.current = true;
-    setError("");
-    attendLiveAction(session.id)
-      .then((result) => {
-        if (result.ok) setJoined(true);
-        else setError(result.message);
-      })
-      .catch(() => setError("Не успяхме да отбележим влизането."))
-      .finally(() => {
-        busy.current = false;
-      });
-  }
-
   if (state === "ended") return null;
 
   return (
@@ -64,18 +43,17 @@ export function LiveCard({ session, attended }: { session: LiveSession; attended
         {state === "open" ? "На живо сега" : "Следващо на живо"}
       </p>
       <p className="font-extrabold break-words">{session.title}</p>
-      <p className="text-sm text-ink-soft capitalize-first">{startsText(session.startsAt)}</p>
+      <p className="text-sm text-ink-soft">{startsText}</p>
       {session.description && <p className="text-sm text-ink-soft">{session.description}</p>}
       <div className="flex flex-wrap gap-2">
         {state === "open" ? (
           <a
-            href={session.joinUrl}
+            href={`/api/live/${session.id}/join`}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={onJoin}
             className={cn(buttonClass("primary", "md"), "flex-1")}
           >
-            {joined ? "Влез пак" : "Влизам"}
+            {attended ? "Влез пак" : "Влизам"}
           </a>
         ) : (
           <a
@@ -88,14 +66,9 @@ export function LiveCard({ session, attended }: { session: LiveSession; attended
           </a>
         )}
       </div>
-      {joined && state === "open" && (
+      {attended && state === "open" && (
         <p className="text-sm font-semibold text-moss" role="status">
-          Отбелязахме те · +5 точки
-        </p>
-      )}
-      {error && (
-        <p role="alert" className="text-sm font-semibold text-brick">
-          {error}
+          Вече си отбелязана за тази сесия
         </p>
       )}
     </section>
