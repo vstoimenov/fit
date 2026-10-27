@@ -6,6 +6,9 @@ import { allSlotsEmpty, menuTotals, slotLabel } from "@/lib/nutrition/menu-forma
 import type { getMenuDay } from "@/server/nutrition/menu";
 import { DishCard, type DishCardData } from "./dish-card";
 
+/** Shown above every menu: the menu is generic guidance, not a personal diet. */
+export const SAMPLE_MENU_NOTE =
+  "Това е примерно меню с ориентировъчни стойности, а не индивидуален хранителен режим. Не замества съвет от лекар или диетолог. Ако имаш здравословен проблем, бременна си или кърмиш, посъветвай се със специалист, преди да промениш храненето си.";
 export const ALLERGY_NOTE = "Провери етикетите на продуктите — при алергия бъди внимателна.";
 const EMPTY_SLOT = "Менюто ти се подготвя — скоро ще има ястия за теб.";
 
@@ -40,6 +43,10 @@ export function MenuView({
 
   return (
     <div className="space-y-4">
+      <p className="rounded-2xl bg-sand px-4 py-3 text-xs leading-relaxed text-ink-soft">
+        {SAMPLE_MENU_NOTE}
+      </p>
+
       {data.usingDefaultTarget && (
         <p className="rounded-2xl bg-sand px-4 py-3 text-sm">
           Целта ти още не е изчислена — менюто е за {formatNumber(data.targetKcal)} ккал.

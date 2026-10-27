@@ -221,7 +221,6 @@ describe("buildMenu", () => {
     targetKcal: 1800,
     userId: "u1",
     date: "2026-10-24",
-    recentMealIds: new Set<string>(),
     swaps: new Map<number, string>(),
   };
   const ids = (m: ReturnType<typeof buildMenu>) => m.map((s) => s.pick?.meal.id ?? null);
@@ -253,7 +252,7 @@ describe("buildMenu", () => {
     expect(orders.size).toBeGreaterThan(1);
   });
 
-  it("orders candidates by closeness to the slot before the hash", () => {
+  it("puts dishes that reach the slot calories first, the rest by closeness", () => {
     const meals = [
       meal({ id: "far", mealTypes: ["breakfast"], kcal: 900 }),
       meal({ id: "near", mealTypes: ["breakfast"], kcal: 440 }),
@@ -276,21 +275,28 @@ describe("buildMenu", () => {
     expect(menu[2].candidates).toEqual([]);
   });
 
-  it("prefers non-recent meals and falls back to recent ones", () => {
-    const meals = [
-      meal({ id: "old", mealTypes: ["breakfast"], kcal: 450 }),
-      meal({ id: "fresh", mealTypes: ["breakfast"], kcal: 700 }),
-    ];
-    const withRecent = buildMenu({ ...base, meals, recentMealIds: new Set(["old"]) });
-    expect(withRecent[0].pick?.meal.id).toBe("fresh");
-    expect(withRecent[0].candidates).toEqual(["fresh", "old"]);
+  it("serves every fitting dish once before any of them comes back", () => {
+    const meals = [0, 1, 2, 3].map((i) =>
+      meal({ id: `b${i}`, mealTypes: ["breakfast"], kcal: 440 + i * 5 }),
+    );
+    const picks = [1, 2, 3, 4, 5].map(
+      (day) => buildMenu({ ...base, meals, date: `2026-11-0${day}` })[0].pick?.meal.id ?? null,
+    );
+    expect(new Set(picks.slice(0, 4)).size).toBe(4);
+    expect(picks[4]).toBe(picks[0]);
+  });
 
-    const onlyRecent = buildMenu({
-      ...base,
-      meals: [meals[0]],
-      recentMealIds: new Set(["old"]),
-    });
-    expect(onlyRecent[0].pick?.meal.id).toBe("old");
+  it("gives different members their own order of dishes", () => {
+    const meals = [0, 1, 2, 3, 4, 5, 6, 7].map((i) =>
+      meal({ id: `b${i}`, mealTypes: ["breakfast"], kcal: 440 + i * 3 }),
+    );
+    const week = (userId: string) =>
+      [1, 2, 3, 4, 5, 6, 7]
+        .map(
+          (day) => buildMenu({ ...base, meals, userId, date: `2026-11-0${day}` })[0].pick?.meal.id,
+        )
+        .join();
+    expect(week("member-a")).not.toBe(week("member-b"));
   });
 
   it("skips unpublished meals and meals of another type", () => {

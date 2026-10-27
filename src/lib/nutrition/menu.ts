@@ -116,11 +116,22 @@ function fnv1a(text: string): number {
   return hash >>> 0;
 }
 
+/** A portion within this share of the slot's kcal counts as reaching it. */
+const REACH = 0.1;
+
+/** Whole days since 1970-01-01 for a YYYY-MM-DD date. */
+function dayNumber(date: string): number {
+  const [y, m, d] = date.split("-").map(Number);
+  return Math.floor(Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1) / 86_400_000);
+}
+
 /**
- * Builds one day's menu, deterministic per (userId, date). Candidates per slot are published meals of
- * that type that fit her prefs and are not already used that day, non-recent ones first, each group
- * ordered by closeness to the slot's kcal then by hash. A stored swap wins only while its meal is
- * still among the slot's candidates (the DB does not check swap targets), otherwise it is ignored.
+ * Builds one day's menu, deterministic per (userId, date). Dishes that fit her prefs and can reach
+ * the slot's kcal with a portion of 0.75-1.5 form a rotation: shuffled once per member, then each day
+ * starts one step further, so every such dish is served once before any comes back and two members
+ * see different days. Dishes that cannot reach the slot follow, closest first. A dish already used
+ * that day is skipped. A stored swap wins only while its meal is still among the slot's candidates
+ * (the DB does not check swap targets), otherwise it is ignored.
  */
 export function buildMenu(input: {
   meals: Meal[];
@@ -128,30 +139,39 @@ export function buildMenu(input: {
   targetKcal: number;
   userId: string;
   date: string;
-  recentMealIds: Set<string>;
   swaps: Map<number, string>;
 }): MenuSlot[] {
-  const { meals, prefs, targetKcal, userId, date, recentMealIds, swaps } = input;
+  const { meals, prefs, targetKcal, userId, date, swaps } = input;
   const fitting = meals.filter((meal) => meal.published && mealFits(meal, prefs));
   const used = new Set<string>();
+  const day = dayNumber(date);
 
   return SLOT_PLANS[prefs.mealsPerDay].map((plan, slot) => {
     const slotKcal = Math.round(targetKcal * plan.share);
-    const ranked = fitting
-      .filter((meal) => meal.mealTypes.includes(plan.meal) && !used.has(meal.id))
+    const scored = fitting
+      .filter((meal) => meal.mealTypes.includes(plan.meal))
       .map((meal) => {
         const factor = portionFactor(meal.kcal, slotKcal);
         return {
           meal,
           factor,
-          recent: recentMealIds.has(meal.id),
           distance: Math.abs(meal.kcal * factor - slotKcal),
-          hash: fnv1a(`${userId}|${date}|${meal.id}`),
+          hash: fnv1a(`${userId}|${meal.id}`),
         };
-      })
-      .sort(
-        (a, b) => Number(a.recent) - Number(b.recent) || a.distance - b.distance || a.hash - b.hash,
-      );
+      });
+    const reaches = (c: { distance: number }) => c.distance <= slotKcal * REACH;
+    // The rotation covers the whole slot list, used dishes included, so a second snack takes the
+    // next dish after the first one instead of shifting the day's starting point.
+    const rotation = scored
+      .filter(reaches)
+      .sort((a, b) => a.hash - b.hash || a.meal.id.localeCompare(b.meal.id));
+    const start = rotation.length ? day % rotation.length : 0;
+    const rest = scored
+      .filter((c) => !reaches(c))
+      .sort((a, b) => a.distance - b.distance || a.hash - b.hash);
+    const ranked = [...rotation.slice(start), ...rotation.slice(0, start), ...rest].filter(
+      (c) => !used.has(c.meal.id),
+    );
 
     const swapId = swaps.get(slot);
     const chosen = (swapId !== undefined && ranked.find((c) => c.meal.id === swapId)) || ranked[0];

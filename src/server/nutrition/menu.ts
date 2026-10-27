@@ -35,8 +35,7 @@ export type MenuDay = {
 
 /**
  * One day's menu for a member. Published meals come through RLS (only members with access see any).
- * The previous two days are built with the same engine, without a "recent" rule of their own and with
- * their stored swaps; what they picked is what she was served lately.
+ * Variety comes from the engine's per-member rotation, so no earlier day has to be rebuilt.
  */
 type NutritionProfile = Awaited<ReturnType<typeof getNutritionProfile>>;
 
@@ -64,28 +63,13 @@ export async function getMenuDay(
 
   const [meals, swapRows, diary] = await Promise.all([
     listPublishedMeals(db),
-    db
-      .from("menu_swaps")
-      .select("menu_date, slot, meal_id")
-      .eq("user_id", userId)
-      .gte("menu_date", shiftDay(day, -2))
-      .lte("menu_date", day),
+    db.from("menu_swaps").select("slot, meal_id").eq("user_id", userId).eq("menu_date", day),
     getDiaryDay(db, userId, day),
   ]);
   if (swapRows.error) throw new Error(`load menu swaps failed: ${swapRows.error.message}`);
 
-  const swapsOf = (date: string) =>
-    new Map(swapRows.data.filter((r) => r.menu_date === date).map((r) => [r.slot, r.meal_id]));
-  const build = (date: string, recentMealIds: Set<string>) =>
-    buildMenu({ meals, prefs, targetKcal, userId, date, recentMealIds, swaps: swapsOf(date) });
-
-  const recentMealIds = new Set<string>();
-  for (const back of [1, 2]) {
-    for (const slot of build(shiftDay(day, -back), new Set())) {
-      if (slot.pick) recentMealIds.add(slot.pick.meal.id);
-    }
-  }
-  const slots = build(day, recentMealIds);
+  const swaps = new Map(swapRows.data.map((r) => [r.slot, r.meal_id]));
+  const slots = buildMenu({ meals, prefs, targetKcal, userId, date: day, swaps });
 
   const eaten = diary.entries.filter((entry) => entry.source === "menu");
   const eatenSlots = slots

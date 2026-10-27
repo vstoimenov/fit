@@ -19,9 +19,18 @@ import {
 
 let admin: TypedClient;
 let createdMeals: string[] = [];
+/** Published meals that were already in the local database; hidden while these tests run. */
+let hiddenMeals: string[] = [];
 
-beforeAll(() => {
+beforeAll(async () => {
   admin = adminClient();
+  // The local library holds real dishes too (some vegan and free of allergens), which would fit the
+  // test member. They are unpublished for this file and published again afterwards.
+  const { data, error } = await admin.from("meals").select("id").eq("published", true);
+  if (error) throw new Error(error.message);
+  hiddenMeals = data.map((m) => m.id);
+  if (hiddenMeals.length)
+    await admin.from("meals").update({ published: false }).in("id", hiddenMeals);
 });
 
 afterEach(async () => {
@@ -32,6 +41,8 @@ afterEach(async () => {
 
 afterAll(async () => {
   if (createdMeals.length) await admin.from("meals").delete().in("id", createdMeals);
+  if (hiddenMeals.length)
+    await admin.from("meals").update({ published: true }).in("id", hiddenMeals);
 });
 
 function sofiaDay(offsetDays = 0): string {
@@ -41,8 +52,8 @@ function sofiaDay(offsetDays = 0): string {
 }
 
 /**
- * The local database also holds other published meals. The test member is vegan and avoids every
- * allergen except the ones the test meals carry, so only the meals created here can fit her.
+ * The test member is vegan and avoids every allergen except the ones the test meals carry; together with
+ * the hidden local library this leaves only the meals created here for her menu.
  */
 const FREE: Allergen[] = ["lupin", "sesame"];
 const ANSWERS = {
@@ -196,63 +207,34 @@ describe("getMenuDay", () => {
     expect(day.eatenSlots).toEqual([]);
   });
 
-  it("meals picked on the two previous days (with their swaps) are not served again", async () => {
-    // Without the recent rule the order is A (exact), B (portion ×1,5), C (portion ×0,75).
-    const [a, b, c] = [
+  it("serves a different breakfast each day until every fitting one has been served", async () => {
+    const ids = [
       await seedMeal("Закуска А", "breakfast", 450),
-      await seedMeal("Закуска Б", "breakfast", 250),
-      await seedMeal("Закуска В", "breakfast", 900),
+      await seedMeal("Закуска Б", "breakfast", 430),
+      await seedMeal("Закуска В", "breakfast", 470),
     ];
     await seedMeal("Обяд", "lunch", 720);
     await seedMeal("Вечеря", "dinner", 630);
-    const { user, db } = await member("menu-recent");
-    // Both previous days served A; a swap on yesterday's breakfast to C also counts as served.
-    const yesterdaySwap = c;
-    const ins = await db.from("menu_swaps").insert({
-      user_id: user.id,
-      menu_date: sofiaDay(-1),
-      slot: 0,
-      meal_id: yesterdaySwap,
-    });
-    expect(ins.error).toBeNull();
+    const { user, db } = await member("menu-rotation");
 
+    const picks: (string | undefined)[] = [];
+    for (const offset of [0, 1, 2, 3]) {
+      picks.push((await getMenuDay(db, user.id, sofiaDay(offset))).slots[0].pick?.meal.id);
+    }
+    expect(new Set(picks.slice(0, 3))).toEqual(new Set(ids));
+    expect(picks[3]).toBe(picks[0]);
+
+    // The service serves exactly what the engine builds for her, with no swaps stored.
     const rows = await admin.from("meals").select("*").in("id", createdMeals);
-    const meals = (rows.data ?? []).map(toMeal);
-    const prefs = {
-      diet: "vegan" as const,
-      allergens: ANSWERS.allergens,
-      avoidFoods: "",
-      mealsPerDay: 3 as const,
-    };
-    const served = (date: string, swaps: Map<number, string>) =>
-      buildMenu({
-        meals,
-        prefs,
-        targetKcal: 1800,
-        userId: user.id,
-        date,
-        recentMealIds: new Set(),
-        swaps,
-      }).flatMap((s) => (s.pick ? [s.pick.meal.id] : []));
-    const recent = new Set([
-      ...served(sofiaDay(-1), new Map([[0, yesterdaySwap]])),
-      ...served(sofiaDay(-2), new Map()),
-    ]);
-    expect([...recent].filter((id) => [a, b, c].includes(id)).sort()).toEqual([a, c].sort());
-
-    const today = await getMenuDay(db, user.id, sofiaDay());
     const expected = buildMenu({
-      meals,
-      prefs,
+      meals: (rows.data ?? []).map(toMeal),
+      prefs: { diet: "vegan", allergens: ANSWERS.allergens, avoidFoods: "", mealsPerDay: 3 },
       targetKcal: 1800,
       userId: user.id,
       date: sofiaDay(),
-      recentMealIds: recent,
       swaps: new Map(),
     });
-    expect(today.slots.map((s) => s.pick?.meal.id)).toEqual(expected.map((s) => s.pick?.meal.id));
-    // A and C were served lately, so the breakfast is B although A fits her better.
-    expect(today.slots[0].pick?.meal.id).toBe(b);
+    expect(picks[0]).toBe(expected[0].pick?.meal.id);
   });
 });
 
@@ -454,8 +436,8 @@ describe("eatSlot", () => {
     expect(pinned.data).toHaveLength(1);
     expect(pinned.data?.[0]).toMatchObject({ menu_date: today, slot: 0, meal_id: first });
 
-    // Three meals that fit the slot exactly (450 kcal). The two previous days can have served at most two
-    // of them, so one is not "recent" and ranks above the eaten meal; without the pin it would replace it.
+    // Three meals that fit the slot exactly (450 kcal) rank above the eaten 700 kcal meal, which cannot
+    // reach the slot even at ×0,75; without the pin one of them would replace it.
     const better = [
       await seedMeal("Закуска по-добра А", "breakfast", 450),
       await seedMeal("Закуска по-добра Б", "breakfast", 450),
