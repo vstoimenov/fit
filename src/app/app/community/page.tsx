@@ -37,7 +37,14 @@ async function Community({ searchParams }: { searchParams: SearchParams }) {
   const shareCompletion = /^[0-9a-f-]{36}$/i.test(str(params.share)) ? str(params.share) : null;
   const shareTitle = str(params.title).slice(0, 120);
   const { user, supabase } = await requireUser();
-  const { data: hasAccess, error: accessError } = await supabase.rpc("my_access");
+  // The feed RPC refuses without access anyway; asking for both at once saves a round trip.
+  const [{ data: hasAccess, error: accessError }, feedResult] = await Promise.all([
+    supabase.rpc("my_access"),
+    listFeed(supabase, before).then(
+      (feed) => ({ feed, error: null as unknown }),
+      (error: unknown) => ({ feed: null, error }),
+    ),
+  ]);
   if (accessError) throw new Error(`load access failed: ${accessError.message}`);
 
   if (!hasAccess) {
@@ -56,7 +63,8 @@ async function Community({ searchParams }: { searchParams: SearchParams }) {
     );
   }
 
-  const { posts, hasMore } = await listFeed(supabase, before);
+  if (feedResult.error || !feedResult.feed) throw feedResult.error;
+  const { posts, hasMore } = feedResult.feed;
   const last = posts.at(-1);
 
   return (

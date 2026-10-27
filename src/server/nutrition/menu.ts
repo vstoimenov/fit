@@ -38,8 +38,16 @@ export type MenuDay = {
  * The previous two days are built with the same engine, without a "recent" rule of their own and with
  * their stored swaps; what they picked is what she was served lately.
  */
-export async function getMenuDay(db: TypedClient, userId: string, day: string): Promise<MenuDay> {
-  const profile = await getNutritionProfile(db, userId);
+type NutritionProfile = Awaited<ReturnType<typeof getNutritionProfile>>;
+
+export async function getMenuDay(
+  db: TypedClient,
+  userId: string,
+  day: string,
+  /** A profile the caller already loaded, so the page does not read it twice. */
+  known?: NutritionProfile,
+): Promise<MenuDay> {
+  const profile = known ?? (await getNutritionProfile(db, userId));
   const usingDefaultTarget = profile.target === null;
   const targetKcal = profile.target?.kcal ?? DEFAULT_TARGET_KCAL;
   if (!profile.hasAccess) {

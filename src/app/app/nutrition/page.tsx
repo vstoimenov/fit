@@ -42,11 +42,26 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
   // The menu is for today only: `day` is ignored there.
   const menuView = view === "menu";
   const day = menuView ? today : parseDayParam(rawDay, today);
-  // The diary reads run next to the profile one; the menu has its own service call below.
-  const [profile, diary, recent] = await Promise.all([
-    getNutritionProfile(supabase, user.id),
+  // The diary reads run next to the profile one. The menu needs the profile first, so it starts the
+  // moment the profile arrives, still alongside the diary reads: two round trips instead of three.
+  const profilePromise = getNutritionProfile(supabase, user.id);
+  const menuPromise =
+    menuView || day === today
+      ? profilePromise.then((p) =>
+          // The answers form (below) takes precedence; the diary chips need access.
+          (p.hasAccess && p.answers === null) || !(menuView || p.hasAccess)
+            ? null
+            : getMenuDay(supabase, user.id, today, p),
+        )
+      : Promise.resolve(null);
+  const [profile, diary, recent, menuResult] = await Promise.all([
+    profilePromise,
     menuView ? null : getDiaryDay(supabase, user.id, day),
     menuView ? null : recentFoods(supabase, user.id, 10),
+    menuPromise.then(
+      (menu) => ({ menu, error: null as unknown }),
+      (error: unknown) => ({ menu: null, error }),
+    ),
   ]);
 
   // First visit: the questions come before the diary. Without access she cannot answer here (the plan
@@ -67,7 +82,8 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
   }
 
   if (menuView) {
-    const menu = await getMenuDay(supabase, user.id, today);
+    if (menuResult.error) throw menuResult.error;
+    const menu = menuResult.menu ?? (await getMenuDay(supabase, user.id, today, profile));
     return (
       <main className="space-y-6 px-5 pt-8 lg:px-8">
         <Header />
@@ -84,14 +100,14 @@ async function Nutrition({ searchParams }: { searchParams: SearchParams }) {
   // Today's open menu dishes become „От менюто“ chips in the add sheet. The diary works without them.
   let menuDishes: MenuDish[] = [];
   if (day === today && profile.hasAccess) {
-    try {
-      const menu = await getMenuDay(supabase, user.id, today);
-      menuDishes = openMenuDishes(menu.slots, menu.eatenSlots);
-    } catch (error) {
+    if (menuResult.error) {
+      const error = menuResult.error;
       console.error(
         "diary: menu chips unavailable",
         error instanceof Error ? error.message : String(error),
       );
+    } else if (menuResult.menu) {
+      menuDishes = openMenuDishes(menuResult.menu.slots, menuResult.menu.eatenSlots);
     }
   }
 

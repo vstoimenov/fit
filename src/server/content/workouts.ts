@@ -54,14 +54,8 @@ export async function getLibrary(
   db: TypedClient,
   userId: string,
 ): Promise<{ level: Level; workouts: WorkoutSummary[] }> {
-  const level = await getMemberLevel(db, userId);
-  const { data, error } = await db
-    .from("workouts")
-    .select(WORKOUT_COLUMNS)
-    .not("publish_at", "is", null)
-    .lte("publish_at", new Date().toISOString())
-    .or(`kind.neq.regular,level.eq.${level}`)
-    .order("publish_at", { ascending: false });
-  if (error) throw new Error(`list workouts failed: ${error.message}`);
-  return { level, workouts: data.map(toSummary) };
+  // Both reads start together; the level narrows the regular workouts afterwards (a few dozen rows),
+  // which saves a round trip on every visit to the library.
+  const [level, all] = await Promise.all([getMemberLevel(db, userId), listPublishedWorkouts(db)]);
+  return { level, workouts: all.filter((w) => w.kind !== "regular" || w.level === level) };
 }
