@@ -53,6 +53,10 @@ export async function saveMeal(
     allergens: meal.allergens,
     steps: meal.steps,
     photo_url: meal.photoUrl,
+    description: meal.description,
+    prep_min: meal.prepMin,
+    cook_min: meal.cookMin,
+    servings: meal.servings,
     ...(input.published === undefined ? {} : { published: input.published }),
   };
   if (!input.id) {

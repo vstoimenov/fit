@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ALLERGENS, MEAL_SLOTS } from "./labels";
+import { RECIPE_UNITS } from "./recipe";
 
 const macroG = z.number("Въведи число").min(0, "Между 0 и 1000 г").max(1000, "Между 0 и 1000 г");
 
@@ -17,11 +18,28 @@ const photoUrl = z.union(
   "Снимката е https:// линк или /photos/…",
 );
 
-/** One ingredient of a meal: name and grams for the standard portion. */
-export const mealIngredientSchema = z.object({
-  name: z.string().trim().min(1, "Нужно е име").max(80, "До 80 знака"),
-  grams: z.number("Въведи грамове").min(1, "Между 1 и 2000 г").max(2000, "Между 1 и 2000 г"),
-});
+/**
+ * One ingredient of a meal: name and grams for the whole list (which makes `servings` portions),
+ * plus an optional household measure shown on the recipe („1½ ч.л.“). Amount and unit go together.
+ */
+export const mealIngredientSchema = z
+  .object({
+    name: z.string().trim().min(1, "Нужно е име").max(80, "До 80 знака"),
+    grams: z.number("Въведи грамове").min(1, "Между 1 и 2000 г").max(2000, "Между 1 и 2000 г"),
+    amount: z.number("Въведи количество").positive("Количеството е над 0").max(5000).optional(),
+    unit: z.enum(RECIPE_UNITS).optional(),
+  })
+  .refine((i) => (i.amount === undefined) === (i.unit === undefined), {
+    message: "Количество и мярка вървят заедно",
+    path: ["unit"],
+  });
+
+const minutes = z
+  .number("Въведи минути")
+  .int("Цели минути")
+  .min(0, "Между 0 и 600 мин")
+  .max(600, "Между 0 и 600 мин")
+  .nullable();
 
 /** Allergens no vegan dish can contain (honey has no allergen code, so it stays the admin's call). */
 export const VEGAN_BLOCKERS = ["milk", "eggs", "fish", "crustaceans", "molluscs"] as const;
@@ -58,6 +76,15 @@ export const mealInputSchema = z
       .default([]),
     steps: z.string().max(10_000, "До 10 000 знака").default(""),
     photoUrl: photoUrl.nullish().transform((url) => url || null),
+    description: z.string().trim().max(2000, "До 2000 знака").default(""),
+    prepMin: minutes.default(null),
+    cookMin: minutes.default(null),
+    servings: z
+      .number("Въведи порции")
+      .int("Цял брой порции")
+      .min(1, "Между 1 и 24 порции")
+      .max(24, "Между 1 и 24 порции")
+      .default(1),
   })
   .superRefine((meal, ctx) => {
     if (

@@ -50,7 +50,7 @@ describe("fillEmptyFields", () => {
       ...emptyMealForm(),
       title: "Каша",
       mealTypes: ["dinner" as const],
-      ingredients: [{ key: "a", name: "Ориз", grams: "" }],
+      ingredients: [{ key: "a", name: "Ориз", grams: "", amount: "", unit: "" }],
       kcal: "500",
       proteinG: "0",
       allergens: ["eggs" as const],
@@ -92,7 +92,10 @@ describe("fillEmptyFields", () => {
   });
 
   it("treats blank ingredient rows as empty", () => {
-    const blank = { ...emptyMealForm(), ingredients: [{ key: "a", name: " ", grams: "" }] };
+    const blank = {
+      ...emptyMealForm(),
+      ingredients: [{ key: "a", name: " ", grams: "", amount: "", unit: "" }],
+    };
     expect(fillEmptyFields(blank, draft).ingredients).toHaveLength(2);
   });
 
@@ -129,6 +132,10 @@ describe("mealToForm", () => {
       allergens: ["gluten"],
       steps: "Свари.",
       photoUrl: null,
+      description: "",
+      prepMin: null,
+      cookMin: null,
+      servings: 1,
       published: true,
     };
     const form = mealToForm(meal);
@@ -142,6 +149,50 @@ describe("mealToForm", () => {
       published: true,
     });
     expect(form.ingredients.map((r) => [r.name, r.grams])).toEqual([["Ядки", "60,5"]]);
+  });
+
+  it("shows the recipe details and the household measures as form strings", () => {
+    const meal: Meal = {
+      id: "m2",
+      title: "Кекс",
+      mealTypes: ["snack"],
+      ingredients: [
+        { name: "Бакпулвер", grams: 6, amount: 1.5, unit: "ч.л." },
+        { name: "Брашно", grams: 100 },
+      ],
+      kcal: 216,
+      proteinG: 4.6,
+      carbsG: 30.3,
+      fatG: 8.7,
+      fitsVegetarian: true,
+      fitsVegan: true,
+      fitsPescatarian: true,
+      allergens: [],
+      steps: "",
+      photoUrl: null,
+      description: "Сочен кекс.",
+      prepMin: 15,
+      cookMin: null,
+      servings: 8,
+      published: false,
+    };
+    const form = mealToForm(meal);
+    expect(form).toMatchObject({
+      description: "Сочен кекс.",
+      prepMin: "15",
+      cookMin: "",
+      servings: "8",
+    });
+    expect(form.ingredients.map((r) => [r.amount, r.unit])).toEqual([
+      ["1,5", "ч.л."],
+      ["", ""],
+    ]);
+    expect(emptyMealForm()).toMatchObject({
+      description: "",
+      prepMin: "",
+      cookMin: "",
+      servings: "1",
+    });
   });
 
   it("starts a new meal with one blank ingredient row", () => {

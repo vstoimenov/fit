@@ -1,7 +1,14 @@
 import { ALLERGEN_LABEL, type Allergen, type MealSlot } from "./labels";
 import type { Meal, MealDraft } from "./meal-schema";
 
-export type IngredientRow = { key: string; name: string; grams: string };
+/** `amount` and `unit` are the optional household measure („1,5“ + „ч.л.“); empty when none. */
+export type IngredientRow = {
+  key: string;
+  name: string;
+  grams: string;
+  amount: string;
+  unit: string;
+};
 
 /** What the admin sees and edits: numbers stay text so a half-typed value is never lost. */
 export type MealFormState = {
@@ -18,6 +25,10 @@ export type MealFormState = {
   allergens: Allergen[];
   steps: string;
   photoUrl: string;
+  description: string;
+  prepMin: string;
+  cookMin: string;
+  servings: string;
   published: boolean;
 };
 
@@ -28,7 +39,7 @@ export function emptyMealForm(): MealFormState {
   return {
     title: "",
     mealTypes: [],
-    ingredients: [{ key: "new-0", name: "", grams: "" }],
+    ingredients: [{ key: "new-0", name: "", grams: "", amount: "", unit: "" }],
     kcal: "",
     proteinG: "",
     carbsG: "",
@@ -39,6 +50,10 @@ export function emptyMealForm(): MealFormState {
     allergens: [],
     steps: "",
     photoUrl: "",
+    description: "",
+    prepMin: "",
+    cookMin: "",
+    servings: "1",
     published: false,
   };
 }
@@ -51,6 +66,8 @@ export function mealToForm(meal: Meal): MealFormState {
       key: `saved-${i}`,
       name: row.name,
       grams: show(row.grams),
+      amount: row.amount === undefined ? "" : show(row.amount),
+      unit: row.unit ?? "",
     })),
     kcal: show(meal.kcal),
     proteinG: show(meal.proteinG),
@@ -62,6 +79,10 @@ export function mealToForm(meal: Meal): MealFormState {
     allergens: meal.allergens,
     steps: meal.steps,
     photoUrl: meal.photoUrl ?? "",
+    description: meal.description,
+    prepMin: meal.prepMin === null ? "" : String(meal.prepMin),
+    cookMin: meal.cookMin === null ? "" : String(meal.cookMin),
+    servings: String(meal.servings),
     published: meal.published,
   };
 }
@@ -93,6 +114,8 @@ export function fillEmptyFields(form: MealFormState, draft: MealDraft): MealForm
       key: `ai-${i}`,
       name: row.name,
       grams: show(row.grams),
+      amount: "",
+      unit: "",
     }));
   }
   for (const key of ["kcal", "proteinG", "carbsG", "fatG"] as const) {

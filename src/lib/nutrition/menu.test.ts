@@ -30,6 +30,10 @@ function meal(over: Partial<Meal> & { mealTypes: MealSlot[] }): Meal {
     allergens: [],
     steps: "",
     photoUrl: null,
+    description: "",
+    prepMin: null,
+    cookMin: null,
+    servings: 1,
     ...over,
   };
 }
@@ -173,6 +177,26 @@ describe("scalePortion", () => {
         { name: "Б", grams: 75 },
       ],
       grams: 227,
+    });
+  });
+
+  it("divides the ingredient list by the portions it makes; kcal and macros are already per portion", () => {
+    const loaf = meal({
+      mealTypes: ["snack"],
+      kcal: 216,
+      servings: 8,
+      ingredients: [
+        { name: "Брашно", grams: 100 },
+        { name: "Банани", grams: 240 },
+      ],
+    });
+    expect(scalePortion(loaf, 1)).toMatchObject({
+      kcal: 216,
+      ingredients: [
+        { name: "Брашно", grams: 13 },
+        { name: "Банани", grams: 30 },
+      ],
+      grams: 43,
     });
   });
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
 import type { ActionResult } from "@/lib/action-result";
 import { cn } from "@/lib/cn";
+import { RECIPE_UNITS } from "@/lib/nutrition/recipe";
 import { ALLERGEN_LABEL, ALLERGENS, MEAL_LABEL, MEAL_SLOTS } from "@/lib/nutrition/labels";
 import {
   addedAllergens,
@@ -97,7 +98,10 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
     });
   }
 
-  function setRow(key: string, patch: { name?: string; grams?: string }) {
+  function setRow(
+    key: string,
+    patch: { name?: string; grams?: string; amount?: string; unit?: string },
+  ) {
     setForm((f) => ({
       ...f,
       ingredients: f.ingredients.map((row) => (row.key === key ? { ...row, ...patch } : row)),
@@ -107,7 +111,10 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
   function addRow() {
     setForm((f) => ({
       ...f,
-      ingredients: [...f.ingredients, { key: `new-${nextKey}`, name: "", grams: "" }],
+      ingredients: [
+        ...f.ingredients,
+        { key: `new-${nextKey}`, name: "", grams: "", amount: "", unit: "" },
+      ],
     }));
     setNextKey((n) => n + 1);
   }
@@ -185,8 +192,56 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
           ))}
         </fieldset>
 
+        <Field label="Кратко описание (по желание)" hint="Показва се под заглавието на рецептата.">
+          <textarea
+            name="description"
+            value={form.description}
+            onChange={(e) => set({ description: e.target.value })}
+            maxLength={2000}
+            rows={3}
+            className={cn(inputClass, "h-auto py-3")}
+          />
+        </Field>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Подготовка (мин)">
+            <input
+              name="prepMin"
+              value={form.prepMin}
+              onChange={(e) => set({ prepMin: e.target.value })}
+              inputMode="numeric"
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Готвене / печене (мин)">
+            <input
+              name="cookMin"
+              value={form.cookMin}
+              onChange={(e) => set({ cookMin: e.target.value })}
+              inputMode="numeric"
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Порции от рецептата" hint="Съставките са за толкова порции.">
+            <input
+              name="servings"
+              value={form.servings}
+              onChange={(e) => set({ servings: e.target.value })}
+              inputMode="numeric"
+              autoComplete="off"
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
         <fieldset className="space-y-2">
-          <legend className="text-sm font-semibold">Съставки за една порция</legend>
+          <legend className="text-sm font-semibold">Съставки за цялата рецепта</legend>
+          <p className="text-sm text-ink-soft">
+            Грамовете са за калориите. Мярката е по желание и се показва в рецептата („1,5“ +
+            „ч.л.“).
+          </p>
           <ul className="space-y-2">
             {form.ingredients.map((row, i) => (
               <li key={row.key} className="flex items-center gap-2">
@@ -210,6 +265,30 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
                   autoComplete="off"
                   className={cn(inputClass, "w-24 shrink-0")}
                 />
+                <input
+                  name="ingredientAmount"
+                  value={row.amount}
+                  onChange={(e) => setRow(row.key, { amount: e.target.value })}
+                  aria-label={`Количество в мярка за съставка ${i + 1}`}
+                  placeholder="бр."
+                  inputMode="decimal"
+                  autoComplete="off"
+                  className={cn(inputClass, "w-16 shrink-0 px-2")}
+                />
+                <select
+                  name="ingredientUnit"
+                  value={row.unit}
+                  onChange={(e) => setRow(row.key, { unit: e.target.value })}
+                  aria-label={`Мярка за съставка ${i + 1}`}
+                  className={cn(inputClass, "w-24 shrink-0 px-2")}
+                >
+                  <option value="">—</option>
+                  {RECIPE_UNITS.map((u) => (
+                    <option key={u} value={u}>
+                      {u}
+                    </option>
+                  ))}
+                </select>
                 <Button
                   variant="link"
                   size="md"
@@ -234,7 +313,7 @@ export function MealForm({ action, meal }: { action: FormAction; meal?: Meal }) 
         </fieldset>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Калории на порция (ккал)">
+          <Field label="Калории на една порция (ккал)">
             <input
               name="kcal"
               value={form.kcal}

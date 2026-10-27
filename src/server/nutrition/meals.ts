@@ -24,6 +24,10 @@ export const toMeal = (r: MealRow): Meal => ({
   allergens: r.allergens as MealInput["allergens"],
   steps: r.steps,
   photoUrl: r.photo_url,
+  description: r.description,
+  prepMin: r.prep_min,
+  cookMin: r.cook_min,
+  servings: r.servings,
   published: r.published,
 });
 
@@ -43,6 +47,22 @@ export async function listPublishedMeals(db: TypedClient): Promise<Meal[]> {
     .order("id")
     .limit(1000);
   if (error) throw new Error(`load meals failed: ${error.message}`);
+  return data.map(toMeal);
+}
+
+/**
+ * The menu dishes that are full recipes (they have steps), newest first, for Полезно → Рецепти.
+ * RLS shows members with access published meals only, so without access this is empty.
+ */
+export async function listRecipeMeals(db: TypedClient, limit = 24): Promise<Meal[]> {
+  const { data, error } = await db
+    .from("meals")
+    .select("*")
+    .eq("published", true)
+    .neq("steps", "")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw new Error(`load recipes failed: ${error.message}`);
   return data.map(toMeal);
 }
 

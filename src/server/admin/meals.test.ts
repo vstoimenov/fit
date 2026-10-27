@@ -19,6 +19,10 @@ function meal(over: Partial<Meal>): Meal {
     allergens: [],
     steps: "",
     photoUrl: null,
+    description: "",
+    prepMin: null,
+    cookMin: null,
+    servings: 1,
     published: true,
     ...over,
   };

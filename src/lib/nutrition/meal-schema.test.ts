@@ -19,7 +19,23 @@ const valid = {
 
 describe("mealInputSchema", () => {
   it("accepts a valid meal", () => {
-    expect(mealInputSchema.parse(valid)).toEqual(valid);
+    // The recipe details are optional: a meal without them gets the defaults.
+    expect(mealInputSchema.parse(valid)).toEqual({
+      ...valid,
+      description: "",
+      prepMin: null,
+      cookMin: null,
+      servings: 1,
+    });
+  });
+
+  it("refuses a measure without its unit, and servings outside 1–24", () => {
+    const bad = (over: object) => mealInputSchema.safeParse({ ...valid, ...over }).success;
+    expect(bad({ ingredients: [{ name: "Сол", grams: 3, amount: 0.5 }] })).toBe(false);
+    expect(bad({ ingredients: [{ name: "Сол", grams: 3, amount: 0.5, unit: "ч.л." }] })).toBe(true);
+    expect(bad({ servings: 0 })).toBe(false);
+    expect(bad({ servings: 25 })).toBe(false);
+    expect(bad({ prepMin: 601 })).toBe(false);
   });
 
   it("defaults optional fields and treats an empty photo as none", () => {

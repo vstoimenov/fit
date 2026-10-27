@@ -35,11 +35,30 @@ function numberOf(raw: string): number {
 function readMeal(form: FormData) {
   const names = form.getAll("ingredientName").map((v) => (typeof v === "string" ? v.trim() : ""));
   const grams = form.getAll("ingredientGrams").map((v) => (typeof v === "string" ? v.trim() : ""));
+  const amounts = form
+    .getAll("ingredientAmount")
+    .map((v) => (typeof v === "string" ? v.trim() : ""));
+  const units = form.getAll("ingredientUnit").map((v) => (typeof v === "string" ? v.trim() : ""));
   // A row left completely empty is dropped; a half-filled one stays so the schema can name the gap.
   const ingredients = names
-    .map((name, i) => ({ name, rawGrams: grams[i] ?? "" }))
+    .map((name, i) => ({
+      name,
+      rawGrams: grams[i] ?? "",
+      rawAmount: amounts[i] ?? "",
+      unit: units[i] ?? "",
+    }))
     .filter((row) => row.name !== "" || row.rawGrams !== "")
-    .map((row) => ({ name: row.name, grams: numberOf(row.rawGrams) }));
+    .map((row) => ({
+      name: row.name,
+      grams: numberOf(row.rawGrams),
+      // The household measure is optional; the schema checks that amount and unit come together.
+      ...(row.rawAmount !== "" ? { amount: numberOf(row.rawAmount) } : {}),
+      ...(row.unit !== "" ? { unit: row.unit } : {}),
+    }));
+  const optionalMinutes = (key: string) => {
+    const raw = formString(form, key);
+    return raw === "" ? null : numberOf(raw);
+  };
 
   return {
     title: formString(form, "title"),
@@ -56,6 +75,10 @@ function readMeal(form: FormData) {
     // Browsers submit textarea line breaks as CRLF.
     steps: formString(form, "steps").replace(/\r\n/g, "\n"),
     photoUrl: formString(form, "photoUrl"),
+    description: formString(form, "description").replace(/\r\n/g, "\n"),
+    prepMin: optionalMinutes("prepMin"),
+    cookMin: optionalMinutes("cookMin"),
+    servings: formNumber(form, "servings"),
     published: formBool(form, "published"),
   };
 }

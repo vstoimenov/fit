@@ -5,12 +5,14 @@ import { ArticleCard } from "@/components/learn/article-card";
 import { CommunityCard } from "@/components/learn/community-card";
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { RecordingCard } from "@/components/learn/recording-card";
+import { RecipeCard } from "@/components/nutrition/recipe-card";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { requireUser } from "@/server/auth/require-user";
 import { getCommunityLink, listArticlesFor, type ArticleCategory } from "@/server/content/articles";
 import { getMemberLevel } from "@/server/content/member";
 import { listRecordings } from "@/server/live/sessions";
+import { listRecipeMeals } from "@/server/nutrition/meals";
 
 export const metadata = { title: "Полезно" };
 
@@ -41,12 +43,22 @@ async function Learn({ searchParams }: { searchParams: SearchParams }) {
   const level = await getMemberLevel(supabase, user.id);
   const category: ArticleCategory | undefined =
     view === "article" || view === "recipe" ? view : undefined;
-  const [articles, recordings, communityUrl] = await Promise.all([
+  const [articles, recordings, communityUrl, recipeMeals] = await Promise.all([
     view === "recording"
       ? Promise.resolve([])
       : listArticlesFor(supabase, level, undefined, category),
     view === "all" || view === "recording" ? listRecordings(supabase) : Promise.resolve([]),
     getCommunityLink(supabase),
+    view === "all" || view === "recipe"
+      ? listRecipeMeals(supabase).catch((error: unknown) => {
+          // The articles still show if the dishes cannot be read.
+          console.error(
+            "learn: recipes unavailable",
+            error instanceof Error ? error.message : String(error),
+          );
+          return [];
+        })
+      : Promise.resolve([]),
   ]);
   const recipes = articles.filter((a) => a.category === "recipe");
   const plain = articles.filter((a) => a.category !== "recipe");
@@ -91,15 +103,18 @@ async function Learn({ searchParams }: { searchParams: SearchParams }) {
         </section>
       )}
 
-      {(view === "recipe" || (view === "all" && recipes.length > 0)) && (
+      {(view === "recipe" || (view === "all" && recipes.length + recipeMeals.length > 0)) && (
         <section aria-labelledby="recipes-heading" className="space-y-4">
           <h2 id="recipes-heading" className="text-xl font-extrabold tracking-tight">
             Рецепти
           </h2>
-          {recipes.length === 0 ? (
+          {recipes.length + recipeMeals.length === 0 ? (
             <Card className="p-5 text-ink-soft">Скоро тук ще има рецепти от нас.</Card>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {recipeMeals.map((m) => (
+                <RecipeCard key={m.id} meal={m} />
+              ))}
               {recipes.map((a) => (
                 <ArticleCard key={a.id} article={a} />
               ))}

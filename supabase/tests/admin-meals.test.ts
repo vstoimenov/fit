@@ -28,6 +28,10 @@ const input = (name: string, over: Partial<MealInput> = {}): MealInput => ({
   allergens: ["gluten"],
   steps: "Свари ядките.",
   photoUrl: null,
+  description: "",
+  prepMin: null,
+  cookMin: null,
+  servings: 1,
   ...over,
 });
 
@@ -108,6 +112,40 @@ describe("admin meals service", () => {
       published: false,
     });
     expect(Number.isNaN(Date.parse(mine[0].updatedAt))).toBe(false);
+  });
+
+  it("keeps the recipe details: description, times, servings and spoon units", async () => {
+    const id = await create("banana bread", {
+      description: "Сочен кекс с фурми.",
+      prepMin: 15,
+      cookMin: 35,
+      servings: 8,
+      ingredients: [
+        { name: "Спелтово брашно", grams: 100 },
+        { name: "Бакпулвер", grams: 6, amount: 1.5, unit: "ч.л." },
+        { name: "Растително мляко", grams: 50, amount: 50, unit: "мл" },
+      ],
+    });
+    const meal = await getMeal(boss, id);
+    expect(meal).toMatchObject({
+      description: "Сочен кекс с фурми.",
+      prepMin: 15,
+      cookMin: 35,
+      servings: 8,
+      ingredients: [
+        { name: "Спелтово брашно", grams: 100 },
+        { name: "Бакпулвер", grams: 6, amount: 1.5, unit: "ч.л." },
+        { name: "Растително мляко", grams: 50, amount: 50, unit: "мл" },
+      ],
+    });
+    // The database refuses a unit it does not know, even past the app's own check.
+    const { error } = await admin
+      .from("meals")
+      .update({ ingredients: [{ name: "Сол", grams: 3, amount: 1, unit: "кофа" }] })
+      .eq("id", id);
+    expect(error?.code).toBe("23514");
+    const servings = await admin.from("meals").update({ servings: 0 }).eq("id", id);
+    expect(servings.error?.code).toBe("23514");
   });
 
   it("rejects input beyond the meal bounds before touching the database", async () => {

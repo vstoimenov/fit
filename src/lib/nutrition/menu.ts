@@ -81,9 +81,11 @@ export function scalePortion(
   grams: number;
 } {
   const macro = (value: number) => Math.round(value * factor * 10 + 1e-9) / 10;
+  // The list is written for `servings` portions; kcal and macros are per portion already.
+  const perPortion = factor / (meal.servings || 1);
   const ingredients = meal.ingredients.map((i) => ({
     name: i.name,
-    grams: Math.round(i.grams * factor),
+    grams: Math.round(i.grams * perPortion),
   }));
   return {
     kcal: Math.round(meal.kcal * factor),

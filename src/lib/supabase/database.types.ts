@@ -803,7 +803,9 @@ export type Database = {
         Row: {
           allergens: string[];
           carbs_g: number;
+          cook_min: number | null;
           created_at: string;
+          description: string;
           fat_g: number;
           fits_pescatarian: boolean;
           fits_vegan: boolean;
@@ -813,8 +815,10 @@ export type Database = {
           kcal: number;
           meal_types: Database["public"]["Enums"]["meal_slot"][];
           photo_url: string | null;
+          prep_min: number | null;
           protein_g: number;
           published: boolean;
+          servings: number;
           steps: string;
           title: string;
           updated_at: string;
@@ -823,7 +827,9 @@ export type Database = {
         Insert: {
           allergens?: string[];
           carbs_g: number;
+          cook_min?: number | null;
           created_at?: string;
+          description?: string;
           fat_g: number;
           fits_pescatarian?: boolean;
           fits_vegan?: boolean;
@@ -833,8 +839,10 @@ export type Database = {
           kcal: number;
           meal_types: Database["public"]["Enums"]["meal_slot"][];
           photo_url?: string | null;
+          prep_min?: number | null;
           protein_g: number;
           published?: boolean;
+          servings?: number;
           steps?: string;
           title: string;
           updated_at?: string;
@@ -842,7 +850,9 @@ export type Database = {
         Update: {
           allergens?: string[];
           carbs_g?: number;
+          cook_min?: number | null;
           created_at?: string;
+          description?: string;
           fat_g?: number;
           fits_pescatarian?: boolean;
           fits_vegan?: boolean;
@@ -852,8 +862,10 @@ export type Database = {
           kcal?: number;
           meal_types?: Database["public"]["Enums"]["meal_slot"][];
           photo_url?: string | null;
+          prep_min?: number | null;
           protein_g?: number;
           published?: boolean;
+          servings?: number;
           steps?: string;
           title?: string;
           updated_at?: string;
