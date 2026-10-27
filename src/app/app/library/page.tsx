@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { WorkoutCard } from "@/components/workout/workout-card";
 import { FOCUS, FOCUS_LABEL, LEVEL_LABEL } from "@/lib/labels";
 import { exclusiveLockLevel } from "@/lib/points/levels";
@@ -68,7 +69,7 @@ function Chips({
 
 export default function LibraryPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Library searchParams={searchParams} />
     </Suspense>
   );

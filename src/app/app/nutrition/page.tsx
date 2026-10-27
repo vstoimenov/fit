@@ -6,6 +6,7 @@ import { DayNav } from "@/components/nutrition/day-nav";
 import { DiaryView } from "@/components/nutrition/diary-view";
 import { MenuView } from "@/components/nutrition/menu-view";
 import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { cn } from "@/lib/cn";
 import { showDayResult } from "@/lib/nutrition/day";
 import { parseDayParam } from "@/lib/nutrition/day-param";
@@ -26,7 +27,7 @@ type SearchParams = Promise<{ day?: string; view?: string }>;
 
 export default function NutritionPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Nutrition searchParams={searchParams} />
     </Suspense>
   );

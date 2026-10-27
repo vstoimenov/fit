@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ArticleCover } from "@/components/learn/article-card";
 import { ArticleBody } from "@/components/learn/article-body";
 import { Chip } from "@/components/ui/chip";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { formatArticleDate } from "@/lib/format";
 import { LEVEL_LABEL } from "@/lib/labels";
 import { requireUser } from "@/server/auth/require-user";
@@ -14,7 +15,7 @@ export const metadata = { title: "Полезно" };
 
 export default function ArticlePage({ params }: { params: Promise<{ slug: string }> }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Article params={params} />
     </Suspense>
   );

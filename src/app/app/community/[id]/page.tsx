@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { z } from "zod";
 import { CommentForm } from "@/components/community/comment-form";
 import { Avatar, PostCard } from "@/components/community/post-card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PostMenu } from "@/components/community/post-menu";
 import { Card } from "@/components/ui/card";
 import { relativeTime } from "@/lib/community/format";
@@ -16,7 +17,7 @@ export const metadata = { title: "Публикация" };
 
 export default function PostPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Post params={params} />
     </Suspense>
   );

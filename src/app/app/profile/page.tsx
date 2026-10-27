@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { NutritionAnswersForm } from "@/components/nutrition/nutrition-answers-form";
 import { HealthSyncCard } from "@/components/profile/health-sync-card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PushCard } from "@/components/profile/push-card";
 import { clientEnv } from "@/env";
 import { buttonClass } from "@/components/ui/button";
@@ -20,7 +21,7 @@ export const metadata = { title: "Профил" };
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Profile />
     </Suspense>
   );

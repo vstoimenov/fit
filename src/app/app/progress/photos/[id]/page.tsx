@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { DeletePhoto } from "@/components/photos/delete-photo";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PhotoShare } from "@/components/photos/photo-share";
 import { serverEnv } from "@/env";
 import { formatLongDate } from "@/lib/progress-photos/format-date";
@@ -14,7 +15,7 @@ export const metadata = { title: "Снимка" };
 
 export default function PhotoPage({ params }: { params: Promise<{ id: string }> }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <PhotoScreen params={params} />
     </Suspense>
   );

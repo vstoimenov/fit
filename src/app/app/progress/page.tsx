@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PhotoGrid } from "@/components/photos/photo-grid";
 import { PhotoUpload } from "@/components/photos/photo-upload";
 import { Sparkline } from "@/components/progress/sparkline";
@@ -22,7 +23,7 @@ const dateFormat = new Intl.DateTimeFormat("bg-BG", {
 
 export default function ProgressPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Progress searchParams={searchParams} />
     </Suspense>
   );

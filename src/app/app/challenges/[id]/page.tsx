@@ -7,6 +7,7 @@ import { BoardToggle } from "@/components/challenges/board-toggle";
 import { ChallengeDays } from "@/components/challenges/challenge-days";
 import { JoinButton } from "@/components/challenges/join-button";
 import { ArticleBody } from "@/components/learn/article-body";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { buttonClass } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { ImageShareButton } from "@/components/workout/share-button";
@@ -32,7 +33,7 @@ const backLinkClass =
 
 export default function ChallengePage({ params }: { params: Params }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Challenge params={params} />
     </Suspense>
   );

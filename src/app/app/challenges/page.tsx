@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ChallengeCard } from "@/components/challenges/challenge-card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { sofiaToday } from "@/lib/progress-photos/today";
@@ -12,7 +13,7 @@ export const metadata = { title: "Предизвикателства" };
 
 export default function ChallengesPage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Challenges />
     </Suspense>
   );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { Composer } from "@/components/community/composer";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { PostCard } from "@/components/community/post-card";
 import { buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -18,7 +19,7 @@ type SearchParams = Promise<{
 
 export default function CommunityPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Community searchParams={searchParams} />
     </Suspense>
   );

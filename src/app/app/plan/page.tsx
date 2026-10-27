@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { serverEnv } from "@/env";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { LEVEL_LABEL, type Goal, type Time } from "@/lib/labels";
 import { buildPlanSummary } from "@/lib/onboarding/plan-summary";
 import { requireUser } from "@/server/auth/require-user";
@@ -27,7 +28,7 @@ type SearchParams = Promise<{ after?: string }>;
 
 export default function PlanPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Plan searchParams={searchParams} />
     </Suspense>
   );

@@ -7,6 +7,7 @@ import { LiveCard } from "@/components/live/live-card";
 import { LevelCard } from "@/components/home/level-card";
 import { ArticleCard } from "@/components/learn/article-card";
 import { Countdown } from "@/components/today/countdown";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { WeekStrip } from "@/components/today/week-strip";
 import { buttonClass } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -33,7 +34,7 @@ export const metadata = { title: "Начало" };
 
 export default function HomePage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Home />
     </Suspense>
   );

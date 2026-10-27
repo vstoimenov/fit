@@ -3,6 +3,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { ArticleCard } from "@/components/learn/article-card";
 import { CommunityCard } from "@/components/learn/community-card";
+import { PageSkeleton } from "@/components/ui/page-skeleton";
 import { RecordingCard } from "@/components/learn/recording-card";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
@@ -25,7 +26,7 @@ type SearchParams = Promise<{ vid?: string | string[] }>;
 
 export default function LearnPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <Suspense fallback={<main className="min-h-dvh px-5 pt-8" aria-busy="true" />}>
+    <Suspense fallback={<PageSkeleton />}>
       <Learn searchParams={searchParams} />
     </Suspense>
   );
