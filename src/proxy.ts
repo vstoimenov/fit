@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientEnv } from "@/env";
 import { decideAuthRedirect } from "@/lib/auth-redirect";
 import { devAutoLoginTarget, devLoginAllowed, shareLoginAllowed } from "@/lib/dev-login";
+import { KEEP_WARM_HEADER, isKeepWarmRequest } from "@/lib/keep-warm";
 
 /**
  * Refreshes the Supabase session cookie and applies optimistic auth redirects. Runs only on the
@@ -11,6 +12,12 @@ import { devAutoLoginTarget, devLoginAllowed, shareLoginAllowed } from "@/lib/de
  */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
+
+  // The keep-warm job (see src/lib/keep-warm.ts) must reach the page function itself; the page
+  // answers it with a redirect. No session lookup, no redirect here.
+  if (isKeepWarmRequest(request.headers.get(KEEP_WARM_HEADER), process.env.CRON_SECRET)) {
+    return response;
+  }
 
   const supabase = createServerClient(
     clientEnv.NEXT_PUBLIC_SUPABASE_URL,
