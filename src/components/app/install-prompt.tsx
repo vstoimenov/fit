@@ -60,7 +60,10 @@ export function InstallPrompt() {
       stored = null;
     }
     if (!installPromptDue(stored, Date.now())) return;
-    const detected = detectInstallPlatform(navigator.userAgent, { standalone: isStandalone() });
+    const detected = detectInstallPlatform(navigator.userAgent, {
+      standalone: isStandalone(),
+      touchPoints: navigator.maxTouchPoints,
+    });
     if (detected === "none") return;
 
     const onBeforeInstall = (e: Event) => {
@@ -107,7 +110,11 @@ export function InstallPrompt() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold tracking-wide text-rose-deep uppercase">
-              {platform === "ios" ? "iPhone" : "Android"}
+              {platform === "ios"
+                ? "iPhone"
+                : platform === "in_app"
+                  ? "Браузър в приложение"
+                  : "Android"}
             </p>
             <h2 id="install-title" className="font-display text-xl leading-tight">
               Добави клуба на началния екран
@@ -127,10 +134,17 @@ export function InstallPrompt() {
           известията на клуба.
         </p>
 
-        {platform === "ios" ? (
+        {platform === "in_app" ? (
+          <p className="text-sm">
+            Отворила си сайта в Instagram или Facebook, а оттам не може да се добави. Натисни{" "}
+            <strong>⋯</strong> горе вдясно → <strong>Отвори в браузъра</strong> и продължи в Safari
+            или Chrome.
+          </p>
+        ) : platform === "ios" ? (
           <ol className="space-y-2">
             <Step icon={<Share size={16} aria-hidden="true" />}>
-              В Safari натисни <strong>Сподели</strong> (бутонът долу в средата).
+              В Safari натисни <strong>Сподели</strong> (квадратчето със стрелка; на нов iPhone е в
+              менюто <strong>⋯</strong>).
             </Step>
             <Step icon={<SquarePlus size={16} aria-hidden="true" />}>
               Избери <strong>Добави към началния екран</strong> (Add to Home Screen).

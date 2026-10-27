@@ -19,17 +19,20 @@ import { SignOutButton } from "./sign-out-button";
 
 export const metadata = { title: "Профил" };
 
-export default function ProfilePage() {
+type SearchParams = Promise<{ export?: string | string[] }>;
+
+export default function ProfilePage({ searchParams }: { searchParams: SearchParams }) {
   return (
     <Suspense fallback={<PageSkeleton />}>
-      <Profile />
+      <Profile searchParams={searchParams} />
     </Suspense>
   );
 }
 
-async function Profile() {
+async function Profile({ searchParams }: { searchParams: SearchParams }) {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
+  const exportFailed = (await searchParams).export === "failed";
   const { user, supabase } = await requireUser();
   const [
     { data: profile, error: profileError },
@@ -151,6 +154,11 @@ async function Profile() {
               <a href="/api/me/export" className={buttonClass("secondary", "md") + " w-full"}>
                 Изтегли моите данни
               </a>
+              {exportFailed && (
+                <p role="alert" className="text-sm font-semibold text-brick">
+                  Не успяхме да подготвим данните ти. Опитай отново след малко.
+                </p>
+              )}
               <SignOutButton />
             </div>
             <DeleteAccount />

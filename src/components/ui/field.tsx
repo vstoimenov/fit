@@ -23,7 +23,9 @@ export function Field({
       <span className="text-sm font-semibold text-ink">{label}</span>
       {children}
       {error ? (
-        <span className="block text-sm text-brick">{error}</span>
+        <span role="alert" className="block text-sm text-brick">
+          {error}
+        </span>
       ) : hint ? (
         <span className="block text-sm text-ink-soft">{hint}</span>
       ) : null}

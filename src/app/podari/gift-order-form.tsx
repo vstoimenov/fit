@@ -73,7 +73,7 @@ export function GiftOrderForm({ defaultMonths = 3 }: { defaultMonths?: number })
             maxLength={300}
             rows={2}
             defaultValue={values?.message}
-            className={inputClass}
+            className={`${inputClass} h-auto py-3`}
           />
         </Field>
       </div>

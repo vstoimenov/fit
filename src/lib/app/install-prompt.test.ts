@@ -23,6 +23,20 @@ describe("detectInstallPlatform", () => {
     expect(detectInstallPlatform(MAC_CHROME, { standalone: false })).toBe("none");
   });
 
+  it("treats iPadOS Safari (desktop user agent with touch) as iOS", () => {
+    const IPADOS =
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15";
+    expect(detectInstallPlatform(IPADOS, { standalone: false, touchPoints: 5 })).toBe("ios");
+    expect(detectInstallPlatform(IPADOS, { standalone: false, touchPoints: 0 })).toBe("none");
+  });
+
+  it("sends Instagram and Facebook in-app browsers to Safari or Chrome", () => {
+    const IG = `${IPHONE_SAFARI} Instagram 312.0.0`;
+    const FB = `${ANDROID_CHROME} [FBAN/FB4A;FBAV/450.0]`;
+    expect(detectInstallPlatform(IG, { standalone: false })).toBe("in_app");
+    expect(detectInstallPlatform(FB, { standalone: false })).toBe("in_app");
+  });
+
   it("is none once the app already runs from the home screen", () => {
     expect(detectInstallPlatform(IPHONE_SAFARI, { standalone: true })).toBe("none");
     expect(detectInstallPlatform(ANDROID_CHROME, { standalone: true })).toBe("none");

@@ -4,7 +4,7 @@ import { createAdminSupabaseClient } from "@/server/db/admin";
 import { requireUser } from "@/server/auth/require-user";
 import { exportMyData } from "@/server/profile/profile";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const { user, supabase } = await requireUser();
     const data = await exportMyData(supabase, user.id, createAdminSupabaseClient());
@@ -16,7 +16,11 @@ export async function GET() {
       },
     });
   } catch (error) {
-    const status = isAppError(error) && error.code === "UNAUTHORIZED" ? 401 : 500;
-    return NextResponse.json({ error: "export failed" }, { status });
+    // She tapped a link, so she would land on raw JSON: send her back with a message instead.
+    if (isAppError(error) && error.code === "UNAUTHORIZED") {
+      return NextResponse.redirect(new URL("/login?next=/app/profile", request.url), 303);
+    }
+    console.error("data export failed", error instanceof Error ? error.message : String(error));
+    return NextResponse.redirect(new URL("/app/profile?export=failed", request.url), 303);
   }
 }

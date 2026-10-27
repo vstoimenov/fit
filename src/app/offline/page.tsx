@@ -1,3 +1,5 @@
+import { RetryButton } from "./retry-button";
+
 export const metadata = { title: "Няма връзка" };
 
 export default function OfflinePage() {
@@ -7,6 +9,7 @@ export default function OfflinePage() {
       <p className="text-ink-soft">
         Провери интернета и опитай пак. Тренировките са видео и имат нужда от връзка.
       </p>
+      <RetryButton />
     </main>
   );
 }

@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { createCommentAction, type ComposerState } from "@/app/app/community/actions";
 import { Button } from "@/components/ui/button";
 import { inputOnCardClass } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 
 const IDLE: ComposerState = { status: "idle" };
 
@@ -20,7 +21,7 @@ export function CommentForm({ postId }: { postId: string }) {
           rows={2}
           placeholder="Напиши коментар…"
           defaultValue={state.status === "error" ? state.body : ""}
-          className={inputOnCardClass}
+          className={cn(inputOnCardClass, "h-auto py-3")}
         />
       </label>
       {state.status === "error" && (

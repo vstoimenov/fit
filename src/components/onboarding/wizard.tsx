@@ -184,7 +184,10 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
         return;
       }
       clearDraft();
-      router.replace(`/app/workout/${result.data.freeWorkoutId}?first=1`);
+      // Without a published free workout there is nothing to open: start in the app instead of a 404.
+      router.replace(
+        result.data.freeWorkoutId ? `/app/workout/${result.data.freeWorkoutId}?first=1` : "/app",
+      );
     } catch {
       unlock();
       setError("Нещо се обърка. Опитай отново.");

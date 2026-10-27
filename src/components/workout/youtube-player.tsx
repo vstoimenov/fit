@@ -541,6 +541,9 @@ export function YouTubePlayer({
         <div
           className={cn(
             "absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/85 to-transparent px-3 pb-1 pt-10 transition-opacity duration-150 motion-reduce:transition-none",
+            // Full screen on iPhone: keep the bar clear of the notch, rounded corners and home indicator.
+            theatre &&
+              "pb-[max(0.25rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]",
             controlsShown ? "opacity-100" : "pointer-events-none opacity-0",
           )}
         >

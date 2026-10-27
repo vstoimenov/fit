@@ -1,6 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonClass } from "@/components/ui/button";
 
 export default function ErrorPage({
   reset,
@@ -15,6 +16,10 @@ export default function ErrorPage({
       <Button onClick={reset} size="md">
         Опитай пак
       </Button>
+      {/* In the home-screen app there is no browser bar: always offer a way out. */}
+      <Link href="/app" className={buttonClass("secondary", "md")}>
+        Към началото
+      </Link>
     </main>
   );
 }

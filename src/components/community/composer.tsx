@@ -8,6 +8,7 @@ import { createPostAction, type ComposerState } from "@/app/app/community/action
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { inputOnCardClass } from "@/components/ui/field";
+import { cn } from "@/lib/cn";
 import { compressPhoto } from "@/lib/progress-photos/compress";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -89,7 +90,7 @@ export function Composer({
             rows={3}
             placeholder="Какво искаш да споделиш?"
             defaultValue={state.status === "error" ? state.body : initialBody}
-            className={inputOnCardClass}
+            className={cn(inputOnCardClass, "h-auto py-3")}
           />
         </label>
         <input type="hidden" name="photoPath" value={photo?.path ?? ""} />
