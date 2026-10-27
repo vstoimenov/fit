@@ -5,8 +5,9 @@ import { BottomNav } from "@/components/app/bottom-nav";
 import { HideOnPlayer } from "@/components/app/hide-on-player";
 import { InstallPrompt } from "@/components/app/install-prompt";
 import { SidebarNav } from "@/components/app/sidebar-nav";
+import { isAppError } from "@/lib/app-error";
 import { pastDueNotice } from "@/lib/subscription-text";
-import { createServerSupabaseClient } from "@/server/db/server";
+import { requireUser } from "@/server/auth/require-user";
 import { ManageSubscriptionButton } from "./profile/manage-subscription-button";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -21,11 +22,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 async function AppGate({ children }: { children: React.ReactNode }) {
   // Opt out of prerendering before the session read: supabase-js compares token expiry with Date.now().
   await connection();
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login?next=/app");
+  // The same cached read the page underneath uses: one session check per request, not two.
+  let session: Awaited<ReturnType<typeof requireUser>>;
+  try {
+    session = await requireUser();
+  } catch (error) {
+    if (isAppError(error) && error.code === "UNAUTHORIZED") redirect("/login?next=/app");
+    throw error;
+  }
+  const { user, supabase } = session;
   const [{ data: profile, error }, { data: sub, error: subError }] = await Promise.all([
     supabase.from("profiles").select("onboarding_done").eq("id", user.id).single(),
     supabase

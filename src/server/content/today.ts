@@ -78,7 +78,7 @@ export async function getTodayView(
   userId: string,
   now = new Date(),
 ): Promise<TodayView> {
-  const [profileRes, workoutsRes, completionsRes, accessRes] = await Promise.all([
+  const [profileRes, workoutsRes, completionsRes, accessRes, nextDropRes] = await Promise.all([
     db
       .from("profiles")
       .select("name, level, timezone, starter_week_done_at")
@@ -92,16 +92,19 @@ export async function getTodayView(
       .lte("publish_at", now.toISOString()),
     db.from("workout_completions").select("workout_id, local_date").eq("user_id", userId),
     db.rpc("my_access"),
+    // Reads the level itself, so it rides in the same round trip as the profile.
+    db.rpc("next_drop_for_me"),
   ]);
   if (profileRes.error && profileRes.error.code !== "PGRST116") {
     throw new Error(`load profile failed: ${profileRes.error.message}`);
   }
   if (!profileRes.data) throw new AppError("NOT_FOUND", "Профилът не е намерен.");
-  if (workoutsRes.error || completionsRes.error || accessRes.error) {
+  if (workoutsRes.error || completionsRes.error || accessRes.error || nextDropRes.error) {
     throw new Error(
-      `today view query failed: ${workoutsRes.error?.message ?? completionsRes.error?.message ?? accessRes.error?.message}`,
+      `today view query failed: ${workoutsRes.error?.message ?? completionsRes.error?.message ?? accessRes.error?.message ?? nextDropRes.error?.message}`,
     );
   }
+  const nextDropAt = nextDropRes.data;
 
   const profile = profileRes.data;
   const workouts = workoutsRes.data.map(toSummary);
@@ -130,11 +133,6 @@ export async function getTodayView(
   const slotDates = regularSlotDates(plan, profile.level, profile.timezone);
   const completionDates = completions.map((c) => c.local_date);
   const stats = completionStats({ slotDates, completionDates, today });
-
-  const { data: nextDropAt, error: nextDropError } = await db.rpc("next_drop_at", {
-    p_level: profile.level,
-  });
-  if (nextDropError) throw new Error(`next drop failed: ${nextDropError.message}`);
 
   return {
     name: profile.name,

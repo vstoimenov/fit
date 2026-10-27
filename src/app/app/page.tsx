@@ -43,16 +43,13 @@ async function Home() {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
   const { user, supabase } = await requireUser();
-  const view = await getTodayView(supabase, user.id);
-  // Level and article are extras: if their reads fail the day's workout must still show.
-  const [progress, article, nutrition, challenge, live, community] = await Promise.all([
+  // Everything that does not need the day's view starts together with it: two round trips to the
+  // database instead of three. The extras are optional: if a read fails the day's workout still shows.
+  const [view, progress, nutrition, challenge, live] = await Promise.all([
+    getTodayView(supabase, user.id),
     getMemberPoints(supabase, user.id).then(
       (p) => levelProgress(p.points),
       (error: unknown) => logSkipped("points", user.id, error, null),
-    ),
-    listArticlesFor(supabase, view.level, 1).then(
-      (list): ArticleSummary | null => list[0] ?? null,
-      (error: unknown) => logSkipped("article", user.id, error, null),
     ),
     nutritionToday(supabase, user.id).catch((error: unknown) =>
       logSkipped("nutrition", user.id, error, null),
@@ -61,6 +58,12 @@ async function Home() {
       logSkipped("challenge", user.id, error, null),
     ),
     homeLive(supabase, user.id).catch((error: unknown) => logSkipped("live", user.id, error, null)),
+  ]);
+  const [article, community] = await Promise.all([
+    listArticlesFor(supabase, view.level, 1).then(
+      (list): ArticleSummary | null => list[0] ?? null,
+      (error: unknown) => logSkipped("article", user.id, error, null),
+    ),
     view.hasAccess
       ? listFeed(supabase, null, 2).then(
           (r) => r.posts.filter((p) => !p.hidden),

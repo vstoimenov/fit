@@ -1767,6 +1767,7 @@ export type Database = {
         Args: { p_level: Database["public"]["Enums"]["workout_level"] };
         Returns: string;
       };
+      next_drop_for_me: { Args: Record<PropertyKey, never>; Returns: string };
       public_free_workout: {
         Args: Record<PropertyKey, never>;
         Returns: {

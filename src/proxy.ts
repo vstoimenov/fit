@@ -4,7 +4,11 @@ import { clientEnv } from "@/env";
 import { decideAuthRedirect } from "@/lib/auth-redirect";
 import { devAutoLoginTarget, devLoginAllowed, shareLoginAllowed } from "@/lib/dev-login";
 
-/** Refreshes the Supabase session cookie and applies optimistic auth redirects. */
+/**
+ * Refreshes the Supabase session cookie and applies optimistic auth redirects. Runs only on the
+ * routes that need a session (see `config.matcher`): static files, public pages and the webhooks
+ * never pay for it.
+ */
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
 
@@ -28,9 +32,10 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() verifies the JWT locally against the project's signing keys (cached per process)
+  // and refreshes an expired session; getUser() would be a network round trip on every request.
+  const { data: claims } = await supabase.auth.getClaims();
+  const user = claims?.claims ?? null;
 
   // Testing only: a signed-out visit signs in as a test account instead of showing /login —
   // locally (client or admin) or on the test-share tunnel host (member app only, a fresh tester).
@@ -62,7 +67,23 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  // Only where a session matters: the member and admin areas, the auth pages, the marketing pages
+  // that send a signed-in member to the app, and the API routes that act for the signed-in user.
+  // The admin manifest is fetched without cookies by the browser, so it stays public.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sw.js|pwa-icon|manifest.webmanifest|admin/manifest.webmanifest|api/visit|api/pay).*)",
+    "/",
+    "/landing",
+    "/login",
+    "/forgot-password",
+    "/reset-password",
+    "/start/:path*",
+    "/app/:path*",
+    "/auth/:path*",
+    "/dev/:path*",
+    "/admin",
+    "/admin/:path((?!manifest\\.webmanifest$).*)",
+    "/api/me/:path*",
+    "/api/share/:path*",
+    "/api/live/:path*",
   ],
 };
