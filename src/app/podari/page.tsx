@@ -9,6 +9,7 @@ import { GIFT_OPTIONS, giftMonthsLabel } from "@/lib/site/gift";
 import { serverEnv } from "@/env";
 import { getSiteFlags, getSiteLinks } from "@/server/site/content";
 import { GiftOrderForm } from "./gift-order-form";
+import { PickGift } from "./pick-gift";
 
 export const metadata = {
   title: "Подари членство",
@@ -82,12 +83,7 @@ export default async function GiftPage() {
                 </ul>
                 <div className="mt-auto flex flex-col gap-2">
                   {ready ? (
-                    <a
-                      href="#porachka"
-                      className={cn(CTA, best ? "bg-white text-ink" : CTA_PRIMARY)}
-                    >
-                      Купи ваучер
-                    </a>
+                    <PickGift months={o.months} onInk={best} />
                   ) : (
                     <>
                       <button

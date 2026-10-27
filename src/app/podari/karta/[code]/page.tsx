@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
+import { Suspense } from "react";
 import { Logo } from "@/components/ui/logo";
 import { formatCode } from "@/lib/gift/code";
 import { giftMonthsLabel } from "@/lib/site/gift";
@@ -9,7 +11,17 @@ import { PrintButton } from "./print-button";
 export const metadata = { title: "Подаръчна картичка", robots: { index: false, follow: false } };
 
 /** Printable gift card. Reachable only with the code, which is the buyer's secret. */
-export default async function GiftCardPage({ params }: { params: Promise<{ code: string }> }) {
+export default function GiftCardPage({ params }: { params: Promise<{ code: string }> }) {
+  return (
+    <Suspense fallback={<main className="min-h-dvh bg-sand" aria-busy="true" />}>
+      <GiftCard params={params} />
+    </Suspense>
+  );
+}
+
+async function GiftCard({ params }: { params: Promise<{ code: string }> }) {
+  // The code is request data: opt out of prerendering before reading it.
+  await connection();
   const { code } = await params;
   const card = await getVoucherCard(createAdminSupabaseClient(), code);
   if (!card) notFound();

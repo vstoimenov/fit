@@ -28,3 +28,15 @@
 - Ruling: the card page is public and keyed only by the code (the buyer's secret) with `noindex`. Cost if wrong: a leaked code shows the card (no buyer e-mail on it).
 - Ruling: a live Stripe subscription blocks redemption and keeps the code (no attempt to extend Stripe billing). Cost if wrong: she redeems later; nothing lost.
 - Not verified: a real Stripe Checkout + webhook round trip (no keys); covered by the parser/apply unit tests and the existing webhook plumbing.
+- Final review (Opus): 2 Critical, 6 Important, 11 Minor. Fix pass (one commit), tests first where a unit exists:
+  - Critical: `next build` failed on `/podari/karta/[code]` (request data outside Suspense) and `/podari/blagodarya` (`useSearchParams` outside Suspense) — both wrapped per the project pattern; `pnpm build` exit 0 (karta = partial prerender, blagodarya static).
+  - Critical: README webhook step now lists `checkout.session.completed` + `checkout.session.async_payment_succeeded`.
+  - redeem RPC carries the current `admin_grant_manual` guards (open paid sub → P0003, liveness re-check on the locked row); DB tests: past_due-beyond-grace refused and code untouched, ended Stripe sub converts.
+  - converting to a paid plan keeps the prepaid months: `trialEndFor` → Stripe `subscription_data.trial_end` (≥48 h, ≤730 d); unit tests.
+  - card PNG rendered (template-literal text nodes); curl: 200, image/png 1200×1600, 85 KB.
+  - Stripe v23: `allowed_payment_method_types: ["card"]` (the SDK dropped `payment_method_types`); the parser also accepts the async success event.
+  - option cards select their own period (`PickGift`), forms keep typed values after an error, honest thank-you copy (payment pending until confirmed), 400 stops polling, gifts always use Stripe regardless of the active plan provider.
+  - `voided_at` + `void_gift_voucher` + admin „Анулирай“ for unredeemed vouchers (DB test); UNAUTHORIZED message on redeem; a11y (`aria-invalid`/`describedby`, focus on success); spec wording fixed.
+- Final: minor (deferred): unknown card codes answer HTTP 200 with the 404 body (notFound after the streamed shell, like other dynamic pages); redeemed_by not shown in the admin list; list capped at 200 without search; no redeem form for a paying member (she is redirected from /app/plan); Cyrillic look-alike letters in codes are stripped, not mapped; no unit test for the webhook gift branch ordering.
+- Final: Ruling: no `charge.refunded` handling — the owner voids by hand after a refund. Cost if wrong: a refunded voucher stays valid until she presses „Анулирай“.
+- Browser-verified after the pass: card page and PNG via curl; PickGift and the order form need Stripe keys to appear (not checked live).

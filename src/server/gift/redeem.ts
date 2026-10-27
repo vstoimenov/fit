@@ -6,6 +6,7 @@ import type { TypedClient } from "@/server/db/types";
 export function redeemErrorMessage(dbMessage: string): string {
   if (dbMessage.includes("not found")) return "Няма такъв код. Провери буквите и цифрите.";
   if (dbMessage.includes("already used")) return "Този код вече е използван.";
+  if (dbMessage.includes("voided")) return "Този ваучер е анулиран.";
   if (dbMessage.includes("expired")) return "Кодът е изтекъл (важи 12 месеца от покупката).";
   if (dbMessage.includes("paid subscription"))
     return "Имаш активен платен абонамент. Активирай ваучера, когато той приключи — кодът остава валиден.";
@@ -18,6 +19,13 @@ export async function redeemGift(
   code: string,
 ): Promise<{ ok: true; periodEnd: string } | { ok: false; message: string }> {
   const { data, error } = await db.rpc("redeem_gift_voucher", { p_code: code });
+  if (error?.code === "P0003") {
+    return {
+      ok: false,
+      message:
+        "Абонаментът ти още е отворен при доставчика на плащания. Активирай ваучера, когато приключи — кодът остава валиден.",
+    };
+  }
   if (error) return { ok: false, message: redeemErrorMessage(error.message) };
   return { ok: true, periodEnd: data };
 }

@@ -302,3 +302,62 @@ describe("StripeProvider", () => {
     });
   });
 });
+
+describe("StripeProvider gifts", () => {
+  it("creates a one-time card payment with the server's amount and the gift metadata", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-27T10:00:30Z"));
+    const client = fakeClient();
+    const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+    await p.createGiftCheckout({
+      months: 3,
+      amountCents: 7900,
+      currency: "EUR",
+      productName: "Подаръчен ваучер · 3 месеца",
+      buyerEmail: "buyer@example.com",
+      recipientName: "Ива",
+      message: null,
+      successUrl: "https://x/ok",
+      cancelUrl: "https://x/no",
+    });
+    const [params, options] = client.checkout.sessions.create.mock.calls[0] as unknown as [
+      Record<string, unknown>,
+      { idempotencyKey: string },
+    ];
+    expect(params.mode).toBe("payment");
+    expect(params.allowed_payment_method_types).toEqual(["card"]);
+    expect(params.line_items).toEqual([
+      {
+        price_data: {
+          currency: "eur",
+          unit_amount: 7900,
+          product_data: { name: "Подаръчен ваучер · 3 месеца" },
+        },
+        quantity: 1,
+      },
+    ]);
+    expect(params.metadata).toMatchObject({ kind: "gift", months: "3", recipient_name: "Ива" });
+    // The key must not carry the e-mail in clear and must differ per recipient/message.
+    expect(options.idempotencyKey).not.toContain("buyer@example.com");
+    expect(options.idempotencyKey.length).toBeLessThanOrEqual(255);
+    vi.useRealTimers();
+  });
+
+  it("keeps the remaining manual months as a trial when a member converts to a paid plan", async () => {
+    const client = fakeClient();
+    const p = createStripeProvider({ secretKey: "sk_test_x", webhookSecret: SECRET }, client);
+    await p.createCheckout({
+      userId: "u1",
+      email: "m@x.bg",
+      customerId: null,
+      priceId: "price_1",
+      successUrl: "https://x/ok",
+      cancelUrl: "https://x/no",
+      trialEnd: 1_800_000_000,
+    });
+    const [params] = client.checkout.sessions.create.mock.calls[0] as unknown as [
+      Record<string, unknown>,
+    ];
+    expect(params.subscription_data).toMatchObject({ trial_end: 1_800_000_000 });
+  });
+});

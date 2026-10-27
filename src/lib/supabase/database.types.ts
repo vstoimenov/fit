@@ -410,6 +410,7 @@ export type Database = {
           redeemed_at: string | null;
           redeemed_by: string | null;
           stripe_session_id: string | null;
+          voided_at: string | null;
         };
         ComputedFields: never;
         Insert: {
@@ -429,6 +430,7 @@ export type Database = {
           redeemed_at?: string | null;
           redeemed_by?: string | null;
           stripe_session_id?: string | null;
+          voided_at?: string | null;
         };
         Update: {
           amount_cents?: number;
@@ -447,6 +449,7 @@ export type Database = {
           redeemed_at?: string | null;
           redeemed_by?: string | null;
           stripe_session_id?: string | null;
+          voided_at?: string | null;
         };
         Relationships: [
           {
@@ -1566,6 +1569,7 @@ export type Database = {
         };
         Returns: boolean;
       };
+      void_gift_voucher: { Args: { p_id: string }; Returns: undefined };
     };
     Enums: {
       activity_level: "sedentary" | "light" | "moderate" | "active";

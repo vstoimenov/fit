@@ -63,17 +63,19 @@ function CardImage({ card }: { card: VoucherCard }) {
           Подари сила.
         </div>
         <div style={{ marginTop: 16, fontSize: 36 }}>
-          {giftMonthsLabel(card.months)} членство в клуба
+          {`${giftMonthsLabel(card.months)} членство в клуба`}
         </div>
       </div>
       <div
         style={{ display: "flex", flexDirection: "column", padding: "70px 90px", gap: 40, flex: 1 }}
       >
         {card.recipientName && (
-          <div style={{ fontSize: 48, fontWeight: 800 }}>За {card.recipientName}</div>
+          <div style={{ fontSize: 48, fontWeight: 800 }}>{`За ${card.recipientName}`}</div>
         )}
         {card.message && (
-          <div style={{ fontSize: 32, lineHeight: 1.4, color: "#5C5A55" }}>„{card.message}“</div>
+          <div
+            style={{ fontSize: 32, lineHeight: 1.4, color: "#5C5A55" }}
+          >{`„${card.message}“`}</div>
         )}
         <div
           style={{

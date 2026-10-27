@@ -7,6 +7,7 @@ import { giftMonthsLabel } from "@/lib/site/gift";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { listVouchers } from "@/server/gift/admin";
 import { IssueVoucherForm } from "./form";
+import { VoidButton } from "./void-button";
 
 export const metadata = { title: "Ваучери" };
 
@@ -69,11 +70,18 @@ async function Vouchers() {
                         {created.date} {created.time}
                       </td>
                       <td className="px-3 py-2">
-                        {v.redeemed_at
-                          ? `активиран ${utcToZoned(v.redeemed_at).date}`
-                          : expired
-                            ? "изтекъл"
-                            : "неизползван"}
+                        {v.redeemed_at ? (
+                          `активиран ${utcToZoned(v.redeemed_at).date}`
+                        ) : v.voided_at ? (
+                          "анулиран"
+                        ) : expired ? (
+                          "изтекъл"
+                        ) : (
+                          <span className="inline-flex items-center gap-3">
+                            неизползван
+                            <VoidButton id={v.id} code={formatCode(v.code)} />
+                          </span>
+                        )}
                       </td>
                     </tr>
                   );

@@ -22,6 +22,8 @@ export interface CheckoutInput {
   priceId: string;
   successUrl: string;
   cancelUrl: string;
+  /** Unix seconds: a prepaid (gift / manual) period carried over as a trial, so no months are lost. */
+  trialEnd?: number;
 }
 
 export interface GiftCheckoutInput {

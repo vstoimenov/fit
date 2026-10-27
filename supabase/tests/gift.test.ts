@@ -101,4 +101,60 @@ describe("gift vouchers", () => {
       .single();
     expect(row?.redeemed_at).toBeNull();
   });
+
+  it("is refused while a paid subscription is still open (past_due beyond grace), untouched", async () => {
+    const { admin, code } = await issued(1);
+    const user = await createUser(admin, "gift-pastdue");
+    await admin.from("subscriptions").upsert({
+      user_id: user.id,
+      provider: "stripe",
+      provider_sub_id: "sub_open",
+      status: "past_due",
+      grace_until: new Date(Date.now() - 86_400_000).toISOString(),
+      current_period_end: new Date(Date.now() - 5 * 86_400_000).toISOString(),
+    });
+    const db = await signedInClient(user);
+    const res = await db.rpc("redeem_gift_voucher", { p_code: code });
+    expect(res.error?.code).toBe("P0003");
+    const { data: row } = await admin
+      .from("gift_vouchers")
+      .select("redeemed_at")
+      .eq("code", code)
+      .single();
+    expect(row?.redeemed_at).toBeNull();
+  });
+
+  it("converts an ended Stripe subscription into manual months", async () => {
+    const { admin, code } = await issued(1);
+    const user = await createUser(admin, "gift-ended");
+    await admin.from("subscriptions").upsert({
+      user_id: user.id,
+      provider: "stripe",
+      provider_sub_id: "sub_old",
+      status: "canceled",
+      current_period_end: new Date(Date.now() - 86_400_000).toISOString(),
+    });
+    const db = await signedInClient(user);
+    const { error } = await db.rpc("redeem_gift_voucher", { p_code: code });
+    expect(error).toBeNull();
+    const { data: sub } = await admin
+      .from("subscriptions")
+      .select("provider, status")
+      .eq("user_id", user.id)
+      .single();
+    expect(sub).toEqual({ provider: "manual", status: "active" });
+  });
+
+  it("an admin voids an unredeemed voucher; it can no longer be redeemed", async () => {
+    const { admin, code } = await issued(1);
+    const { db: adminDb } = await createAdminUser(admin, "gift-voider");
+    const { data: row } = await admin.from("gift_vouchers").select("id").eq("code", code).single();
+    expect((await adminDb.rpc("void_gift_voucher", { p_id: row!.id })).error).toBeNull();
+    const db = await signedInClient(await createUser(admin, "gift-void-user"));
+    expect((await db.rpc("redeem_gift_voucher", { p_code: code })).error?.message).toMatch(
+      /voided/,
+    );
+    const member = await signedInClient(await createUser(admin, "gift-void-member"));
+    expect((await member.rpc("void_gift_voucher", { p_id: row!.id })).error?.code).toBe("42501");
+  });
 });

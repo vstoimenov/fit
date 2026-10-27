@@ -6,7 +6,7 @@ import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { formString } from "@/lib/form-data";
 import { formatCode } from "@/lib/gift/code";
 import { requireAdmin } from "@/server/admin/require-admin";
-import { issueVoucher } from "@/server/gift/admin";
+import { issueVoucher, voidVoucher } from "@/server/gift/admin";
 
 const schema = z.object({
   months: z.coerce.number().refine((m) => [1, 3, 12].includes(m), "1, 3 или 12 месеца"),
@@ -28,6 +28,18 @@ export async function issueVoucherAction(
     const code = await issueVoucher(supabase, input);
     revalidatePath("/admin/vouchers");
     return actionOk({ code: formatCode(code) });
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** Refund or mistake: an unredeemed voucher can no longer be used. */
+export async function voidVoucherAction(id: string): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireAdmin();
+    await voidVoucher(supabase, z.uuid().parse(id));
+    revalidatePath("/admin/vouchers");
+    return actionOk(null);
   } catch (error) {
     return actionFail(error);
   }

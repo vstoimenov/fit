@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Stripe from "stripe";
 import { normalizeStripeEvent } from "@/lib/payments/stripe-normalize";
 import { giftFromStripeSession } from "@/server/gift/purchase";
@@ -88,7 +89,10 @@ export function createStripeProvider(
             : i.email
               ? { customer_email: i.email }
               : {}),
-          subscription_data: { metadata: { user_id: i.userId } },
+          subscription_data: {
+            metadata: { user_id: i.userId },
+            ...(i.trialEnd ? { trial_end: i.trialEnd } : {}),
+          },
           metadata: { user_id: i.userId },
           allow_promotion_codes: true,
           locale: "bg",
@@ -109,6 +113,8 @@ export function createStripeProvider(
       const session = await need().checkout.sessions.create(
         {
           mode: "payment",
+          // Cards (incl. Apple/Google Pay) settle at once; delayed methods would complete unpaid.
+          allowed_payment_method_types: ["card"],
           line_items: [
             {
               price_data: {
@@ -132,7 +138,18 @@ export function createStripeProvider(
           locale: "bg",
           expires_at: (minute + 36) * 60,
         },
-        { idempotencyKey: `gift-${i.buyerEmail}-${i.months}-${minute}` },
+        {
+          // Same order within a minute (a double click) returns the same session; the key never
+          // carries the e-mail in clear and differs for another recipient or message.
+          idempotencyKey: `gift-${createHash("sha256")
+            .update(
+              [i.buyerEmail, i.months, i.recipientName ?? "", i.message ?? "", minute].join(
+                "\u0000",
+              ),
+            )
+            .digest("hex")
+            .slice(0, 48)}`,
+        },
       );
       if (!session.url) throw new Error("stripe returned no checkout url");
       return { url: session.url };

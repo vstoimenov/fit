@@ -15,6 +15,7 @@ export interface VoucherRow {
   expires_at: string;
   redeemed_at: string | null;
   redeemed_by: string | null;
+  voided_at: string | null;
 }
 
 /** Newest vouchers first (admin RLS). */
@@ -22,7 +23,7 @@ export async function listVouchers(db: TypedClient, limit = 200): Promise<Vouche
   const { data, error } = await db
     .from("gift_vouchers")
     .select(
-      "id, code, months, amount_cents, kind, buyer_email, recipient_name, note, created_at, expires_at, redeemed_at, redeemed_by",
+      "id, code, months, amount_cents, kind, buyer_email, recipient_name, note, created_at, expires_at, redeemed_at, redeemed_by, voided_at",
     )
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -43,4 +44,9 @@ export async function issueVoucher(
   });
   if (error) throw new Error(`issue voucher failed: ${error.message}`);
   return data;
+}
+
+export async function voidVoucher(db: TypedClient, id: string): Promise<void> {
+  const { error } = await db.rpc("void_gift_voucher", { p_id: id });
+  if (error) throw new Error(`void voucher failed: ${error.message}`);
 }

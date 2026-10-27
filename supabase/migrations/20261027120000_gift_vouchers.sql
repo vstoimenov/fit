@@ -16,7 +16,9 @@ create table public.gift_vouchers (
   created_at timestamptz not null default now(),
   expires_at timestamptz not null default now() + interval '12 months',
   redeemed_by uuid references public.profiles (id) on delete set null,
-  redeemed_at timestamptz
+  redeemed_at timestamptz,
+  -- Set by the owner after a refund or a mistake; a voided code can no longer be redeemed.
+  voided_at timestamptz
 );
 create index gift_vouchers_created on public.gift_vouchers (created_at desc);
 
@@ -72,8 +74,10 @@ revoke execute on function public.issue_gift_voucher(int, text, text) from publi
 grant execute on function public.issue_gift_voucher(int, text, text) to authenticated;
 
 -- A signed-in member redeems a code: her manual access is extended by the voucher's months
--- (from now, or from the end of a running manual period). A live paid subscription cannot be
--- extended here, so the code is left untouched and she is told to come back later.
+-- (from now, or from the end of a running manual period). The subscription rules are those of
+-- admin_grant_manual (20261016100400): a live paid subscription is never replaced, a paid one
+-- that is still billable (past_due beyond grace, still open at the provider) is never orphaned,
+-- and the upsert re-checks liveness on the locked row. In those cases the code stays unused.
 create function public.redeem_gift_voucher(p_code text) returns timestamptz
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -83,6 +87,7 @@ declare
   s public.subscriptions%rowtype;
   v_start timestamptz := now();
   v_end timestamptz;
+  v_rows int;
 begin
   if v_uid is null then
     raise exception 'sign in first' using errcode = '42501';
@@ -98,6 +103,9 @@ begin
   if v.redeemed_at is not null then
     raise exception 'voucher already used' using errcode = 'P0001';
   end if;
+  if v.voided_at is not null then
+    raise exception 'voucher voided' using errcode = 'P0001';
+  end if;
   if v.expires_at <= now() then
     raise exception 'voucher expired' using errcode = 'P0001';
   end if;
@@ -105,6 +113,9 @@ begin
   if found then
     if s.provider <> 'manual' and public.has_active_access(v_uid) then
       raise exception 'paid subscription is live' using errcode = '23P01';
+    end if;
+    if s.provider <> 'manual' and s.provider_sub_id is not null and s.status <> 'canceled' then
+      raise exception 'paid subscription still open' using errcode = 'P0003';
     end if;
     if s.provider = 'manual' and s.status = 'active'
        and s.current_period_end is not null and s.current_period_end > now() then
@@ -119,9 +130,35 @@ begin
   on conflict (user_id) do update set
     provider = 'manual', status = 'active', current_period_end = excluded.current_period_end,
     grace_until = null, canceled_at = null, cancel_at_period_end = false, plan_id = null,
-    provider_sub_id = null, price_cents = null, billing_interval = null, provider_event_at = null;
+    provider_sub_id = null, price_cents = null, billing_interval = null, provider_event_at = null
+  where t.provider = 'manual'
+     or not coalesce(
+          t.status in ('active', 'trialing')
+          or (t.status = 'past_due' and t.grace_until > now())
+          or (t.status = 'canceled' and t.current_period_end > now()),
+          false);
+  get diagnostics v_rows = row_count;
+  if v_rows = 0 then
+    raise exception 'paid subscription is live' using errcode = '23P01';
+  end if;
   update public.gift_vouchers set redeemed_by = v_uid, redeemed_at = now() where id = v.id;
   return v_end;
 end $$;
 revoke execute on function public.redeem_gift_voucher(text) from public, anon;
 grant execute on function public.redeem_gift_voucher(text) to authenticated;
+
+-- The owner cancels an unredeemed voucher (refund, mistake).
+create function public.void_gift_voucher(p_id uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  if not public.is_admin() then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  update public.gift_vouchers set voided_at = now()
+    where id = p_id and redeemed_at is null and voided_at is null;
+  if not found then
+    raise exception 'voucher not found or already used' using errcode = 'P0002';
+  end if;
+end $$;
+revoke execute on function public.void_gift_voucher(uuid) from public, anon;
+grant execute on function public.void_gift_voucher(uuid) to authenticated;

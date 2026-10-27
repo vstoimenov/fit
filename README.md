@@ -151,7 +151,9 @@ CRON_SECRET>', 'cron_secret');` — until then the job runs and does nothing. `s
    subscription**. The app gives 3 days of access after a failed renewal and then asks her to update the card; a
    subscription left `past_due`/`unpaid` forever would keep blocking a new checkout and manual access.
 5. Developers → Webhooks: endpoint `<APP_URL>/api/pay/stripe/webhook`, events
-   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`.
+   `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`,
+   plus `checkout.session.completed` and `checkout.session.async_payment_succeeded` (gift vouchers — without them
+   buyers are charged and get no code).
    Copy the signing secret.
 6. Env: `STRIPE_SECRET_KEY=sk_test_…`, `STRIPE_WEBHOOK_SECRET=whsec_…` (Vercel → Project → Environment Variables; never commit them).
 7. Admin → Настройки → Планове: paste each Stripe Price ID (`price_…`) into its plan. After that the plan's price is locked; a new price = a new plan.

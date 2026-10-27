@@ -18,6 +18,7 @@ export function GiftThanks() {
   const sessionId = params.get("session_id") ?? "";
   const [found, setFound] = useState<Found | null>(null);
   const [gaveUp, setGaveUp] = useState(false);
+  const [bad, setBad] = useState(false);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -29,6 +30,10 @@ export function GiftThanks() {
         if (res.ok) {
           const data = (await res.json()) as Found;
           if (!cancelled) setFound(data);
+          return;
+        }
+        if (res.status === 400) {
+          if (!cancelled) setBad(true);
           return;
         }
       } catch {
@@ -45,7 +50,7 @@ export function GiftThanks() {
     };
   }, [sessionId]);
 
-  if (!sessionId) {
+  if (!sessionId || bad) {
     return <p className="mt-5 text-lg text-ink-soft">Няма такава поръчка.</p>;
   }
   if (found) {
@@ -77,8 +82,8 @@ export function GiftThanks() {
     <div className="mt-8 max-w-2xl space-y-4" aria-live="polite">
       <p className="text-xl leading-relaxed">
         {gaveUp
-          ? "Плащането мина, но кодът се бави. Ще го получиш на имейла си до няколко минути; ако не — пиши ни."
-          : "Плащането мина. Подготвяме кода…"}
+          ? "Поръчката е приета, но кодът се бави. Щом плащането бъде потвърдено, ще го получиш на имейла си; ако до час няма нищо — пиши ни на info@iamstrong.bg."
+          : "Поръчката е приета. Чакаме потвърждение от банката и подготвяме кода…"}
       </p>
       {!gaveUp && (
         <span

@@ -34,6 +34,26 @@ function reusableCustomerId(
   return providerName === "stripe" && id?.startsWith("cus_") ? id : null;
 }
 
+const TRIAL_MIN_MS = 48 * 60 * 60 * 1000;
+const TRIAL_MAX_DAYS = 730;
+
+/**
+ * A live manual period (gift voucher or comp) becomes the Stripe trial, so converting to a paid
+ * plan never throws prepaid months away. Stripe wants the trial end ≥ 48 h ahead and ≤ 730 days.
+ */
+export function trialEndFor(
+  sub: { provider: string; status: string; current_period_end: string | null } | null,
+  now = new Date(),
+): number | undefined {
+  if (!sub || sub.provider !== "manual" || sub.status !== "active" || !sub.current_period_end) {
+    return undefined;
+  }
+  const end = Date.parse(sub.current_period_end);
+  if (!(end - now.getTime() >= TRIAL_MIN_MS)) return undefined;
+  const cap = now.getTime() + TRIAL_MAX_DAYS * 86_400_000;
+  return Math.floor(Math.min(end, cap) / 1000);
+}
+
 export async function startCheckout(
   db: TypedClient,
   provider: PaymentProvider,
@@ -48,7 +68,7 @@ export async function startCheckout(
     db.from("plans").select("id, active, provider_price_ids").eq("id", i.planId).maybeSingle(),
     db
       .from("subscriptions")
-      .select("provider, provider_customer_id, provider_sub_id, status")
+      .select("provider, provider_customer_id, provider_sub_id, status, current_period_end")
       .eq("user_id", i.userId)
       .maybeSingle(),
   ]);
@@ -74,6 +94,7 @@ export async function startCheckout(
     priceId,
     successUrl: `${i.appUrl}/app/welcome?session_id={CHECKOUT_SESSION_ID}`,
     cancelUrl: `${i.appUrl}/app/plan`,
+    trialEnd: trialEndFor(sub),
   });
 }
 

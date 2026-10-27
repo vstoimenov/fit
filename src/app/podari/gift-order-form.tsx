@@ -13,6 +13,9 @@ const IDLE: GiftOrderState = { status: "idle" };
 /** Pick a period, leave an e-mail for the code, go to Stripe. */
 export function GiftOrderForm({ defaultMonths = 3 }: { defaultMonths?: number }) {
   const [state, action, pending] = useActionState(startGiftCheckoutAction, IDLE);
+  // After an error the form keeps what she typed (React resets uncontrolled fields after an action).
+  const values = state.status === "error" ? state.values : undefined;
+  const checked = values ? Number(values.months) : defaultMonths;
   return (
     <form action={action} id="porachka" className="scroll-mt-24 rounded-3xl bg-sand p-6 sm:p-8">
       <h2 className="text-2xl font-extrabold tracking-[-0.02em]">Поръчай ваучер</h2>
@@ -32,7 +35,8 @@ export function GiftOrderForm({ defaultMonths = 3 }: { defaultMonths?: number })
                   type="radio"
                   name="months"
                   value={o.months}
-                  defaultChecked={o.months === defaultMonths}
+                  id={`gift-m-${o.months}`}
+                  defaultChecked={o.months === checked}
                   className="size-4 accent-ink"
                 />
                 <span className="font-semibold">{giftMonthsLabel(o.months)}</span>
@@ -44,15 +48,33 @@ export function GiftOrderForm({ defaultMonths = 3 }: { defaultMonths?: number })
       </fieldset>
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <Field label="Твоят имейл (за кода)">
-          <input name="email" type="email" autoComplete="email" required className={inputClass} />
+          <input
+            name="email"
+            type="email"
+            autoComplete="email"
+            required
+            defaultValue={values?.email}
+            className={inputClass}
+          />
         </Field>
         <Field label="За кого е (по избор)">
-          <input name="recipientName" maxLength={60} className={inputClass} />
+          <input
+            name="recipientName"
+            maxLength={60}
+            defaultValue={values?.recipientName}
+            className={inputClass}
+          />
         </Field>
       </div>
       <div className="mt-4">
         <Field label="Пожелание на картичката (по избор)">
-          <textarea name="message" maxLength={300} rows={2} className={inputClass} />
+          <textarea
+            name="message"
+            maxLength={300}
+            rows={2}
+            defaultValue={values?.message}
+            className={inputClass}
+          />
         </Field>
       </div>
       {state.status === "error" && (

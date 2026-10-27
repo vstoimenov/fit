@@ -48,9 +48,17 @@ export interface GiftPurchase {
   message: string | null;
 }
 
-/** A paid `checkout.session.completed` marked `metadata.kind = gift`; null for anything else. */
+const GIFT_EVENTS = new Set([
+  "checkout.session.completed",
+  "checkout.session.async_payment_succeeded",
+]);
+
+/**
+ * A paid gift session (`metadata.kind = gift`): the completed event for cards, the async one should
+ * a delayed method ever be enabled; null for anything else.
+ */
 export function giftFromStripeSession(event: Stripe.Event): GiftPurchase | null {
-  if (event.type !== "checkout.session.completed") return null;
+  if (!GIFT_EVENTS.has(event.type)) return null;
   const s = event.data.object as Stripe.Checkout.Session;
   if (s.mode !== "payment" || s.payment_status !== "paid") return null;
   if (s.metadata?.kind !== "gift") return null;

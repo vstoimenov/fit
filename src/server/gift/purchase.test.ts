@@ -50,6 +50,11 @@ describe("giftFromStripeSession", () => {
       message: "Честит рожден ден!",
     });
   });
+  it("also accepts the async success event for delayed payment methods", () => {
+    const async = { ...session(), type: "checkout.session.async_payment_succeeded" };
+    expect(giftFromStripeSession(async as never)?.sessionId).toBe("cs_test_1");
+  });
+
   it("ignores subscriptions, unpaid sessions and sessions without the gift marker", () => {
     expect(giftFromStripeSession(session({ mode: "subscription" }) as never)).toBeNull();
     expect(giftFromStripeSession(session({ payment_status: "unpaid" }) as never)).toBeNull();

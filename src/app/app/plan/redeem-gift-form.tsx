@@ -2,7 +2,7 @@
 
 import { Gift } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect, useRef } from "react";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { inputOnCardClass } from "@/components/ui/field";
@@ -13,6 +13,10 @@ const IDLE: RedeemState = { status: "idle" };
 /** „Имаш ваучер?" — the code from a gift card extends her access. */
 export function RedeemGiftForm() {
   const [state, action, pending] = useActionState(redeemGiftAction, IDLE);
+  const done = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (state.status === "ok") done.current?.focus();
+  }, [state.status]);
   if (state.status === "ok") {
     const until = new Date(state.periodEnd).toLocaleDateString("bg-BG", {
       timeZone: "Europe/Sofia",
@@ -21,7 +25,7 @@ export function RedeemGiftForm() {
       year: "numeric",
     });
     return (
-      <Card className="space-y-3 p-5" role="status">
+      <Card ref={done} tabIndex={-1} className="space-y-3 p-5 outline-none" role="status">
         <p className="flex items-center gap-2 font-semibold">
           <Gift size={20} aria-hidden="true" />
           Ваучерът е активиран
@@ -50,11 +54,13 @@ export function RedeemGiftForm() {
             maxLength={20}
             required
             className={inputOnCardClass}
-            aria-label="Код на ваучера"
+            defaultValue={state.status === "error" ? state.code : undefined}
+            aria-invalid={state.status === "error" || undefined}
+            aria-describedby={state.status === "error" ? "gift-code-error" : undefined}
           />
         </label>
         {state.status === "error" && (
-          <p role="alert" className="text-sm font-semibold text-brick">
+          <p id="gift-code-error" role="alert" className="text-sm font-semibold text-brick">
             {state.message}
           </p>
         )}
