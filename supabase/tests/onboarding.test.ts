@@ -1,4 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import { saveContact } from "@/server/onboarding/save-contact";
 import { saveOnboarding } from "@/server/onboarding/save-onboarding";
 import {
   adminClient,
@@ -184,5 +185,29 @@ describe("saveOnboarding", () => {
     });
     const { data } = await admin.from("profiles").select("role, level").eq("id", user.id).single();
     expect(data).toMatchObject({ role: "client", level: "beginner" });
+  });
+});
+
+describe("saveContact", () => {
+  it("stores her phone and call consent right after sign-up, before any question", async () => {
+    const user = await createUser(admin, "onb-contact");
+    const db = await signedInClient(user);
+    await saveContact(db, user.id, { phone: "0888 123 456", phoneCallConsent: true });
+    const { data } = await admin
+      .from("profiles")
+      .select("phone, phone_call_consent, onboarding_done")
+      .eq("id", user.id)
+      .single();
+    expect(data).toEqual({ phone: "0888123456", phone_call_consent: true, onboarding_done: false });
+  });
+
+  it("rejects a missing phone without writing", async () => {
+    const user = await createUser(admin, "onb-contact-empty");
+    const db = await signedInClient(user);
+    await expect(
+      saveContact(db, user.id, { phone: "", phoneCallConsent: false }),
+    ).rejects.toThrow();
+    const { data } = await admin.from("profiles").select("phone").eq("id", user.id).single();
+    expect(data?.phone).toBeNull();
   });
 });

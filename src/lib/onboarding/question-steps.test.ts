@@ -18,12 +18,13 @@ describe("nutrition step", () => {
 });
 
 describe("stepCounter", () => {
-  it("shows n/N over the questions only", () => {
-    expect(stepCounter("goal", 0)).toBe(`1/${QUESTION_COUNT}`);
-    expect(stepCounter("contact", QUESTION_COUNT - 1)).toBe(`${QUESTION_COUNT}/${QUESTION_COUNT}`);
+  it("counts the questions only, so the sign-up screen before them does not shift the numbers", () => {
+    expect(stepCounter("goal")).toBe(`1/${QUESTION_COUNT}`);
+    expect(stepCounter("contact")).toBe(`${QUESTION_COUNT}/${QUESTION_COUNT}`);
   });
 
-  it("names the account step „Профил“ instead of counting it as a question", () => {
-    expect(stepCounter("account", QUESTION_COUNT)).toBe("Профил");
+  it("names the sign-up and phone screens „Профил“ instead of counting them as questions", () => {
+    expect(stepCounter("account")).toBe("Профил");
+    expect(stepCounter("phone")).toBe("Профил");
   });
 });

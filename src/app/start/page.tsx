@@ -22,15 +22,18 @@ async function StartGate() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  let phone: string | null = null;
   if (user) {
     const { data: profile, error } = await supabase
       .from("profiles")
-      .select("onboarding_done")
+      .select("onboarding_done, phone")
       .eq("id", user.id)
       .single();
     // A failed query must not look like "not onboarded".
     if (error) throw new Error(`load onboarding state failed: ${error.message}`);
     if (profile.onboarding_done) return <DraftResetRedirect to="/app" />;
+    phone = profile.phone;
   }
-  return <Wizard signedIn={user !== null} />;
+  // Back from Google (or a sign-up that stopped before the phone was saved): ask for the phone first.
+  return <Wizard signedIn={user !== null} needsPhone={user !== null && !phone} />;
 }

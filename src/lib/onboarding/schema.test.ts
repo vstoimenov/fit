@@ -5,6 +5,7 @@ import {
   nutritionStepSchema,
   onboardingSchema,
   profileAnswersSchema,
+  contactStepSchema,
 } from "./schema";
 
 const currentYear = Number(sofiaToday().slice(0, 4));
@@ -29,6 +30,22 @@ const valid = {
   avoidFoods: "черен дроб",
   mealsPerDay: 4,
 };
+
+describe("contactStepSchema", () => {
+  it("requires a phone on the sign-up screen and normalizes it", () => {
+    expect(contactStepSchema.safeParse({ phone: "", phoneCallConsent: false }).success).toBe(false);
+    expect(contactStepSchema.parse({ phone: "0888 123-456", phoneCallConsent: true })).toEqual({
+      phone: "0888123456",
+      phoneCallConsent: true,
+    });
+  });
+
+  it("rejects a phone that is not a number, with the message on the phone field", () => {
+    const result = contactStepSchema.safeParse({ phone: "abc", phoneCallConsent: false });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(["phone"]);
+  });
+});
 
 describe("onboardingSchema", () => {
   it("accepts a complete answer set", () => {

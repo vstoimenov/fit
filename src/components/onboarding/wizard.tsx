@@ -5,7 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { completeOnboarding } from "@/app/start/actions";
+import { completeOnboarding, saveContactAction } from "@/app/start/actions";
 import { Button, buttonClass } from "@/components/ui/button";
 import { NutritionFields } from "@/components/nutrition/nutrition-fields";
 import { Consent } from "@/components/ui/consent";
@@ -24,7 +24,7 @@ import {
 } from "@/lib/labels";
 import { transitionFor } from "@/lib/motion";
 import { QUESTION_STEPS, stepCounter, type QuestionStepId } from "@/lib/onboarding/question-steps";
-import { nutritionStepSchema, onboardingSchema } from "@/lib/onboarding/schema";
+import { contactStepSchema, nutritionStepSchema, onboardingSchema } from "@/lib/onboarding/schema";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 import { browserTimezone } from "@/lib/timezone";
 import { ChoiceList, NumberSlider } from "./steps";
@@ -63,13 +63,12 @@ const STEP_OF_FIELD: Record<string, StepId> = {
   avoidFoods: "nutrition",
   mealsPerDay: "nutrition",
   name: "contact",
-  phone: "contact",
-  phoneCallConsent: "contact",
   healthConsent: "contact",
   marketingConsent: "contact",
 };
 
-type StepId = QuestionStepId | "account";
+/** „account“ (email, phone, password) opens the wizard; after Google it is „phone“ alone. */
+type StepId = QuestionStepId | "account" | "phone";
 
 const TITLE: Record<StepId, string> = {
   goal: "Какво искаш да постигнеш?",
@@ -79,10 +78,12 @@ const TITLE: Record<StepId, string> = {
   time: "Колко време имаш за тренировка?",
   nutrition: "Малко за храната",
   contact: "Почти готово",
-  account: "Създай профила си и започни",
+  account: "Създай профила си",
+  phone: "Телефон за връзка",
 };
 
 const HINT: Partial<Record<StepId, string>> = {
+  account: "После 7 кратки въпроса и планът ти е готов.",
   problems: "Избери всичко, което важи.",
   body: "Само ти и треньорът ти виждате тези числа.",
   nutrition: "Така ще изчислим дневната ти цел. Ориентир, не медицински съвет.",
@@ -92,10 +93,14 @@ const HINT: Partial<Record<StepId, string>> = {
 const fieldClass = cn(inputClass, "lg:bg-white");
 const TITLE_ID = "question-title";
 
-export function Wizard({ signedIn }: { signedIn: boolean }) {
+export function Wizard({ signedIn, needsPhone }: { signedIn: boolean; needsPhone: boolean }) {
   const router = useRouter();
-  const steps: StepId[] = [...QUESTION_STEPS, ...(signedIn ? [] : ["account" as const])];
+  // The profile comes first: email, phone and password (or just the phone after Google), then the questions.
+  const opening: StepId[] = signedIn ? (needsPhone ? ["phone"] : []) : ["account"];
+  const steps: StepId[] = [...opening, ...QUESTION_STEPS];
   const [index, setIndexRaw] = useState(0);
+  // Once the profile exists, „Назад“ stops at the first question: the sign-up screen is done.
+  const [floor, setFloor] = useState(0);
   // The first screen paints at once (it is server-rendered); only later steps animate in.
   const [navigated, setNavigated] = useState(false);
   const setIndex: typeof setIndexRaw = (next) => {
@@ -140,11 +145,9 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     body: true,
     time: Boolean(draft.time),
     nutrition: draft.birthYear !== undefined && Boolean(draft.activity) && Boolean(draft.diet),
-    contact:
-      Boolean(draft.name?.trim()) &&
-      draft.healthConsent === true &&
-      (!draft.phoneCallConsent || Boolean(draft.phone)),
-    account: true,
+    contact: Boolean(draft.name?.trim()) && draft.healthConsent === true,
+    account: Boolean(draft.phone?.trim()),
+    phone: Boolean(draft.phone?.trim()),
   };
 
   function lock(): boolean {
@@ -170,8 +173,40 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
     for (const issue of result.error.issues) errors[issue.path.join(".")] ??= issue.message;
     setFieldErrors(errors);
     const failedStep = STEP_OF_FIELD[String(result.error.issues[0]?.path[0])] ?? "contact";
-    setIndex(Math.max(steps.indexOf(failedStep), 0));
+    setIndex(Math.max(steps.indexOf(failedStep), floor));
     return false;
+  }
+
+  /** The phone screen's own check; the message lands on the phone field. */
+  function validContact(): boolean {
+    const result = contactStepSchema.safeParse({
+      phone: draft.phone ?? "",
+      phoneCallConsent: draft.phoneCallConsent === true,
+    });
+    if (result.success) return true;
+    setFieldErrors({ phone: result.error.issues[0]?.message ?? "Невалиден телефон" });
+    return false;
+  }
+
+  /** Caller holds the lock. Saves the phone, then opens the first question. */
+  async function storeContactAndContinue() {
+    try {
+      const result = await saveContactAction({
+        phone: draft.phone ?? "",
+        phoneCallConsent: draft.phoneCallConsent === true,
+      });
+      unlock();
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      const first = steps.indexOf(QUESTION_STEPS[0]);
+      setFloor(first);
+      setIndex(first);
+    } catch {
+      unlock();
+      setError("Нещо се обърка. Опитай отново.");
+    }
   }
 
   /** Caller holds the lock. The lock stays on after success: the page is navigating away. */
@@ -184,10 +219,8 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
         return;
       }
       clearDraft();
-      // Without a published free workout there is nothing to open: start in the app instead of a 404.
-      router.replace(
-        result.data.freeWorkoutId ? `/app/workout/${result.data.freeWorkoutId}?first=1` : "/app",
-      );
+      // The app's home screen, not the video: the free workout waits for her there.
+      router.replace("/app");
     } catch {
       unlock();
       setError("Нещо се обърка. Опитай отново.");
@@ -200,14 +233,13 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
   }
 
   async function signUp(form: FormData) {
-    if (busyRef.current || !validate() || !lock()) return;
+    if (busyRef.current || !validContact() || !lock()) return;
     // A retry after the account exists must only save the answers, never sign up again.
     if (!accountCreated.current) {
       try {
         const { error: signUpError } = await createBrowserSupabaseClient().auth.signUp({
           email: String(form.get("email")),
           password: String(form.get("password")),
-          options: { data: { name: draft.name } },
         });
         if (signUpError) {
           unlock();
@@ -228,14 +260,20 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
       }
       accountCreated.current = true;
     }
-    await submitAnswers();
+    await storeContactAndContinue();
+  }
+
+  async function savePhone() {
+    if (busyRef.current || !validContact() || !lock()) return;
+    await storeContactAndContinue();
   }
 
   async function google() {
     saveDraft(draft);
     await createBrowserSupabaseClient().auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${location.origin}/auth/callback?next=/start/finish` },
+      // Back to the wizard, signed in: it asks for the phone, then the questions.
+      options: { redirectTo: `${location.origin}/auth/callback?next=/start` },
     });
   }
 
@@ -250,23 +288,25 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
         return;
       }
     }
-    if (step === "contact") {
-      if (signedIn) return void finish();
-      if (!validate()) return;
-    }
+    if (step === "contact") return void finish();
     setIndex((i) => Math.min(i + 1, steps.length - 1));
   }
 
   const submitLabel = busy
-    ? "Подготвяме плана ти…"
-    : step === "account" || (step === "contact" && signedIn)
-      ? "Към първата тренировка"
-      : "Напред";
+    ? step === "contact"
+      ? "Подготвяме плана ти…"
+      : "Момент…"
+    : step === "account"
+      ? "Създай профила"
+      : step === "contact"
+        ? "Към приложението"
+        : "Напред";
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     if (step === "account") return void signUp(new FormData(event.currentTarget));
+    if (step === "phone") return void savePhone();
     if (canContinue[step]) next();
   }
 
@@ -278,7 +318,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
             type="button"
             onClick={() => setIndex((i) => Math.max(i - 1, 0))}
             className="-ml-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink disabled:invisible lg:-ml-2"
-            disabled={index === 0 || busy}
+            disabled={index <= floor || busy}
             aria-label="Назад"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -299,7 +339,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
             />
           </div>
           <span className="min-w-9 text-right text-sm tabular-nums text-ink-soft">
-            {stepCounter(step, index)}
+            {stepCounter(step)}
           </span>
         </div>
 
@@ -420,26 +460,7 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                     autoComplete="given-name"
                   />
                 </Field>
-                <Field
-                  label="Телефон (по желание)"
-                  error={fieldErrors.phone}
-                  hint="Ако нещо не върви, треньорът може да ти звънне."
-                >
-                  <input
-                    className={fieldClass}
-                    type="tel"
-                    value={draft.phone ?? ""}
-                    onChange={(e) => set({ phone: e.target.value })}
-                    autoComplete="tel"
-                  />
-                </Field>
                 <div className="space-y-1">
-                  <Consent
-                    checked={draft.phoneCallConsent === true}
-                    onChange={(v) => set({ phoneCallConsent: v })}
-                  >
-                    Съгласна съм треньорът да ми се обади.
-                  </Consent>
                   <Consent
                     checked={draft.healthConsent === true}
                     onChange={(v) => set({ healthConsent: v ? true : undefined })}
@@ -471,6 +492,27 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                     className={fieldClass}
                   />
                 </Field>
+                <Field
+                  label="Телефон"
+                  error={fieldErrors.phone}
+                  hint="Ако нещо не върви, треньорът може да ти звънне."
+                >
+                  <input
+                    name="phone"
+                    className={fieldClass}
+                    type="tel"
+                    required
+                    value={draft.phone ?? ""}
+                    onChange={(e) => set({ phone: e.target.value })}
+                    autoComplete="tel"
+                  />
+                </Field>
+                <Consent
+                  checked={draft.phoneCallConsent === true}
+                  onChange={(v) => set({ phoneCallConsent: v })}
+                >
+                  Съгласна съм треньорът да ми се обади.
+                </Consent>
                 <Field label="Парола" hint="Поне 10 символа">
                   <input
                     name="password"
@@ -481,16 +523,31 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
                     className={fieldClass}
                   />
                 </Field>
-                {clientEnv.NEXT_PUBLIC_GOOGLE_AUTH === "1" && (
-                  <Button variant="secondary" onClick={google} className="w-full">
-                    Продължи с Google
-                  </Button>
-                )}
-                <div className="flex justify-center">
-                  <Link href="/login" className={buttonClass("link")}>
-                    Имам профил
-                  </Link>
-                </div>
+              </div>
+            )}
+            {step === "phone" && (
+              <div className="space-y-4">
+                <Field
+                  label="Телефон"
+                  error={fieldErrors.phone}
+                  hint="Ако нещо не върви, треньорът може да ти звънне."
+                >
+                  <input
+                    name="phone"
+                    className={fieldClass}
+                    type="tel"
+                    required
+                    value={draft.phone ?? ""}
+                    onChange={(e) => set({ phone: e.target.value })}
+                    autoComplete="tel"
+                  />
+                </Field>
+                <Consent
+                  checked={draft.phoneCallConsent === true}
+                  onChange={(v) => set({ phoneCallConsent: v })}
+                >
+                  Съгласна съм треньорът да ми се обади.
+                </Consent>
               </div>
             )}
             {error && (
@@ -504,6 +561,20 @@ export function Wizard({ signedIn }: { signedIn: boolean }) {
             <Button type="submit" disabled={!canContinue[step] || busy} className="w-full">
               {submitLabel}
             </Button>
+            {step === "account" && (
+              <div className="space-y-1 pt-3">
+                {clientEnv.NEXT_PUBLIC_GOOGLE_AUTH === "1" && (
+                  <Button variant="secondary" onClick={google} disabled={busy} className="w-full">
+                    Продължи с Google
+                  </Button>
+                )}
+                <div className="flex justify-center">
+                  <Link href="/login" className={buttonClass("link")}>
+                    Имам профил
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </form>
       </div>

@@ -40,6 +40,14 @@ const callConsentNeedsPhone = {
   message: "Остави телефон, за да можем да ти се обадим.",
 };
 
+/** The sign-up screen asks for a phone first: required there, same normalization as everywhere else. */
+export const contactStepSchema = z.object({
+  phone: phoneSchema.refine((phone) => phone !== "", "Остави телефон, за да се свържем с теб."),
+  phoneCallConsent: z.boolean(),
+});
+
+export type ContactStep = z.infer<typeof contactStepSchema>;
+
 export const profileAnswersSchema = z
   .object(profileFields)
   .refine(callConsentHasPhone, callConsentNeedsPhone);
