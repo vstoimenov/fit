@@ -24,5 +24,5 @@
 
 ## Ledger
 - Tasks 1–5 complete: migration `20261027130000_live_recipes.sql` (articles.category, live_sessions, live_attendance, `attend_live`, points trigger; DB tests 4/4), `liveState`/`buildIcs` (3/3), `pickNextSession`/`liveInputSchema` (3/3), home `LiveCard` + `attendLiveAction`, `/api/live/[id]/calendar.ics`, „Полезно“ chips (Всичко/Статии/Рецепти/Записи), `/admin/live` list + create/edit/delete, article „Вид“ select, nav, README.
-- Task 6 NOT done (usage limit): no browser check of the home card / join flow / admin pages yet; no Opus review. Two test sessions were inserted in the LOCAL db only (one starting now, one past with a recording) for that check.
+- Task 6: browser-verified on the dev server — Начало shows „На живо сега“ with „Влизам“; the tap records attendance and the ledger holds 5 `live` points once (button turns „Влез пак“, status „Отбелязахме те · +5 точки“); „Полезно → Записи на живо“ lists the past session with its recording. Opus review dispatched; test sessions exist in the LOCAL db only.
 - Ruling: „Влизам“ is a real link to the room (new tab) that also records attendance; the points are not conditional on the room actually opening. Cost if wrong: a tap without joining earns 5 points once.
