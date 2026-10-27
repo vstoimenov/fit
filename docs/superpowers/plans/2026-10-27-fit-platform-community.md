@@ -50,3 +50,4 @@
 - Final: minor (deferred): the repeated „Сигнал“/„Изтрий“ buttons carry no per-item accessible context.
 - Final: minor (deferred): a member without access gets 404 on a post page but the plans card on the feed; a lapsed member has no UI path to delete her own posts; „Сподели в общността“ after the free first workout leads to the plans card.
 - Final: minor (deferred): feed cursor ties on equal `created_at`; report form layout inside the post header.
+- Ruling (owner, 27.10): „Хранене“ returns to the phone bar; „Общност“ stays in the desktop sidebar and opens on the phone from the Начало teaser, the Полезно card and the after-workout share. Overrides the engagement spec's final navigation. Cost if wrong: one tab swap.

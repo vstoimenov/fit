@@ -1,14 +1,25 @@
 import { describe, expect, it } from "vitest";
-import { APP_NAV, activeNavHref, navHidden } from "./app-nav";
+import { APP_NAV, BAR_NAV, activeNavHref, navHidden } from "./app-nav";
 
 describe("APP_NAV", () => {
-  it("lists the five tabs in order", () => {
+  it("lists the six sidebar entries in order", () => {
     expect(APP_NAV.map((i) => [i.href, i.label])).toEqual([
       ["/app", "Начало"],
       ["/app/library", "Тренировки"],
+      ["/app/nutrition", "Хранене"],
       ["/app/community", "Общност"],
       ["/app/learn", "Полезно"],
       ["/app/profile", "Профил"],
+    ]);
+  });
+
+  it("keeps Хранене in the phone bar; Общност opens from Начало and Полезно there", () => {
+    expect(BAR_NAV.map((i) => i.label)).toEqual([
+      "Начало",
+      "Тренировки",
+      "Хранене",
+      "Полезно",
+      "Профил",
     ]);
   });
 });
@@ -20,8 +31,8 @@ describe("activeNavHref", () => {
     ["/app/library/x", "/app/library"],
     ["/app/progress", "/app/profile"],
     ["/app/check-in", "/app/profile"],
-    ["/app/nutrition", "/app"],
-    ["/app/nutrition/history", "/app"],
+    ["/app/nutrition", "/app/nutrition"],
+    ["/app/nutrition/history", "/app/nutrition"],
     ["/app/community", "/app/community"],
     ["/app/community/abc", "/app/community"],
     ["/app/learn", "/app/learn"],

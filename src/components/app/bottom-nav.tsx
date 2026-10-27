@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { APP_NAV, activeNavHref, navHidden } from "@/lib/app-nav";
+import { BAR_NAV, activeNavHref, navHidden } from "@/lib/app-nav";
 import { cn } from "@/lib/cn";
 import { NAV_ICON } from "./nav-icons";
 
@@ -17,7 +17,7 @@ export function BottomNav() {
       className="pb-safe fixed inset-x-0 bottom-0 z-20 border-t border-line bg-white lg:hidden"
     >
       <ul className="mx-auto flex max-w-md justify-around px-2 pt-1">
-        {APP_NAV.map((item) => {
+        {BAR_NAV.map((item) => {
           const Icon = NAV_ICON[item.href];
           const isActive = active === item.href;
           return (

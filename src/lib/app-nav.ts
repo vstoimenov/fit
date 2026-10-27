@@ -1,16 +1,21 @@
 /**
- * The five tabs of the member app (bottom bar on mobile, sidebar on desktop). „Хранене“ is reached
- * from its card on Начало and from Профил (the engagement spec's final navigation).
+ * The member app's navigation. The desktop sidebar shows all six entries; the phone bar fits five,
+ * so „Общност“ stays off it (the owner's call, 27.10) and opens from the Начало teaser, the Полезно
+ * card and the after-workout share button.
  */
 export const APP_NAV = [
   { href: "/app", label: "Начало" },
   { href: "/app/library", label: "Тренировки" },
+  { href: "/app/nutrition", label: "Хранене" },
   { href: "/app/community", label: "Общност" },
   { href: "/app/learn", label: "Полезно" },
   { href: "/app/profile", label: "Профил" },
 ] as const;
 
 export type AppNavHref = (typeof APP_NAV)[number]["href"];
+
+/** The phone's bottom bar: five of the six. */
+export const BAR_NAV = APP_NAV.filter((item) => item.href !== "/app/community");
 
 function under(pathname: string, base: string) {
   return pathname === base || pathname.startsWith(`${base}/`);
@@ -21,9 +26,8 @@ export function activeNavHref(pathname: string): AppNavHref | null {
   // Предизвикателствата са част от Начало: картата там води към тях.
   if (pathname === "/app" || under(pathname, "/app/challenges")) return "/app";
   if (under(pathname, "/app/library")) return "/app/library";
+  if (under(pathname, "/app/nutrition")) return "/app/nutrition";
   if (under(pathname, "/app/community")) return "/app/community";
-  // Хранене opens from its card on Начало.
-  if (under(pathname, "/app/nutrition")) return "/app";
   if (under(pathname, "/app/learn")) return "/app/learn";
   // Прогрес is reached from Начало and Профил, so it (and the check-in) belong to Профил.
   if (
