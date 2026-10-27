@@ -63,7 +63,7 @@ async function Home() {
     homeLive(supabase, user.id).catch((error: unknown) => logSkipped("live", user.id, error, null)),
     view.hasAccess
       ? listFeed(supabase, null, 2).then(
-          (r) => r.posts,
+          (r) => r.posts.filter((p) => !p.hidden),
           (error: unknown) => logSkipped("community", user.id, error, []),
         )
       : Promise.resolve([]),

@@ -28,13 +28,8 @@ export function HeartButton({
     setState(next);
     try {
       const result = await toggleHeartAction(postId);
-      if (!result.ok) setState(previous);
-      else if (result.data.hearted !== next.hearted) {
-        setState({
-          hearts: previous.hearts + (result.data.hearted ? 1 : 0),
-          hearted: result.data.hearted,
-        });
-      }
+      // The server's count wins: another tab or member may have changed it meanwhile.
+      setState(result.ok ? result.data : previous);
     } catch {
       setState(previous);
     } finally {
@@ -47,7 +42,7 @@ export function HeartButton({
       type="button"
       onClick={() => void toggle()}
       aria-pressed={state.hearted}
-      aria-label={state.hearted ? "Махни сърцето" : "Дай сърце"}
+      aria-label={`Сърце · ${state.hearts}`}
       className={cn(
         "inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink",
         state.hearted ? "text-rose-deep" : "text-ink-soft",

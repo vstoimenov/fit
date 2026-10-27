@@ -130,6 +130,9 @@ async function Profile() {
           {nutrition && (
             <Card className="space-y-4 p-5">
               <h2 className="font-semibold">Хранене</h2>
+              <Link href="/app/nutrition" className={`${buttonClass("secondary", "md")} w-full`}>
+                Към дневника за хранене
+              </Link>
               <NutritionAnswersForm initial={nutrition.answers} variant="secondary" />
             </Card>
           )}

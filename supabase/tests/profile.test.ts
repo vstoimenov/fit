@@ -165,6 +165,7 @@ describe("profile services", () => {
     expect(data.check_ins).toHaveLength(1);
     expect(data.workout_completions).toHaveLength(1);
     expect(data.push_subscriptions).toEqual([]);
+    expect(data.community).toEqual({ posts: [], comments: [], hearts: [], reports: [] });
     // Completing a workout also marks it watched; the mark is personal data too.
     expect(data.workout_watches).toEqual([
       expect.objectContaining({ workout_id: expect.any(String), watched_at: expect.any(String) }),

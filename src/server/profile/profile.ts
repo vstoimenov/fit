@@ -3,6 +3,7 @@ import { profileAnswersSchema } from "@/lib/onboarding/schema";
 import type { CheckInInput } from "@/lib/progress/check-in-schema";
 import type { Level } from "@/lib/program/types";
 import { paidSubOpen } from "@/lib/subscription-text";
+import { removeAllCommunityPhotos } from "@/server/community/write";
 import type { TypedClient } from "@/server/db/types";
 import { listProgressPhotos, removeAllProgressPhotos } from "@/server/progress/photos";
 
@@ -103,6 +104,10 @@ export async function exportMyData(
     menuSwaps,
     watches,
     pushSubscriptions,
+    posts,
+    comments,
+    hearts,
+    reports,
   ] = await Promise.all([
     db.from("profiles").select("*").eq("id", userId).single(),
     db
@@ -157,6 +162,27 @@ export async function exportMyData(
       .select("endpoint, user_agent, created_at")
       .eq("user_id", userId)
       .order("created_at"),
+    // Community tables have no API grants: read her rows with the service role.
+    admin
+      .from("community_posts")
+      .select("body, photo_path, created_at, hidden_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    admin
+      .from("community_comments")
+      .select("post_id, body, created_at, hidden_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    admin
+      .from("community_hearts")
+      .select("post_id, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
+    admin
+      .from("community_reports")
+      .select("post_id, comment_id, reason, created_at")
+      .eq("user_id", userId)
+      .order("created_at"),
   ]);
   // A silently partial export would misstate what is stored about the user.
   const failed = [
@@ -173,6 +199,10 @@ export async function exportMyData(
     menuSwaps,
     watches,
     pushSubscriptions,
+    posts,
+    comments,
+    hearts,
+    reports,
   ].find((r) => r.error);
   if (failed?.error) throw new Error(`export failed: ${failed.error.message}`);
   return {
@@ -198,6 +228,12 @@ export async function exportMyData(
     })),
     workout_watches: watches.data ?? [],
     push_subscriptions: pushSubscriptions.data ?? [],
+    community: {
+      posts: posts.data ?? [],
+      comments: comments.data ?? [],
+      hearts: hearts.data ?? [],
+      reports: reports.data ?? [],
+    },
   };
 }
 
@@ -261,6 +297,7 @@ export async function deleteAccount(
   // Her photos live in Storage, which no cascade reaches. They go before anything irreversible; if
   // removal fails the account stays, so a retry can finish the job.
   await removeAllProgressPhotos(admin, userId);
+  await removeAllCommunityPhotos(admin, userId);
 
   const anonIds = await anonIdsOf(admin, userId);
   for (let i = 0; i < anonIds.length; i += IN_CHUNK) {

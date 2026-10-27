@@ -116,8 +116,11 @@ No name, weight, measurements or e-mail ever go into the image.
   in every Vercel environment the form runs in — Preview deployments too, or the action fails.
 - **Community (phase 4).** Members with access post (text + one photo in the private `community-photos` bucket),
   comment, heart and report; names show as first name + initial; points: post 3, comment 1, capped at 5 a day.
-  The owner moderates at `/admin/community` (open reports with the text: hide/unhide, delete, dismiss). The
-  „Общност“ tab replaces „Хранене“ in the bar (nutrition stays on Начало and Профил).
+  A photo is readable only while its post is visible (plus the author and admins) and is removed with the post
+  and with the account; her posts, comments, hearts and reports are part of the data export. The owner moderates
+  at `/admin/community` (open reports with the text: hide/unhide, delete the post or the comment, dismiss; the
+  latest-posts table hides/deletes any post). The „Общност“ tab replaces „Хранене“ in the bar (nutrition stays
+  on Начало and Профил, with a link to the diary from the Профил card).
 - **Live sessions.** `/admin/live` schedules sessions (Sofia time, Zoom/YouTube link, recording link later).
   Members with access see the next one on Начало with „Добави в календара“ (.ics) and „Влизам“ from 15 minutes
   before the start until the end (5 points once per session); recordings and recipes (`articles.category`) are

@@ -52,9 +52,18 @@ describe("community", () => {
       ids.push(data as string);
     }
     const other = await member("cm-other");
-    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toBe(true);
-    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toBe(false);
-    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toBe(true);
+    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toEqual({
+      hearted: true,
+      hearts: 1,
+    });
+    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toEqual({
+      hearted: false,
+      hearts: 0,
+    });
+    expect((await other.db.rpc("toggle_heart", { p_post_id: ids[0]! })).data).toEqual({
+      hearted: true,
+      hearts: 1,
+    });
     expect(
       (await other.db.rpc("create_comment", { p_post_id: ids[0]!, p_body: "Браво!" })).error,
     ).toBeNull();
@@ -135,5 +144,121 @@ describe("community", () => {
       (await db.rpc("create_post", { p_body: "шести", p_photo_path: "", p_completion_id: "" }))
         .error?.message,
     ).toMatch(/5/);
+  });
+
+  it("photos: own-folder upload only, readable only while a visible post shows them, removed with the post", async () => {
+    const author = await member("cm-photo-author");
+    const viewer = await member("cm-photo-viewer");
+    const jpeg = new Blob([Uint8Array.from([0xff, 0xd8, 0xff, 0xd9])], { type: "image/jpeg" });
+    const own = `${author.user.id}/11111111-2222-4333-8444-555555555555.jpg`;
+    const foreign = `${viewer.user.id}/11111111-2222-4333-8444-666666666666.jpg`;
+    const bucket = author.db.storage.from("community-photos");
+    expect(
+      (await bucket.upload(foreign, jpeg, { contentType: "image/jpeg" })).error,
+    ).not.toBeNull();
+    expect((await bucket.upload(own, jpeg, { contentType: "image/jpeg" })).error).toBeNull();
+    // Uploaded but not yet posted: nobody else can read it.
+    expect((await viewer.db.storage.from("community-photos").download(own)).error).not.toBeNull();
+    // A path that is not hers, or not uploaded, is refused by create_post.
+    expect(
+      (
+        await author.db.rpc("create_post", {
+          p_body: "x",
+          p_photo_path: foreign,
+          p_completion_id: "",
+        })
+      ).error?.code,
+    ).toBe("P0002");
+    const { data: postId, error } = await author.db.rpc("create_post", {
+      p_body: "Снимка",
+      p_photo_path: own,
+      p_completion_id: "",
+    });
+    expect(error).toBeNull();
+    // Visible post: a member with access can read it; a member without access cannot.
+    expect((await viewer.db.storage.from("community-photos").download(own)).error).toBeNull();
+    const outsider = await signedInClient(await createUser(author.admin, "cm-photo-outsider"));
+    expect((await outsider.storage.from("community-photos").download(own)).error).not.toBeNull();
+    // Hidden by the owner: readable by nobody but the author.
+    const { db: adminDb } = await createAdminUser(author.admin, "cm-photo-admin");
+    await adminDb.rpc("admin_moderate_post", { p_id: postId as string, p_hidden: true });
+    expect((await viewer.db.storage.from("community-photos").download(own)).error).not.toBeNull();
+    expect((await author.db.storage.from("community-photos").download(own)).error).toBeNull();
+    // Deleting returns the path so the caller removes the object.
+    const { data: removed } = await author.db.rpc("delete_own_post", { p_id: postId as string });
+    expect(removed).toBe(own);
+  });
+
+  it("hidden posts: the author still sees hers (marked), others do not, hearts and comments are closed", async () => {
+    const author = await member("cm-hidden-author");
+    const other = await member("cm-hidden-other");
+    const { data: postId } = await author.db.rpc("create_post", {
+      p_body: "Скрий ме",
+      p_photo_path: "",
+      p_completion_id: "",
+    });
+    const { db: adminDb } = await createAdminUser(author.admin, "cm-hidden-admin");
+    await adminDb.rpc("admin_moderate_post", { p_id: postId as string, p_hidden: true });
+    const mine = (await author.db.rpc("community_feed", { p_before: "", p_limit: 20 }))
+      .data as Array<Record<string, unknown>>;
+    expect(mine.find((r) => r.id === postId)?.hidden).toBe(true);
+    const theirs = (await other.db.rpc("community_feed", { p_before: "", p_limit: 20 }))
+      .data as Array<Record<string, unknown>>;
+    expect(theirs.some((r) => r.id === postId)).toBe(false);
+    expect((await other.db.rpc("toggle_heart", { p_post_id: postId as string })).error?.code).toBe(
+      "P0002",
+    );
+    expect(
+      (await other.db.rpc("create_comment", { p_post_id: postId as string, p_body: "?" })).error
+        ?.code,
+    ).toBe("P0002");
+    // Unhide is reversible.
+    await adminDb.rpc("admin_moderate_post", { p_id: postId as string, p_hidden: false });
+    const again = (await other.db.rpc("community_feed", { p_before: "", p_limit: 20 }))
+      .data as Array<Record<string, unknown>>;
+    expect(again.some((r) => r.id === postId)).toBe(true);
+  });
+
+  it("reports: deduplicated per reporter, invisible to members, comment moderation and deletion", async () => {
+    const author = await member("cm-rep-author");
+    const reporter = await member("cm-rep-reporter");
+    const { data: postId } = await author.db.rpc("create_post", {
+      p_body: "Публикация",
+      p_photo_path: "",
+      p_completion_id: "",
+    });
+    const { data: commentId } = await reporter.db.rpc("create_comment", {
+      p_post_id: postId as string,
+      p_body: "Грозен коментар",
+    });
+    await author.db.rpc("report_content", {
+      p_post_id: "",
+      p_comment_id: commentId as string,
+      p_reason: "обида",
+    });
+    await author.db.rpc("report_content", {
+      p_post_id: "",
+      p_comment_id: commentId as string,
+      p_reason: "пак",
+    });
+    expect((await reporter.db.rpc("community_reports")).data).toBeNull();
+    const { db: adminDb } = await createAdminUser(author.admin, "cm-rep-admin");
+    const reports = (await adminDb.rpc("community_reports")).data as Array<Record<string, unknown>>;
+    expect(reports.filter((r) => r.comment_id === commentId)).toHaveLength(1);
+    expect(
+      (await adminDb.rpc("admin_moderate_comment", { p_id: commentId as string, p_hidden: true }))
+        .error,
+    ).toBeNull();
+    const post = (await author.db.rpc("community_post", { p_id: postId as string })).data as Record<
+      string,
+      unknown
+    >;
+    expect((post.comments as unknown[]).length).toBe(0);
+    expect(
+      (await adminDb.rpc("admin_delete_comment", { p_id: commentId as string })).error,
+    ).toBeNull();
+    expect(
+      (await reporter.db.rpc("admin_delete_comment", { p_id: commentId as string })).error?.code,
+    ).toBe("42501");
   });
 });

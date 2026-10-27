@@ -6,8 +6,6 @@
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('community-photos', 'community-photos', false, 5242880, array['image/jpeg'])
 on conflict (id) do nothing;
-create policy community_photos_member_select on storage.objects for select to authenticated
-  using (bucket_id = 'community-photos' and (select public.my_access()));
 create policy community_photos_own_insert on storage.objects for insert to authenticated
   with check (
     bucket_id = 'community-photos'
@@ -61,6 +59,21 @@ create table public.community_reports (
 );
 create index community_reports_open on public.community_reports (created_at desc) where resolved_at is null;
 
+-- A photo is readable by its uploader, and by members with access only while a visible post shows
+-- it: deleted, hidden and never-posted uploads stay private.
+create function public.community_photo_readable(p_name text) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select (storage.foldername(p_name))[1] = (select auth.uid())::text
+      or (select public.is_admin())
+      or ((select public.my_access()) and exists (
+            select 1 from public.community_posts p
+            where p.photo_path = p_name and p.hidden_at is null));
+$$;
+revoke execute on function public.community_photo_readable(text) from public, anon;
+grant execute on function public.community_photo_readable(text) to authenticated;
+create policy community_photos_member_select on storage.objects for select to authenticated
+  using (bucket_id = 'community-photos' and public.community_photo_readable(name));
+
 alter table public.community_posts enable row level security;
 alter table public.community_comments enable row level security;
 alter table public.community_hearts enable row level security;
@@ -95,11 +108,11 @@ revoke all on function public.award_community_points(uuid, public.points_source,
 create function public.community_display_name(p_name text) returns text
 language sql immutable set search_path = '' as $$
   select case
-    when btrim(coalesce(p_name, '')) = '' then 'Членка'
-    when array_length(regexp_split_to_array(btrim(p_name), '\s+'), 1) >= 2
-      then (regexp_split_to_array(btrim(p_name), '\s+'))[1] || ' ' ||
-           left((regexp_split_to_array(btrim(p_name), '\s+'))[2], 1) || '.'
-    else btrim(p_name)
+    when regexp_replace(coalesce(p_name, ''), '^\s+|\s+$', '', 'g') = '' then 'Членка'
+    when array_length(regexp_split_to_array(regexp_replace(p_name, '^\s+|\s+$', '', 'g'), '\s+'), 1) >= 2
+      then (regexp_split_to_array(regexp_replace(p_name, '^\s+|\s+$', '', 'g'), '\s+'))[1] || ' ' ||
+           left((regexp_split_to_array(regexp_replace(p_name, '^\s+|\s+$', '', 'g'), '\s+'))[2], 1) || '.'
+    else regexp_replace(p_name, '^\s+|\s+$', '', 'g')
   end;
 $$;
 revoke all on function public.community_display_name(text) from public, anon, authenticated;
@@ -116,6 +129,8 @@ begin
   if v_uid is null or not public.my_access() then
     raise exception 'forbidden' using errcode = '42501';
   end if;
+  -- One writer per member at a time: the daily limits and the points cap are read-then-write.
+  perform pg_advisory_xact_lock(hashtextextended('community:' || v_uid::text, 0));
   if char_length(v_body) < 1 or char_length(v_body) > 1000 then
     raise exception 'body must be 1..1000 characters' using errcode = '22023';
   end if;
@@ -151,6 +166,7 @@ begin
   if v_uid is null or not public.my_access() then
     raise exception 'forbidden' using errcode = '42501';
   end if;
+  perform pg_advisory_xact_lock(hashtextextended('community:' || v_uid::text, 0));
   if char_length(v_body) < 1 or char_length(v_body) > 500 then
     raise exception 'body must be 1..500 characters' using errcode = '22023';
   end if;
@@ -168,11 +184,12 @@ begin
   return v_id;
 end $$;
 
--- Returns the new state (true = hearted).
-create function public.toggle_heart(p_post_id uuid) returns boolean
+-- Returns { hearted, hearts }; safe under two taps at once.
+create function public.toggle_heart(p_post_id uuid) returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare
   v_uid uuid := (select auth.uid());
+  v_hearted boolean;
 begin
   if v_uid is null or not public.my_access() then
     raise exception 'forbidden' using errcode = '42501';
@@ -182,10 +199,15 @@ begin
   end if;
   delete from public.community_hearts where post_id = p_post_id and user_id = v_uid;
   if found then
-    return false;
+    v_hearted := false;
+  else
+    insert into public.community_hearts (post_id, user_id) values (p_post_id, v_uid)
+    on conflict do nothing;
+    v_hearted := true;
   end if;
-  insert into public.community_hearts (post_id, user_id) values (p_post_id, v_uid);
-  return true;
+  return jsonb_build_object(
+    'hearted', v_hearted,
+    'hearts', (select count(*) from public.community_hearts h where h.post_id = p_post_id));
 end $$;
 
 create function public.report_content(p_post_id text, p_comment_id text, p_reason text) returns void
@@ -214,13 +236,17 @@ begin
   values (v_post, v_comment, v_uid, v_reason);
 end $$;
 
-create function public.delete_own_post(p_id uuid) returns void
+create function public.delete_own_post(p_id uuid) returns text
 language plpgsql security definer set search_path = '' as $$
+declare
+  v_photo text;
 begin
-  delete from public.community_posts where id = p_id and user_id = (select auth.uid());
+  delete from public.community_posts where id = p_id and user_id = (select auth.uid())
+    returning photo_path into v_photo;
   if not found then
     raise exception 'post not found' using errcode = 'P0002';
   end if;
+  return v_photo;
 end $$;
 
 create function public.delete_own_comment(p_id uuid) returns void
@@ -331,13 +357,25 @@ begin
   end if;
 end $$;
 
-create function public.admin_delete_post(p_id uuid) returns void
+create function public.admin_delete_post(p_id uuid) returns text
+language plpgsql security definer set search_path = '' as $$
+declare
+  v_photo text;
+begin
+  if not public.is_admin() then
+    raise exception 'forbidden' using errcode = '42501';
+  end if;
+  delete from public.community_posts where id = p_id returning photo_path into v_photo;
+  return v_photo;
+end $$;
+
+create function public.admin_delete_comment(p_id uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
   if not public.is_admin() then
     raise exception 'forbidden' using errcode = '42501';
   end if;
-  delete from public.community_posts where id = p_id;
+  delete from public.community_comments where id = p_id;
 end $$;
 
 create function public.admin_dismiss_report(p_id uuid) returns void
@@ -387,9 +425,11 @@ grant execute on function public.create_post(text, text, text), public.create_co
   public.toggle_heart(uuid), public.report_content(text, text, text), public.delete_own_post(uuid),
   public.delete_own_comment(uuid), public.community_feed(text, int), public.community_post(uuid),
   public.admin_moderate_post(uuid, boolean), public.admin_moderate_comment(uuid, boolean),
-  public.admin_delete_post(uuid), public.admin_dismiss_report(uuid), public.community_reports()
+  public.admin_delete_post(uuid), public.admin_delete_comment(uuid), public.admin_dismiss_report(uuid),
+  public.community_reports()
   to authenticated;
+revoke execute on function public.admin_delete_comment(uuid) from public, anon;
 
--- Photos of a deleted account go with it (the row cascade handles the tables).
-create trigger community_posts_audit after update or delete on public.community_posts
+-- Moderation is audited; a member's own delete (and an account deletion) leaves no copy of her text.
+create trigger community_posts_audit after update on public.community_posts
   for each row execute function public.audit_row('id');

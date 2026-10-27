@@ -30,7 +30,9 @@ async function Community({ searchParams }: { searchParams: SearchParams }) {
   // Opt out of prerendering before the session read (see src/app/start/page.tsx).
   await connection();
   const params = await searchParams;
-  const before = str(params.before) || null;
+  const rawBefore = str(params.before);
+  // A garbage cursor would make the RPC raise 22023; treat it as the first page.
+  const before = rawBefore && Number.isFinite(Date.parse(rawBefore)) ? rawBefore : null;
   const shareCompletion = /^[0-9a-f-]{36}$/i.test(str(params.share)) ? str(params.share) : null;
   const shareTitle = str(params.title).slice(0, 120);
   const { user, supabase } = await requireUser();

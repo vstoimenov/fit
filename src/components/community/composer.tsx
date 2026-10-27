@@ -2,7 +2,8 @@
 
 import { Camera, X } from "lucide-react";
 import Image from "next/image";
-import { useActionState, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createPostAction, type ComposerState } from "@/app/app/community/actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -26,11 +27,22 @@ export function Composer({
   initialBody?: string;
   completionId?: string | null;
 }) {
+  const router = useRouter();
   const [state, action, pending] = useActionState(createPostAction, IDLE);
   const [photo, setPhoto] = useState<{ path: string; preview: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [photoError, setPhotoError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // The page stays mounted after a post: forget the attached photo once it is published.
+  const [seenToken, setSeenToken] = useState<string | undefined>(undefined);
+  if (state.status === "ok" && state.token !== seenToken) {
+    setSeenToken(state.token);
+    if (photo) URL.revokeObjectURL(photo.preview);
+    setPhoto(null);
+  }
+  useEffect(() => {
+    if (state.status === "ok") router.refresh();
+  }, [state, router]);
 
   async function pick(file: File) {
     setPhotoError("");
@@ -41,7 +53,10 @@ export function Composer({
       const blob = await compressPhoto(file);
       const { error } = await storage.upload(path, blob, { contentType: "image/jpeg" });
       if (error) throw error;
-      if (photo) await storage.remove([photo.path]).catch(() => null);
+      if (photo) {
+        URL.revokeObjectURL(photo.preview);
+        await storage.remove([photo.path]).catch(() => null);
+      }
       setPhoto({ path, preview: URL.createObjectURL(blob) });
     } catch {
       setPhotoError("Снимката не се качи. Опитай с друга.");
@@ -53,7 +68,8 @@ export function Composer({
 
   async function removePhoto() {
     if (!photo) return;
-    const { path } = photo;
+    const { path, preview } = photo;
+    URL.revokeObjectURL(preview);
     setPhoto(null);
     await createBrowserSupabaseClient()
       .storage.from(BUCKET)
@@ -92,14 +108,14 @@ export function Composer({
               type="button"
               onClick={() => void removePhoto()}
               aria-label="Махни снимката"
-              className="absolute -right-2 -top-2 inline-flex size-9 items-center justify-center rounded-full bg-ink text-white"
+              className="absolute -right-3 -top-3 inline-flex size-11 items-center justify-center rounded-full bg-ink text-white"
             >
               <X size={16} strokeWidth={2.5} aria-hidden="true" />
             </button>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-semibold text-ink ring-[1.5px] ring-ink ring-inset">
+          <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full px-3 text-sm font-semibold text-ink ring-[1.5px] ring-ink ring-inset has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink">
             <Camera size={18} strokeWidth={2.25} aria-hidden="true" />
             {uploading ? "Качва се…" : photo ? "Смени снимката" : "Снимка"}
             <input
@@ -107,7 +123,7 @@ export function Composer({
               type="file"
               accept="image/*"
               className="sr-only"
-              disabled={uploading}
+              disabled={uploading || pending}
               onChange={(e) => {
                 const file = e.target.files?.[0];
                 if (file) void pick(file);

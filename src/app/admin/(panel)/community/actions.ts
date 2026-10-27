@@ -5,11 +5,13 @@ import { z } from "zod";
 import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { requireAdmin } from "@/server/admin/require-admin";
 import {
+  deleteCommentAsAdmin,
   deletePostAsAdmin,
   dismissReport,
   moderateComment,
   moderatePost,
 } from "@/server/community/admin";
+import { createAdminSupabaseClient } from "@/server/db/admin";
 
 function done() {
   revalidatePath("/admin/community");
@@ -42,7 +44,18 @@ export async function hideCommentAction(id: string, hidden: boolean): Promise<Ac
 export async function deletePostAction(id: string): Promise<ActionResult<null>> {
   try {
     const { supabase } = await requireAdmin();
-    await deletePostAsAdmin(supabase, z.uuid().parse(id));
+    await deletePostAsAdmin(supabase, createAdminSupabaseClient(), z.uuid().parse(id));
+    done();
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+export async function deleteCommentAction(id: string): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireAdmin();
+    await deleteCommentAsAdmin(supabase, z.uuid().parse(id));
     done();
     return actionOk(null);
   } catch (error) {

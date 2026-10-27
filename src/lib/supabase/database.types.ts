@@ -1661,7 +1661,8 @@ export type Database = {
       };
       admin_dashboard: { Args: { p_now?: string; p_own_host?: string }; Returns: Json };
       admin_delete_challenge: { Args: { p_id: string }; Returns: undefined };
-      admin_delete_post: { Args: { p_id: string }; Returns: undefined };
+      admin_delete_comment: { Args: { p_id: string }; Returns: undefined };
+      admin_delete_post: { Args: { p_id: string }; Returns: string };
       admin_dismiss_report: { Args: { p_id: string }; Returns: undefined };
       admin_grant_manual: { Args: { p_days: number; p_user_id: string }; Returns: string };
       admin_mfa_required: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -1729,6 +1730,7 @@ export type Database = {
       community_display_name: { Args: { p_name: string }; Returns: string };
       community_feed: { Args: { p_before: string; p_limit: number }; Returns: Json };
       community_link: { Args: Record<PropertyKey, never>; Returns: string };
+      community_photo_readable: { Args: { p_name: string }; Returns: boolean };
       community_post: { Args: { p_id: string }; Returns: Json };
       community_reports: { Args: Record<PropertyKey, never>; Returns: Json };
       create_comment: { Args: { p_body: string; p_post_id: string }; Returns: string };
@@ -1737,7 +1739,7 @@ export type Database = {
         Returns: string;
       };
       delete_own_comment: { Args: { p_id: string }; Returns: undefined };
-      delete_own_post: { Args: { p_id: string }; Returns: undefined };
+      delete_own_post: { Args: { p_id: string }; Returns: string };
       delete_progress_photo: { Args: { p_id: string }; Returns: undefined };
       gift_code: { Args: Record<PropertyKey, never>; Returns: string };
       has_active_access: { Args: { uid: string }; Returns: boolean };
@@ -1793,7 +1795,7 @@ export type Database = {
         };
         Returns: boolean;
       };
-      toggle_heart: { Args: { p_post_id: string }; Returns: boolean };
+      toggle_heart: { Args: { p_post_id: string }; Returns: Json };
       void_gift_voucher: { Args: { p_id: string }; Returns: undefined };
     };
     Enums: {

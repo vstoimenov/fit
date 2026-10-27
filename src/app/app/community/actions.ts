@@ -14,7 +14,13 @@ import {
   toggleHeart,
 } from "@/server/community/write";
 
-export type ComposerState = { status: "idle" | "error"; message?: string; body?: string };
+export type ComposerState = {
+  status: "idle" | "ok" | "error";
+  message?: string;
+  body?: string;
+  /** Changes on every successful post, so the composer knows to clear its photo. */
+  token?: string;
+};
 
 const optionalUuid = z.preprocess(
   (v) => (typeof v === "string" && v.trim() === "" ? null : v),
@@ -44,7 +50,7 @@ export async function createPostAction(
     return { status: "error", message: actionFail(error).message, body };
   }
   revalidateCommunity();
-  redirect("/app/community");
+  return { status: "ok", token: crypto.randomUUID() };
 }
 
 export async function createCommentAction(
@@ -64,14 +70,13 @@ export async function createCommentAction(
   return { status: "idle" };
 }
 
+/** No revalidation: the optimistic state plus the fresh count are enough, and a re-render would re-sign every photo. */
 export async function toggleHeartAction(
   postId: string,
-): Promise<ActionResult<{ hearted: boolean }>> {
+): Promise<ActionResult<{ hearted: boolean; hearts: number }>> {
   try {
     const { supabase } = await requireUser();
-    const hearted = await toggleHeart(supabase, z.uuid().parse(postId));
-    revalidateCommunity();
-    return actionOk({ hearted });
+    return actionOk(await toggleHeart(supabase, z.uuid().parse(postId)));
   } catch (error) {
     return actionFail(error);
   }

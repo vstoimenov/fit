@@ -50,24 +50,28 @@ export function PostCard({ post, detail = false }: { post: FeedPost; detail?: bo
           className="max-h-[480px] w-full rounded-xl object-cover"
         />
       )}
-      <footer className="flex items-center gap-1">
-        <HeartButton postId={post.id} hearts={post.hearts} hearted={post.heartedByMe} />
-        {detail ? (
-          <span className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm font-semibold text-ink-soft">
-            <MessageCircle size={20} strokeWidth={2.25} aria-hidden="true" />
-            <span className="tabular-nums">{post.comments}</span>
-          </span>
-        ) : (
-          <Link
-            href={`/app/community/${post.id}`}
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
-          >
-            <MessageCircle size={20} strokeWidth={2.25} aria-hidden="true" />
-            <span className="tabular-nums">{post.comments}</span>
-            <span className="sr-only"> коментара</span>
-          </Link>
-        )}
-      </footer>
+      {post.hidden ? (
+        <p className="text-sm text-ink-soft">Скрита е от екипа — другите не я виждат.</p>
+      ) : (
+        <footer className="flex items-center gap-1">
+          <HeartButton postId={post.id} hearts={post.hearts} hearted={post.heartedByMe} />
+          {detail ? (
+            <span className="inline-flex min-h-11 items-center gap-1.5 px-3 text-sm font-semibold text-ink-soft">
+              <MessageCircle size={20} strokeWidth={2.25} aria-hidden="true" />
+              <span className="tabular-nums">{post.comments}</span>
+            </span>
+          ) : (
+            <Link
+              href={`/app/community/${post.id}`}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-semibold text-ink-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
+            >
+              <MessageCircle size={20} strokeWidth={2.25} aria-hidden="true" />
+              <span className="tabular-nums">{post.comments}</span>
+              <span className="sr-only"> коментара</span>
+            </Link>
+          )}
+        </footer>
+      )}
     </article>
   );
 }

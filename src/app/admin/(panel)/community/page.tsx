@@ -5,7 +5,7 @@ import { utcToZoned } from "@/lib/admin/time";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { listReports } from "@/server/community/admin";
 import { listFeed } from "@/server/community/feed";
-import { ReportActions } from "./report-actions";
+import { PostActions, ReportActions } from "./report-actions";
 
 export const metadata = { title: "Общност" };
 
@@ -78,6 +78,7 @@ async function CommunityAdmin() {
                   <th className="px-3 py-2">Текст</th>
                   <th className="px-3 py-2">♥ / коментари</th>
                   <th className="px-3 py-2">Състояние</th>
+                  <th className="px-3 py-2">Действия</th>
                 </tr>
               </thead>
               <tbody>
@@ -101,6 +102,9 @@ async function CommunityAdmin() {
                         {p.hearts} / {p.comments}
                       </td>
                       <td className="px-3 py-2">{p.hidden ? "скрита" : "видима"}</td>
+                      <td className="px-3 py-2">
+                        <PostActions id={p.id} hidden={p.hidden} />
+                      </td>
                     </tr>
                   );
                 })}
