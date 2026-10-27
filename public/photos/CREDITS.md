@@ -19,6 +19,10 @@ Resized to ≤1600px and re-encoded; source = the original Unsplash image URL.
 | focus-stretch.jpg     | https://images.unsplash.com/photo-1552196563-55cd4e45efb3    |
 | focus-cardio.jpg      | https://images.unsplash.com/photo-1476480862126-209bfaa8edc8 |
 | default.jpg           | https://images.unsplash.com/photo-1544367567-0f2fcb009e0b    |
+| recipe-banana-bread.jpg | https://images.unsplash.com/photo-1767065887793-f68f736ea9d6 |
+| recipe-oat-cookies.jpg  | https://images.unsplash.com/photo-1499636136210-6f4ee915583e |
+| article-habits.jpg      | https://images.unsplash.com/photo-1512621776951-a57141f2eefd |
+| article-protein.jpg     | https://images.unsplash.com/photo-1482049016688-2d3e1b311543 |
 
 Fonts: `public/fonts/manrope-400.ttf`, `public/fonts/manrope-800.ttf` — Manrope (SIL Open Font License 1.1),
 downloaded from Google Fonts; used by the share-image route (`next/og`).
