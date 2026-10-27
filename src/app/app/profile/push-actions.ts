@@ -35,16 +35,21 @@ export async function subscribePushAction(
   }
 }
 
-/** A subscription found on the device at load time is re-attached to whoever is signed in now. */
-export async function claimPushAction(subscription: unknown): Promise<ActionResult<null>> {
+/**
+ * A subscription found on the device at load time is re-attached to whoever is signed in now.
+ * `claimed: false` means the server does not know this device (any more): the caller re-subscribes.
+ */
+export async function claimPushAction(
+  subscription: unknown,
+): Promise<ActionResult<{ claimed: boolean }>> {
   try {
     const { user } = await requireUser();
-    await claimSubscription(
+    const claimed = await claimSubscription(
       createAdminSupabaseClient(),
       user.id,
       subscriptionSchema.parse(subscription),
     );
-    return actionOk(null);
+    return actionOk({ claimed });
   } catch (error) {
     return actionFail(error);
   }

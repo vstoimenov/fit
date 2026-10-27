@@ -2,7 +2,12 @@
 
 import { Bell, BellOff } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { setPushHourAction, unsubscribePushAction } from "@/app/app/profile/push-actions";
+import {
+  claimPushAction,
+  setPushHourAction,
+  subscribePushAction,
+  unsubscribePushAction,
+} from "@/app/app/profile/push-actions";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
@@ -53,6 +58,15 @@ export function PushCard({
       const registration = await navigator.serviceWorker.getRegistration();
       const current = await registration?.pushManager.getSubscription();
       if (cancelled) return;
+      if (current) {
+        // The device may still be registered to whoever signed in here before, or the server may
+        // have forgotten it: re-attach it to her, or save it again, so „Включени“ is true.
+        const claim = await claimPushAction(current.toJSON());
+        if (claim.ok && !claim.data.claimed) {
+          await subscribePushAction(current.toJSON(), pushHour ?? DEFAULT_HOUR);
+        }
+      }
+      if (cancelled) return;
       setStatus(current ? { kind: "on", endpoint: current.endpoint } : { kind: "off" });
     })().catch(() => {
       if (!cancelled) setStatus({ kind: "unavailable", support: "unsupported" });
@@ -60,7 +74,7 @@ export function PushCard({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [pushHour]);
 
   async function turnOn() {
     if (busy.current || !publicKey) return;

@@ -73,23 +73,25 @@ async function trimDevices(admin: TypedClient, userId: string): Promise<void> {
     );
 }
 
-/** On a shared device the browser subscription may still belong to whoever signed in before. */
+/**
+ * On a shared device the browser subscription may still belong to whoever signed in before. The
+ * device moves to the current member only when the caller holds the subscription's auth secret
+ * (only that browser has it), and a claim never creates a row: an endpoint learned elsewhere cannot
+ * be taken, and unknown endpoints go through saveSubscription. Returns whether a row was claimed.
+ */
 export async function claimSubscription(
   admin: TypedClient,
   userId: string,
   input: SubscriptionInput,
-): Promise<void> {
-  const { error } = await admin.from("push_subscriptions").upsert(
-    {
-      user_id: userId,
-      endpoint: input.endpoint,
-      p256dh: input.keys.p256dh,
-      auth: input.keys.auth,
-      last_used_at: new Date().toISOString(),
-    },
-    { onConflict: "endpoint" },
-  );
+): Promise<boolean> {
+  const { data, error } = await admin
+    .from("push_subscriptions")
+    .update({ user_id: userId, p256dh: input.keys.p256dh, last_used_at: new Date().toISOString() })
+    .eq("endpoint", input.endpoint)
+    .eq("auth", input.keys.auth)
+    .select("id");
   if (error) throw new Error(`claim push subscription failed: ${error.message}`);
+  return data.length > 0;
 }
 
 /** Removes her own subscription for this endpoint (RLS scopes the delete). */
