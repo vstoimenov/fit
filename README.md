@@ -142,6 +142,10 @@ No name, weight, measurements or e-mail ever go into the image.
 CRON_SECRET>', 'cron_secret');` — until then the job runs and does nothing. `select public.push_cron_status();`
   shows whether it is scheduled; `select * from cron.job_run_details order by start_time desc limit 5;` shows runs.
   Without the keys the card says „скоро“ and nothing is sent. iPhone needs the app on the home screen (iOS 16.4+).
+- **Keep-warm (test phase).** `warm-every-5-min` in pg_cron asks for two cheap public routes every five minutes
+  (migration `20261027160000_warm_ping.sql`, uses the same Vault `app_url`), so the Vercel functions do not go
+  cold between the owner's own visits. About 17k requests a month. Remove it once real traffic keeps the site
+  warm: `select cron.unschedule('warm-every-5-min');` in the SQL editor.
 - **Video player.** YouTube videos play inside our own player (poster, play/pause, seek, mute, fullscreen; YouTube's
   controls, title bar and related videos are never shown). The video must allow embedding on YouTube (default for
   public and unlisted videos). Vimeo and Bunny links still use the provider's own player. Members can mark a workout

@@ -1786,6 +1786,7 @@ export type Database = {
         Returns: undefined;
       };
       run_push_cron: { Args: Record<PropertyKey, never>; Returns: undefined };
+      run_warm_ping: { Args: Record<PropertyKey, never>; Returns: undefined };
       submit_lead: {
         Args: {
           p_email: string;
@@ -1798,6 +1799,7 @@ export type Database = {
       };
       toggle_heart: { Args: { p_post_id: string }; Returns: Json };
       void_gift_voucher: { Args: { p_id: string }; Returns: undefined };
+      warm_cron_status: { Args: Record<PropertyKey, never>; Returns: Json };
     };
     Enums: {
       activity_level: "sedentary" | "light" | "moderate" | "active";
