@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { applyGrams, draftTotals, gramsProblem, parseGramsInput } from "./estimate-draft";
+import {
+  applyGrams,
+  draftTotals,
+  gramsProblem,
+  parseGramsInput,
+  portionLabel,
+  stepGrams,
+} from "./estimate-draft";
 import type { EstimateItem } from "./schema";
 
 const bread: EstimateItem = {
@@ -139,5 +146,39 @@ describe("gramsProblem", () => {
       fatG: 8,
     };
     expect(gramsProblem(dense, "2000")).toBe("Това количество е твърде голямо.");
+  });
+});
+
+describe("stepGrams", () => {
+  it("moves to the next half portion of the estimated amount", () => {
+    expect(stepGrams(160, 160, 1)).toBe(240);
+    expect(stepGrams(160, 160, -1)).toBe(80);
+    expect(stepGrams(160, 240, 1)).toBe(320);
+  });
+
+  it("snaps an in-between amount to the nearest half portion in that direction", () => {
+    expect(stepGrams(160, 170, 1)).toBe(240);
+    expect(stepGrams(160, 170, -1)).toBe(160);
+    expect(stepGrams(160, 150, -1)).toBe(80);
+  });
+
+  it("stays between half a portion and five portions, in whole grams", () => {
+    expect(stepGrams(160, 80, -1)).toBe(80);
+    expect(stepGrams(160, 800, 1)).toBe(800);
+    expect(stepGrams(33, 33, 1)).toBe(50);
+  });
+});
+
+describe("portionLabel", () => {
+  it("names whole and half portions in Bulgarian", () => {
+    expect(portionLabel(160, 160)).toBe("1 порция");
+    expect(portionLabel(160, 80)).toBe("½ порция");
+    expect(portionLabel(160, 240)).toBe("1½ порции");
+    expect(portionLabel(160, 320)).toBe("2 порции");
+  });
+
+  it("rounds an in-between amount to a tenth and says it is approximate", () => {
+    expect(portionLabel(160, 130)).toBe("≈ 0,8 порция");
+    expect(portionLabel(160, 200)).toBe("≈ 1,3 порции");
   });
 });

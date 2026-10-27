@@ -313,7 +313,8 @@ export function AddFoodSheet({
                       className={cn(inputClass, "h-auto resize-none py-3")}
                     />
                     <p id="food-privacy" className="text-xs text-ink-soft">
-                      Текстът се изпраща за изчисление на калориите. Не пиши лични данни.
+                      Например „3 пържени мекици“ или „2 яйца и филия хляб“. Изпращаме само този
+                      текст, без лични данни.
                     </p>
                   </div>
                   {message && (
@@ -322,7 +323,7 @@ export function AddFoodSheet({
                     </p>
                   )}
                   <Button type="submit" size="md" className="w-full">
-                    Изчисли
+                    Изчисли калориите
                   </Button>
                   <Button
                     variant="secondary"
@@ -369,11 +370,12 @@ export function AddFoodSheet({
                       Провери и поправи
                     </h3>
                     <p className="text-xs text-ink-soft">
-                      Промени количеството или махни ред. Ориентир, не медицински съвет.
+                      Нагласи количеството с − и + или махни ред. Числата са ориентир.
                     </p>
                   </div>
                   <EstimateRows
                     rows={draft.rows}
+                    base={draft.base}
                     texts={draft.texts}
                     problems={problems}
                     disabled={saving}

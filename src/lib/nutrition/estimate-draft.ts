@@ -38,3 +38,38 @@ export function gramsProblem(base: EstimateItem, raw: string): string | null {
   if (grams === null || grams < 1 || grams > 2000) return "Количеството е между 1 и 2000 г.";
   return rescale(base, grams) ? null : "Това количество е твърде голямо.";
 }
+
+const HALF_PORTION_MIN = 0.5;
+const PORTIONS_MAX = 5;
+
+/**
+ * The − / + buttons next to an amount think in portions of the estimated serving, not grams:
+ * half a portion per tap, between ½ and 5 portions, snapping an in-between amount to the next
+ * half in the direction of the tap. Whole grams, so the field and the label agree.
+ */
+export function stepGrams(baseGrams: number, currentGrams: number, direction: 1 | -1): number {
+  const portions = currentGrams / baseGrams;
+  const next =
+    direction === 1
+      ? Math.floor(portions * 2 + 1e-9) / 2 + 0.5
+      : Math.ceil(portions * 2 - 1e-9) / 2 - 0.5;
+  const clamped = Math.min(PORTIONS_MAX, Math.max(HALF_PORTION_MIN, next));
+  return Math.max(1, Math.round(clamped * baseGrams));
+}
+
+/** „½ порция“, „1 порция“, „1½ порции“ … or „≈ 0,8 порция“ for an amount between the halves. */
+export function portionLabel(baseGrams: number, grams: number): string {
+  const portions = grams / baseGrams;
+  const halves = Math.round(portions * 2);
+  const exact = Math.abs(portions * 2 - halves) < 0.02;
+  if (exact) {
+    const whole = Math.floor(halves / 2);
+    const half = halves % 2 === 1;
+    const number = whole === 0 ? "½" : half ? `${whole}½` : String(whole);
+    const noun = whole === 0 || (whole === 1 && !half) ? "порция" : "порции";
+    return `${number} ${noun}`;
+  }
+  const rounded = Math.round(portions * 10) / 10;
+  const noun = rounded <= 1 ? "порция" : "порции";
+  return `≈ ${rounded.toFixed(1).replace(".", ",")} ${noun}`;
+}
