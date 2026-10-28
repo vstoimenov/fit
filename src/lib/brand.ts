@@ -10,5 +10,5 @@ export const brand = {
   accentColor: "#E5A9AE",
   supportEmail: "info@iamstrong.bg",
   /** The company behind the club, for the legal pages; fill in before sales start. */
-  operator: { name: "", eik: "", address: "" },
+  operator: { name: "ПРОФИТБРАНД ЕООД", eik: "208768032", address: "гр. Плевен" },
 } as const;
