@@ -1,7 +1,8 @@
-import { LegalPlaceholder } from "@/components/site/legal-placeholder";
+import { LegalDocument } from "@/components/site/legal-document";
+import { TERMS } from "@/lib/legal/terms";
 
-export const metadata = { title: "Общи условия", robots: { index: false, follow: false } };
+export const metadata = { title: TERMS.title };
 
 export default function TermsPage() {
-  return <LegalPlaceholder title="Общи условия" />;
+  return <LegalDocument doc={TERMS} />;
 }

@@ -9,8 +9,8 @@ import { completeOnboarding, saveContactAction } from "@/app/start/actions";
 import { Button, buttonClass } from "@/components/ui/button";
 import { NutritionFields } from "@/components/nutrition/nutrition-fields";
 import { Consent } from "@/components/ui/consent";
+import { GoogleButton } from "@/components/ui/google-button";
 import { Field, inputClass } from "@/components/ui/field";
-import { clientEnv } from "@/env";
 import { cn } from "@/lib/cn";
 import {
   EXPERIENCE,
@@ -562,12 +562,29 @@ export function Wizard({ signedIn, needsPhone }: { signedIn: boolean; needsPhone
               {submitLabel}
             </Button>
             {step === "account" && (
+              <p className="pt-2 text-center text-xs leading-relaxed text-ink-soft">
+                Със създаването на профил приемаш{" "}
+                <a
+                  href="/terms"
+                  target="_blank"
+                  className="font-semibold text-ink underline underline-offset-2"
+                >
+                  Общите условия
+                </a>{" "}
+                и{" "}
+                <a
+                  href="/privacy"
+                  target="_blank"
+                  className="font-semibold text-ink underline underline-offset-2"
+                >
+                  Политиката за поверителност
+                </a>
+                .
+              </p>
+            )}
+            {step === "account" && (
               <div className="space-y-1 pt-3">
-                {clientEnv.NEXT_PUBLIC_GOOGLE_AUTH === "1" && (
-                  <Button variant="secondary" onClick={google} disabled={busy} className="w-full">
-                    Продължи с Google
-                  </Button>
-                )}
+                <GoogleButton onClick={google} disabled={busy} />
                 <div className="flex justify-center">
                   <Link href="/login" className={buttonClass("link")}>
                     Имам профил

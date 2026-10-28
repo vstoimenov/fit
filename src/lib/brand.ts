@@ -9,4 +9,6 @@ export const brand = {
   backgroundColor: "#FFFFFF",
   accentColor: "#E5A9AE",
   supportEmail: "info@iamstrong.bg",
+  /** The company behind the club, for the legal pages; fill in before sales start. */
+  operator: { name: "", eik: "", address: "" },
 } as const;

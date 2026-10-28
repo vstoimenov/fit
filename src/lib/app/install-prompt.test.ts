@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   detectInstallPlatform,
   installPromptDue,
+  isInAppBrowser,
   INSTALL_PROMPT_SNOOZE_MS,
   type InstallPromptState,
 } from "./install-prompt";
@@ -57,5 +58,26 @@ describe("installPromptDue", () => {
     const expired: InstallPromptState = { snoozedAt: now - INSTALL_PROMPT_SNOOZE_MS - 1 };
     expect(installPromptDue(JSON.stringify(expired), now)).toBe(true);
     expect(installPromptDue("{not json", now)).toBe(true);
+  });
+});
+
+describe("isInAppBrowser", () => {
+  it("spots the Instagram, Facebook and Messenger browsers, where Google refuses to sign in", () => {
+    expect(
+      isInAppBrowser("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Instagram 350.0"),
+    ).toBe(true);
+    expect(isInAppBrowser("Mozilla/5.0 (Linux; Android 14) [FB_IAB/FB4A;FBAV/480.0]")).toBe(true);
+    expect(isInAppBrowser("Mozilla/5.0 (iPhone) [FBAN/MessengerForiOS]")).toBe(true);
+  });
+
+  it("leaves Safari and Chrome alone", () => {
+    expect(
+      isInAppBrowser(
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile Safari/604.1",
+      ),
+    ).toBe(false);
+    expect(
+      isInAppBrowser("Mozilla/5.0 (Linux; Android 14) Chrome/130.0 Mobile Safari/537.36"),
+    ).toBe(false);
   });
 });

@@ -1,10 +1,8 @@
-import { LegalPlaceholder } from "@/components/site/legal-placeholder";
+import { LegalDocument } from "@/components/site/legal-document";
+import { PRIVACY } from "@/lib/legal/privacy";
 
-export const metadata = {
-  title: "Политика за поверителност",
-  robots: { index: false, follow: false },
-};
+export const metadata = { title: PRIVACY.title };
 
 export default function PrivacyPage() {
-  return <LegalPlaceholder title="Политика за поверителност" />;
+  return <LegalDocument doc={PRIVACY} />;
 }

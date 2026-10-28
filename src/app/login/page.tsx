@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { GoogleButton } from "@/components/ui/google-button";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { AuthCard } from "@/components/ui/auth-card";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
-import { clientEnv } from "@/env";
 import { safeNext } from "@/lib/auth-redirect";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
@@ -72,11 +72,7 @@ function LoginForm() {
           {busy ? "Влизам…" : "Влез"}
         </Button>
       </form>
-      {clientEnv.NEXT_PUBLIC_GOOGLE_AUTH === "1" && (
-        <Button variant="secondary" onClick={google} className="w-full">
-          Продължи с Google
-        </Button>
-      )}
+      <GoogleButton onClick={google} />
       <div className="flex flex-col items-center">
         <Link href="/forgot-password" className={buttonClass("link")}>
           Забравена парола

@@ -3,6 +3,14 @@ export type InstallPlatform = "ios" | "android" | "in_app" | "none";
 /** What the „add to home screen" note remembers per browser. */
 export type InstallPromptState = { done?: boolean; snoozedAt?: number };
 
+/** Instagram, Facebook and Messenger open links in their own browser, which cannot install apps or sign in with Google. */
+const IN_APP = /Instagram|FBAN|FBAV|FB_IAB|Messenger/i;
+
+/** True inside the Instagram/Facebook/Messenger browser (Google refuses OAuth there: disallowed_useragent). */
+export function isInAppBrowser(userAgent: string): boolean {
+  return IN_APP.test(userAgent);
+}
+
 export const INSTALL_PROMPT_KEY = "iamstrong.install-prompt";
 /** „По-късно" hides the note for a week. */
 export const INSTALL_PROMPT_SNOOZE_MS = 7 * 24 * 60 * 60 * 1000;
@@ -21,7 +29,7 @@ export function detectInstallPlatform(
     /iPhone|iPad|iPod/i.test(userAgent) ||
     (/Macintosh/.test(userAgent) && (opts.touchPoints ?? 0) > 1);
   const android = /Android/i.test(userAgent);
-  if ((ios || android) && /Instagram|FBAN|FBAV|FB_IAB|Messenger/i.test(userAgent)) return "in_app";
+  if ((ios || android) && isInAppBrowser(userAgent)) return "in_app";
   if (ios) return "ios";
   if (android) return "android";
   return "none";
