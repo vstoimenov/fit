@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { claimAction } from "@/app/na-myasto/actions";
+import { claimAction } from "@/app/zala/actions";
 import { Button } from "@/components/ui/button";
 import { Field, inputOnCardClass } from "@/components/ui/field";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
@@ -32,10 +32,10 @@ export function ClaimForm({ token }: { token: string }) {
         password,
       });
       if (signInError) {
-        router.replace("/login?next=/na-myasto");
+        router.replace("/login?next=/zala");
         return;
       }
-      router.replace("/na-myasto");
+      router.replace("/zala");
       router.refresh();
     } catch {
       setError("Нещо се обърка. Опитай отново.");

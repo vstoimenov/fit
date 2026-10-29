@@ -47,7 +47,7 @@ async function Roster({ params }: { params: Promise<{ sessionId: string }> }) {
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/na-myasto" className="text-sm underline">
+      <Link href="/admin/zala" className="text-sm underline">
         ← Тренировки
       </Link>
       <header className="flex flex-wrap items-center gap-3">
@@ -75,7 +75,7 @@ async function Roster({ params }: { params: Promise<{ sessionId: string }> }) {
               >
                 <div>
                   <Link
-                    href={`/admin/na-myasto/klientka/${e.userId}`}
+                    href={`/admin/zala/klientka/${e.userId}`}
                     className="font-semibold underline-offset-2 hover:underline"
                   >
                     {e.name || "Без име"}

@@ -193,7 +193,7 @@ export async function cancelStudioSession(
     {
       title: "Отменена тренировка",
       body: cancelNotice(session.starts_at),
-      url: "/na-myasto",
+      url: "/zala",
       tag: `studio-cancel-${sessionId}`,
     },
     transport,

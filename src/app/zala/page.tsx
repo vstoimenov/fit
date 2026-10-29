@@ -74,7 +74,7 @@ async function Studio() {
       ) : (
         <p className="text-sm">
           Вече имаш профил?{" "}
-          <Link href="/login?next=/na-myasto" className={buttonClass("link")}>
+          <Link href="/login?next=/zala" className={buttonClass("link")}>
             Влез
           </Link>
         </p>

@@ -50,7 +50,7 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
         {TABS.map((t) => (
           <Link
             key={t.key}
-            href={`/admin/na-myasto?tab=${t.key}`}
+            href={`/admin/zala?tab=${t.key}`}
             className={cn(
               "rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-line",
               t.key === tab ? "bg-ink text-white ring-ink" : "bg-white",
@@ -87,7 +87,7 @@ async function Sessions({ supabase, past = false }: { supabase: Db; past?: boole
     return (
       <p className="text-ink-soft">
         Няма тренировки за следващите 14 дни. Добави ги в{" "}
-        <Link href="/admin/na-myasto?tab=grafik" className="underline">
+        <Link href="/admin/zala?tab=grafik" className="underline">
           График
         </Link>
         .
@@ -101,7 +101,7 @@ async function Sessions({ supabase, past = false }: { supabase: Db; past?: boole
         return (
           <li key={s.id}>
             <Link
-              href={`/admin/na-myasto/${s.id}`}
+              href={`/admin/zala/${s.id}`}
               className="flex items-center justify-between gap-4 p-4 hover:bg-sand"
             >
               <span>
@@ -147,7 +147,7 @@ async function Clients({ supabase }: { supabase: Db }) {
           {clients.map((c) => (
             <li key={c.userId}>
               <Link
-                href={`/admin/na-myasto/klientka/${c.userId}`}
+                href={`/admin/zala/klientka/${c.userId}`}
                 className="flex flex-wrap items-center justify-between gap-2 p-4 hover:bg-sand"
               >
                 <span>

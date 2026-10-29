@@ -19,7 +19,7 @@ import { adjustStudioCard, grantStudioCard, voidStudioCard } from "@/server/stud
 import { createStudioInvite } from "@/server/studio/invite";
 import { createWalkIn } from "@/server/studio/walkin";
 
-const BASE = "/admin/na-myasto";
+const BASE = "/admin/zala";
 const uuid = (v: string) => z.uuid().parse(v);
 /** The server modules answer `{ ok: false, message }` for her mistakes; show it as is. */
 const fail = (message: string) => {
@@ -28,7 +28,7 @@ const fail = (message: string) => {
 
 function refresh() {
   revalidatePath(BASE, "layout");
-  revalidatePath("/na-myasto");
+  revalidatePath("/zala");
 }
 
 export async function saveSlotAction(
@@ -187,7 +187,7 @@ export async function inviteAction(userId: string): Promise<ActionResult<{ messa
     const { user } = await requireAdmin();
     const token = await createStudioInvite(createAdminSupabaseClient(), uuid(userId), user.id);
     const base = serverEnv.APP_URL.replace(/\/$/, "");
-    return actionOk({ message: `${base}/na-myasto/pokana/${token}` });
+    return actionOk({ message: `${base}/zala/pokana/${token}` });
   } catch (error) {
     return actionFail(error);
   }

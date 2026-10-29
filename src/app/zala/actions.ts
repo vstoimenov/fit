@@ -9,7 +9,7 @@ import { joinStudio } from "@/server/studio/join";
 
 type Result<T = object> = ({ ok: true } & T) | { ok: false; message: string };
 
-/** Right after sign-up on /na-myasto: her name and phone, and she is now an in-person client. */
+/** Right after sign-up on /zala: her name and phone, and she is now an in-person client. */
 export async function joinAction(input: { name: string; phone: string }): Promise<Result> {
   try {
     const { supabase } = await requireUser();

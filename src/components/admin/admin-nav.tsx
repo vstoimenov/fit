@@ -12,7 +12,7 @@ const ITEMS = [
   { href: "/admin/meals", label: "Ястия" },
   { href: "/admin/challenges", label: "Предизвикателства" },
   { href: "/admin/live", label: "На живо" },
-  { href: "/admin/na-myasto", label: "На място" },
+  { href: "/admin/zala", label: "На място" },
   { href: "/admin/community", label: "Общност" },
   { href: "/admin/clients", label: "Клиентки" },
   { href: "/admin/leads", label: "Лийдове" },

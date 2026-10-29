@@ -43,7 +43,7 @@ async function StudioClient({ params }: { params: Promise<{ userId: string }> })
 
   return (
     <div className="space-y-6">
-      <Link href="/admin/na-myasto?tab=klientki" className="text-sm underline">
+      <Link href="/admin/zala?tab=klientki" className="text-sm underline">
         ← Клиентки
       </Link>
       <header className="space-y-1">

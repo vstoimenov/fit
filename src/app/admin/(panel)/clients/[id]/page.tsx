@@ -99,10 +99,7 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
             <h2 className="font-semibold">На място</h2>
             <p className="text-sm">{studio.current ? cardLine(studio.current) : "Няма карта"}</p>
           </div>
-          <Link
-            href={`/admin/na-myasto/klientka/${p.id}`}
-            className="text-sm font-semibold underline"
-          >
+          <Link href={`/admin/zala/klientka/${p.id}`} className="text-sm font-semibold underline">
             Карти и записвания →
           </Link>
         </section>

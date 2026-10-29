@@ -3,7 +3,7 @@ import { onboardingRedirect } from "./redirect";
 
 describe("onboardingRedirect", () => {
   it("sends an in-person client to her trainings, not the online questions", () => {
-    expect(onboardingRedirect({ onboarding_done: false, studio_client: true })).toBe("/na-myasto");
+    expect(onboardingRedirect({ onboarding_done: false, studio_client: true })).toBe("/zala");
   });
   it("sends anyone else who has not finished to the questions", () => {
     expect(onboardingRedirect({ onboarding_done: false, studio_client: false })).toBe("/start");

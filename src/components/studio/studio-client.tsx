@@ -7,7 +7,7 @@ import { dayLabel } from "@/lib/studio/format";
 import { canCancel, DROP_IN_PRICE_EUR } from "@/lib/studio/rules";
 import type { MyBooking } from "@/server/studio/booking";
 import type { StudioSession } from "@/server/studio/schedule";
-import { bookAction, cancelAction, joinAction } from "@/app/na-myasto/actions";
+import { bookAction, cancelAction, joinAction } from "@/app/zala/actions";
 import { Button } from "@/components/ui/button";
 import { JoinForm } from "./join-form";
 import { ScheduleList } from "./schedule-list";

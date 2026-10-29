@@ -5,5 +5,5 @@ export function onboardingRedirect(profile: {
 }): string | null {
   if (profile.onboarding_done) return null;
   // She trains in the gym: her page is the schedule and her card, not the online club's funnel.
-  return profile.studio_client ? "/na-myasto" : "/start";
+  return profile.studio_client ? "/zala" : "/start";
 }

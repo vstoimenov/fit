@@ -86,7 +86,7 @@ describe("card warnings", () => {
     await sendStudioWarnings(admin, first.transport, noon());
     expect(first.sent.find((s) => s.endpoint === phone)?.payload).toMatchObject({
       body: "Остава ти 1 посещение по картата. Поднови я при Аксения.",
-      url: "/na-myasto",
+      url: "/zala",
     });
     const second = recorder();
     await sendStudioWarnings(admin, second.transport, noon());

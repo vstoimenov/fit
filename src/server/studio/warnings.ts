@@ -57,7 +57,7 @@ export async function sendStudioWarnings(
     await sendToUsers(
       service,
       [card.user_id!],
-      { title: "Твоята карта", body, url: "/na-myasto", tag: `studio-card-${kind}-${card.id}` },
+      { title: "Твоята карта", body, url: "/zala", tag: `studio-card-${kind}-${card.id}` },
       transport,
     );
     if (kind === "low") low++;

@@ -131,7 +131,7 @@ export function JoinForm({
         .
       </p>
       <div className="flex justify-center">
-        <Link href="/login?next=/na-myasto" className={buttonClass("link")}>
+        <Link href="/login?next=/zala" className={buttonClass("link")}>
           Имам профил
         </Link>
       </div>
