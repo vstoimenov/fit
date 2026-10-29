@@ -1082,6 +1082,7 @@ export type Database = {
           push_reminded_on: string | null;
           role: Database["public"]["Enums"]["user_role"];
           starter_week_done_at: string | null;
+          studio_client: boolean;
           target_weight_kg: number | null;
           time_per_session: string | null;
           timezone: string;
@@ -1118,6 +1119,7 @@ export type Database = {
           push_reminded_on?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           starter_week_done_at?: string | null;
+          studio_client?: boolean;
           target_weight_kg?: number | null;
           time_per_session?: string | null;
           timezone?: string;
@@ -1153,6 +1155,7 @@ export type Database = {
           push_reminded_on?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           starter_week_done_at?: string | null;
+          studio_client?: boolean;
           target_weight_kg?: number | null;
           time_per_session?: string | null;
           timezone?: string;
@@ -1346,6 +1349,272 @@ export type Database = {
           key?: string;
           updated_at?: string;
           value?: NonNullable<Json>;
+        };
+        Relationships: [];
+      };
+      studio_bookings: {
+        Row: {
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          card_id: string | null;
+          created_at: string;
+          id: string;
+          over_limit: boolean;
+          session_id: string;
+          source: string;
+          status: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          card_id?: string | null;
+          created_at?: string;
+          id?: string;
+          over_limit?: boolean;
+          session_id: string;
+          source: string;
+          status?: string;
+          user_id: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          card_id?: string | null;
+          created_at?: string;
+          id?: string;
+          over_limit?: boolean;
+          session_id?: string;
+          source?: string;
+          status?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "studio_bookings_cancelled_by_fkey";
+            columns: ["cancelled_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_bookings_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_card_status";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_bookings_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_bookings_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_bookings_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      studio_card_adjustments: {
+        Row: {
+          card_id: string;
+          created_at: string;
+          created_by: string | null;
+          delta: number;
+          id: string;
+          reason: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          card_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          delta: number;
+          id?: string;
+          reason: string;
+        };
+        Update: {
+          card_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          delta?: number;
+          id?: string;
+          reason?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "studio_card_adjustments_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_card_status";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_card_adjustments_card_id_fkey";
+            columns: ["card_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_cards";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_card_adjustments_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      studio_cards: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          ends_on: string;
+          id: string;
+          kind: string;
+          starts_on: string;
+          used_before: number;
+          user_id: string;
+          visits: number;
+          voided_at: string | null;
+          warned_expiry_at: string | null;
+          warned_low_at: string | null;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          ends_on: string;
+          id?: string;
+          kind: string;
+          starts_on: string;
+          used_before?: number;
+          user_id: string;
+          visits: number;
+          voided_at?: string | null;
+          warned_expiry_at?: string | null;
+          warned_low_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          ends_on?: string;
+          id?: string;
+          kind?: string;
+          starts_on?: string;
+          used_before?: number;
+          user_id?: string;
+          visits?: number;
+          voided_at?: string | null;
+          warned_expiry_at?: string | null;
+          warned_low_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "studio_cards_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_cards_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      studio_sessions: {
+        Row: {
+          cancelled_at: string | null;
+          capacity: number;
+          created_at: string;
+          duration_min: number;
+          id: string;
+          slot_id: string | null;
+          starts_at: string;
+          title: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          cancelled_at?: string | null;
+          capacity: number;
+          created_at?: string;
+          duration_min: number;
+          id?: string;
+          slot_id?: string | null;
+          starts_at: string;
+          title: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          capacity?: number;
+          created_at?: string;
+          duration_min?: number;
+          id?: string;
+          slot_id?: string | null;
+          starts_at?: string;
+          title?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "studio_sessions_slot_id_fkey";
+            columns: ["slot_id"];
+            isOneToOne: false;
+            referencedRelation: "studio_slots";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      studio_slots: {
+        Row: {
+          active: boolean;
+          capacity: number;
+          created_at: string;
+          duration_min: number;
+          id: string;
+          start_time: string;
+          title: string;
+          updated_at: string;
+          weekday: number;
+        };
+        ComputedFields: never;
+        Insert: {
+          active?: boolean;
+          capacity: number;
+          created_at?: string;
+          duration_min?: number;
+          id?: string;
+          start_time: string;
+          title: string;
+          updated_at?: string;
+          weekday: number;
+        };
+        Update: {
+          active?: boolean;
+          capacity?: number;
+          created_at?: string;
+          duration_min?: number;
+          id?: string;
+          start_time?: string;
+          title?: string;
+          updated_at?: string;
+          weekday?: number;
         };
         Relationships: [];
       };
@@ -1633,7 +1902,34 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      studio_card_status: {
+        Row: {
+          adjusted: number | null;
+          booked: number | null;
+          created_at: string | null;
+          ends_on: string | null;
+          id: string | null;
+          kind: string | null;
+          remaining: number | null;
+          starts_on: string | null;
+          used_before: number | null;
+          user_id: string | null;
+          visits: number | null;
+          voided_at: string | null;
+          warned_expiry_at: string | null;
+          warned_low_at: string | null;
+        };
+        ComputedFields: never;
+        Relationships: [
+          {
+            foreignKeyName: "studio_cards_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       active_payment_provider: { Args: Record<PropertyKey, never>; Returns: string };
@@ -1799,6 +2095,19 @@ export type Database = {
       };
       run_push_cron: { Args: Record<PropertyKey, never>; Returns: undefined };
       run_warm_ping: { Args: Record<PropertyKey, never>; Returns: undefined };
+      studio_ensure_sessions: { Args: { p_days?: number; p_today?: string }; Returns: undefined };
+      studio_schedule: {
+        Args: { p_from: string; p_to: string };
+        Returns: {
+          booked: number;
+          cancelled: boolean;
+          capacity: number;
+          duration_min: number;
+          id: string;
+          starts_at: string;
+          title: string;
+        }[];
+      };
       submit_lead: {
         Args: {
           p_email: string;
