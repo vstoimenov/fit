@@ -5,6 +5,14 @@ import { useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { ActionResult } from "@/lib/action-result";
 
+/** An action may return `{ message }` to say more than the fixed success text (e.g. a link). */
+const successText = (data: unknown): string | null =>
+  typeof data === "object" &&
+  data !== null &&
+  typeof (data as { message?: unknown }).message === "string"
+    ? (data as { message: string }).message
+    : null;
+
 type FormAction = (
   prev: ActionResult<unknown> | null,
   form: FormData,
@@ -83,8 +91,8 @@ export function ActionForm({
           {pending ? "Запазване…" : submitLabel}
         </Button>
         {state?.ok && (
-          <p role="status" className="text-sm text-moss">
-            {successMessage}
+          <p role="status" className="text-sm break-all text-moss">
+            {successText(state.data) ?? successMessage}
           </p>
         )}
         {state && !state.ok && (

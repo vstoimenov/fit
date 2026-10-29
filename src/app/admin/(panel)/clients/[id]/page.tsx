@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
@@ -18,10 +19,12 @@ import {
   type Time,
 } from "@/lib/labels";
 import { levelProgress } from "@/lib/points/levels";
+import { cardLine } from "@/lib/studio/rules";
 import { endNotice } from "@/lib/subscription-text";
 import { getClientDetail } from "@/server/admin/clients";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { getMemberPoints, listPointsLedger } from "@/server/content/points";
+import { loadMyStudio } from "@/server/studio/booking";
 import {
   addNoteAction,
   adjustPointsAction,
@@ -62,9 +65,10 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
   const parsed = z.uuid().safeParse(id);
   const c = parsed.success ? await getClientDetail(supabase, parsed.data) : null;
   if (!c) notFound();
-  const [points, ledger] = await Promise.all([
+  const [points, ledger, studio] = await Promise.all([
     getMemberPoints(supabase, c.profile.id),
     listPointsLedger(supabase, c.profile.id, 20),
+    loadMyStudio(supabase, c.profile.id),
   ]);
   const progress = levelProgress(points.points);
   const p = c.profile;
@@ -89,6 +93,20 @@ async function Client({ params }: { params: Promise<{ id: string }> }) {
           <span className="text-sm text-ink-soft">Без съгласие за обаждане</span>
         )}
       </header>
+      {(studio.cards.length > 0 || studio.upcoming.length + studio.past.length > 0) && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-5 ring-1 ring-line">
+          <div>
+            <h2 className="font-semibold">На място</h2>
+            <p className="text-sm">{studio.current ? cardLine(studio.current) : "Няма карта"}</p>
+          </div>
+          <Link
+            href={`/admin/na-myasto/klientka/${p.id}`}
+            className="text-sm font-semibold underline"
+          >
+            Карти и записвания →
+          </Link>
+        </section>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         <section className="space-y-2 rounded-2xl bg-white p-4 text-sm ring-1 ring-line">
