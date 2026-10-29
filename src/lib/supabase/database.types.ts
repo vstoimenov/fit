@@ -2099,14 +2099,18 @@ export type Database = {
         Args: { p_card_id: string; p_delta: number; p_reason: string };
         Returns: undefined;
       };
+      studio_admin_add: { Args: { p_session_id: string; p_user_id: string }; Returns: Json };
+      studio_admin_remove: { Args: { p_booking_id: string }; Returns: undefined };
       studio_book: { Args: { p_session_id: string }; Returns: Json };
       studio_cancel: { Args: { p_booking_id: string }; Returns: undefined };
+      studio_cancel_session: { Args: { p_session_id: string }; Returns: string[] };
       studio_ensure_sessions: { Args: { p_days?: number; p_today?: string }; Returns: undefined };
       studio_grant_card: {
         Args: { p_kind: string; p_starts_on: string; p_used_before?: number; p_user_id: string };
         Returns: Json;
       };
       studio_pick_card: { Args: { p_day: string; p_user: string }; Returns: string };
+      studio_reset_slot_sessions: { Args: { p_slot_id: string }; Returns: undefined };
       studio_schedule: {
         Args: { p_from: string; p_to: string };
         Returns: {
