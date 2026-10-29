@@ -1539,6 +1539,49 @@ export type Database = {
           },
         ];
       };
+      studio_invites: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          expires_at: string;
+          token_hash: string;
+          used_at: string | null;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          expires_at: string;
+          token_hash: string;
+          used_at?: string | null;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          expires_at?: string;
+          token_hash?: string;
+          used_at?: string | null;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "studio_invites_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "studio_invites_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       studio_sessions: {
         Row: {
           cancelled_at: string | null;
@@ -2109,6 +2152,7 @@ export type Database = {
         Args: { p_kind: string; p_starts_on: string; p_used_before?: number; p_user_id: string };
         Returns: Json;
       };
+      studio_join: { Args: { p_name: string; p_phone: string }; Returns: undefined };
       studio_pick_card: { Args: { p_day: string; p_user: string }; Returns: string };
       studio_reset_slot_sessions: { Args: { p_slot_id: string }; Returns: undefined };
       studio_schedule: {
