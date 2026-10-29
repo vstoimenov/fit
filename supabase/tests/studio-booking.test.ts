@@ -91,7 +91,7 @@ describe("studio booking", () => {
       "started",
     );
 
-    const far = await studioSession(admin, hours(15 * 24));
+    const far = await studioSession(admin, hours(32 * 24));
     expect((await db.rpc("studio_book", { p_session_id: far })).error?.message).toContain(
       "not open",
     );
@@ -199,5 +199,13 @@ describe("cancelled trainings", () => {
     const my = await loadMyStudio(db, user.id);
     expect(my.upcoming).toEqual([]);
     expect(my.cancelled.map((b) => b.sessionId)).toEqual([session]);
+  });
+});
+
+describe("booking window", () => {
+  it("a training 20 days ahead can be booked (the month view is open)", async () => {
+    const { admin, db } = await client("book-month");
+    const session = await studioSession(admin, hours(20 * 24));
+    expect((await db.rpc("studio_book", { p_session_id: session })).error).toBeNull();
   });
 });

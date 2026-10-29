@@ -14,8 +14,8 @@ export const STUDIO_CARDS: Record<
 export const DROP_IN_PRICE_EUR = 7;
 /** A booking can be cancelled (and the visit returned) until this many hours before the start. */
 export const CANCEL_HOURS = 6;
-/** How far ahead the schedule is open for booking. */
-export const BOOKING_DAYS = 14;
+/** How far ahead the schedule is open for booking (the month calendar on /zala). */
+export const BOOKING_DAYS = 31;
 /** Walk-ins added by the trainer get a non-deliverable e-mail until they claim an invite. */
 export const WALKIN_EMAIL_DOMAIN = "na-myasto.invalid";
 

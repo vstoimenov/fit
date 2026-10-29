@@ -86,7 +86,7 @@ async function Sessions({ supabase, past = false }: { supabase: Db; past?: boole
   if (sessions.length === 0) {
     return (
       <p className="text-ink-soft">
-        Няма тренировки за следващите 14 дни. Добави ги в{" "}
+        Няма тренировки за следващия месец. Добави ги в{" "}
         <Link href="/admin/zala?tab=grafik" className="underline">
           График
         </Link>

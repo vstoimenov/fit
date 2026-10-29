@@ -19,7 +19,7 @@ export function ScheduleList({
   onBook: (session: StudioSession) => void;
 }) {
   if (sessions.length === 0) {
-    return <p className="text-ink-soft">Графикът за следващите две седмици още не е готов.</p>;
+    return <p className="text-ink-soft">Графикът още не е готов.</p>;
   }
   const days = new Map<string, StudioSession[]>();
   for (const s of sessions) {

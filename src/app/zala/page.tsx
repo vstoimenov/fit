@@ -5,11 +5,11 @@ import { SiteFooter } from "@/components/site/site-footer";
 import { SiteHeader } from "@/components/site/site-header";
 import { DISPLAY, EYEBROW, WRAP } from "@/components/site/styles";
 import { MyCard } from "@/components/studio/my-card";
+import { PriceCards } from "@/components/studio/price-cards";
 import { StudioClient } from "@/components/studio/studio-client";
 import { buttonClass } from "@/components/ui/button";
 import { utcToZoned } from "@/lib/admin/time";
 import { cancelNotice, dayLabel } from "@/lib/studio/format";
-import { DROP_IN_PRICE_EUR, STUDIO_CARDS } from "@/lib/studio/rules";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
 import { getSiteFlags, getSiteLinks } from "@/server/site/content";
@@ -31,14 +31,11 @@ export default async function StudioPage() {
         <p className={`${EYEBROW} text-rose-deep`}>Тренировки на място</p>
         <h1 className={`${DISPLAY} mt-3 text-[40px] sm:text-6xl`}>Тренирай с Аксения в залата.</h1>
         <p className="mt-4 text-lg leading-relaxed">
-          Еднократна {DROP_IN_PRICE_EUR} € · {STUDIO_CARDS.card8.label} —{" "}
-          {STUDIO_CARDS.card8.priceEur} € за {STUDIO_CARDS.card8.weeks} седмици ·{" "}
-          {STUDIO_CARDS.card12.label} — {STUDIO_CARDS.card12.priceEur} € за{" "}
-          {STUDIO_CARDS.card12.weeks} седмици. Плащаш на място.
+          Избери ден в календара, запиши се с едно докосване и следи картата си тук.
         </p>
-        <p className="mt-2 text-sm text-ink-soft">
-          Посещението се отчита при записване. Можеш да откажеш до 6 часа преди началото.
-        </p>
+        <div className="mt-10">
+          <PriceCards />
+        </div>
         <div className="mt-10">
           <Suspense fallback={<p aria-busy="true">Зареждане…</p>}>
             <Studio />
@@ -88,7 +85,12 @@ async function Studio() {
           {cancelNotice(b.startsAt)}
         </p>
       ))}
-      <StudioClient signedIn={Boolean(user)} sessions={sessions} upcoming={my?.upcoming ?? []} />
+      <StudioClient
+        signedIn={Boolean(user)}
+        sessions={sessions}
+        upcoming={my?.upcoming ?? []}
+        today={today}
+      />
       {my && my.past.length > 0 && (
         <section>
           <h2 className="mb-3 text-xl font-bold">Минали посещения</h2>

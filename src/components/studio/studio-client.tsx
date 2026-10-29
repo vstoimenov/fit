@@ -10,7 +10,7 @@ import type { StudioSession } from "@/server/studio/schedule";
 import { bookAction, cancelAction, joinAction } from "@/app/zala/actions";
 import { Button } from "@/components/ui/button";
 import { JoinForm } from "./join-form";
-import { ScheduleList } from "./schedule-list";
+import { StudioCalendar } from "./studio-calendar";
 
 const when = (iso: string) => {
   const { date, time } = utcToZoned(iso);
@@ -25,10 +25,12 @@ export function StudioClient({
   signedIn,
   sessions,
   upcoming,
+  today,
 }: {
   signedIn: boolean;
   sessions: StudioSession[];
   upcoming: MyBooking[];
+  today: string;
 }) {
   const router = useRouter();
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -126,13 +128,14 @@ export function StudioClient({
         </section>
       )}
 
-      <section>
+      <section id="grafik" className="scroll-mt-24">
         <h2 className="mb-4 text-xl font-bold">График</h2>
-        <ScheduleList
+        <StudioCalendar
           sessions={sessions}
           bookedIds={upcoming.map((b) => b.sessionId)}
           busyId={busyId}
           onBook={onBook}
+          today={today}
         />
       </section>
 
