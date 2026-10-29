@@ -87,6 +87,8 @@ export const config = {
     "/forgot-password",
     "/reset-password",
     "/start/:path*",
+    "/na-myasto",
+    "/na-myasto/:path*",
     "/app/:path*",
     "/auth/:path*",
     "/dev/:path*",

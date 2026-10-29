@@ -34,8 +34,8 @@ export function visitsLeftText(remaining: number): string {
   return `остават ${remaining} посещения`;
 }
 
-/** "2026-11-26" -> "26.11" */
-export const dayMonth = (date: string) => `${date.slice(8, 10)}.${date.slice(5, 7)}`;
+/** "2026-11-26" -> "26.11", "2026-05-03" -> "3.05" */
+export const dayMonth = (date: string) => `${Number(date.slice(8, 10))}.${date.slice(5, 7)}`;
 
 export function cardLine(card: { kind: CardKind; remaining: number; endsOn: string }): string {
   return `${STUDIO_CARDS[card.kind].label} · ${visitsLeftText(card.remaining)} · валидна до ${dayMonth(card.endsOn)}`;

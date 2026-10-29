@@ -1,11 +1,11 @@
 import { utcToZoned, weekdayOf } from "@/lib/admin/time";
+import { dayMonth } from "./rules";
 
 const WEEKDAYS = ["Понеделник", "Вторник", "Сряда", "Четвъртък", "Петък", "Събота", "Неделя"];
 
 /** "2026-11-03" -> "Вторник, 3.11" */
 export function dayLabel(date: string): string {
-  const [, m, d] = date.split("-").map(Number);
-  return `${WEEKDAYS[weekdayOf(date)]}, ${d}.${m}`;
+  return `${WEEKDAYS[weekdayOf(date)]}, ${dayMonth(date)}`;
 }
 
 export function cancelNotice(startsAt: string): string {

@@ -6,6 +6,7 @@ import { HideOnPlayer } from "@/components/app/hide-on-player";
 import { InstallPrompt } from "@/components/app/install-prompt";
 import { SidebarNav } from "@/components/app/sidebar-nav";
 import { isAppError } from "@/lib/app-error";
+import { onboardingRedirect } from "@/lib/onboarding/redirect";
 import { pastDueNotice } from "@/lib/subscription-text";
 import { requireUser } from "@/server/auth/require-user";
 import { ManageSubscriptionButton } from "./profile/manage-subscription-button";
@@ -33,7 +34,7 @@ async function AppGate({ children }: { children: React.ReactNode }) {
   }
   const { user, supabase } = session;
   const [{ data: profile, error }, { data: sub, error: subError }] = await Promise.all([
-    supabase.from("profiles").select("onboarding_done").eq("id", user.id).single(),
+    supabase.from("profiles").select("onboarding_done, studio_client").eq("id", user.id).single(),
     supabase
       .from("subscriptions")
       .select("provider, provider_sub_id, provider_customer_id, status, grace_until")
@@ -44,7 +45,9 @@ async function AppGate({ children }: { children: React.ReactNode }) {
   if (error) throw new Error(`load onboarding state failed: ${error.message}`);
   // Signed up but not through the questions yet (she left after the profile screen): back to them.
   // The wizard keeps her saved answers and asks for the phone first if it is still missing.
-  if (!profile.onboarding_done) redirect("/start");
+  // An in-person client goes to her trainings instead.
+  const away = onboardingRedirect(profile);
+  if (away) redirect(away);
   // The banner is a nudge, not an access rule: a failed read only hides it.
   if (subError) console.error("load subscription for banner failed", subError.message);
   // Failed renewal, still in grace. The portal is always Stripe's (see openPortalAction).
