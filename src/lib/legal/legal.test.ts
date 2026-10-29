@@ -57,3 +57,16 @@ describe("operatorLine", () => {
     );
   });
 });
+
+describe("in-person trainings", () => {
+  it("TERMS has a section with the booking and 6-hour cancel rules", () => {
+    const section = TERMS.sections.find((s) => s.heading === "9. Тренировки на място");
+    expect(section).toBeDefined();
+    expect(text({ ...TERMS, sections: [section!] })).toContain("6 часа");
+    expect(TERMS.sections.map((s) => s.heading).at(-1)).toBe("16. Въпроси, жалби и спорове");
+  });
+  it("PRIVACY lists what is kept for in-person trainings", () => {
+    const section = PRIVACY.sections.find((s) => s.heading === "2. Какви данни събираме");
+    expect(text({ ...PRIVACY, sections: [section!] })).toContain("Тренировки на място");
+  });
+});
