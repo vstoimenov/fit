@@ -106,14 +106,15 @@ export async function loadMyStudio(
   adjustments: CardAdjustment[];
   upcoming: MyBooking[];
   past: MyBooking[];
+  /** Coming trainings she was booked for that Аксения called off (the visit is back). */
+  cancelled: MyBooking[];
 }> {
   const [cardsRes, bookingsRes, adjRes] = await Promise.all([
     db.from("studio_card_status").select(CARD_COLUMNS).eq("user_id", userId),
     db
       .from("studio_bookings")
-      .select("id, session_id, card_id, studio_sessions(title, starts_at)")
-      .eq("user_id", userId)
-      .eq("status", "booked"),
+      .select("id, session_id, card_id, status, studio_sessions(title, starts_at, cancelled_at)")
+      .eq("user_id", userId),
     db
       .from("studio_card_adjustments")
       .select("card_id, delta, reason, created_at")
@@ -126,16 +127,20 @@ export async function loadMyStudio(
 
   const cards = cardsRes.data.map(toCard);
   const own = new Set(cards.map((c) => c.id));
-  const bookings: MyBooking[] = bookingsRes.data
-    .filter((b) => b.studio_sessions)
-    .map((b) => ({
-      id: b.id,
-      sessionId: b.session_id,
-      title: b.studio_sessions!.title,
-      startsAt: b.studio_sessions!.starts_at,
-      cardId: b.card_id,
-      canCancel: canCancel(b.studio_sessions!.starts_at, now),
-    }));
+  const toBooking = (b: (typeof bookingsRes.data)[number]): MyBooking => ({
+    id: b.id,
+    sessionId: b.session_id,
+    title: b.studio_sessions!.title,
+    startsAt: b.studio_sessions!.starts_at,
+    cardId: b.card_id,
+    canCancel: canCancel(b.studio_sessions!.starts_at, now),
+  });
+  const withSession = bookingsRes.data.filter((b) => b.studio_sessions);
+  const bookings = withSession.filter((b) => b.status === "booked").map(toBooking);
+  const calledOff = withSession
+    .filter((b) => b.status === "cancelled" && b.studio_sessions!.cancelled_at !== null)
+    .map(toBooking)
+    .filter((b) => Date.parse(b.startsAt) > now.getTime());
   const at = (b: MyBooking) => Date.parse(b.startsAt);
   return {
     cards,
@@ -154,5 +159,6 @@ export async function loadMyStudio(
       .filter((b) => at(b) <= now.getTime())
       .sort((a, b) => at(b) - at(a))
       .slice(0, 30),
+    cancelled: calledOff.sort((a, b) => at(a) - at(b)),
   };
 }

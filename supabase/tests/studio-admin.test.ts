@@ -167,3 +167,72 @@ describe("studio admin (server)", () => {
     ]);
   });
 });
+
+describe("studio admin (review fixes)", () => {
+  it("a cancelled training still shows who was booked, with phones", async () => {
+    const { listSessionRoster } = await import("@/server/studio/admin");
+    const { admin, trainer } = await setup("fix-roster");
+    const session = await studioSession(admin, hours(30));
+    const client = await createUser(admin, "fix-roster-client");
+    await admin.from("profiles").update({ name: "Вера", phone: "0888999000" }).eq("id", client.id);
+    await (await signedInClient(client)).rpc("studio_book", { p_session_id: session });
+    await trainer.rpc("studio_cancel_session", { p_session_id: session });
+    const roster = await listSessionRoster(trainer, session);
+    expect(roster.session.cancelled).toBe(true);
+    expect(roster.entries).toEqual([
+      expect.objectContaining({ userId: client.id, name: "Вера", phone: "0888999000" }),
+    ]);
+  });
+
+  it("the admin list starts at the beginning of today, so a started training is still there", async () => {
+    const { listStudioSchedule } = await import("@/server/studio/schedule");
+    const { admin, trainer } = await setup("fix-started");
+    const started = await studioSession(admin, hours(-0.25));
+    const from = new Date(Date.now() - 3 * 3_600_000);
+    const list = await listStudioSchedule(trainer, new Date(), from);
+    expect(list.map((s) => s.id)).toContain(started);
+  });
+
+  it("a slot edit moves a training whose only booking was cancelled", async () => {
+    const { admin, trainer } = await setup("fix-slot");
+    const d1 = addDays(sofiaToday(), 3);
+    const { data: slot } = await trainer
+      .from("studio_slots")
+      .insert({ weekday: isoWeekday(d1), start_time: "18:00", title: "Вечерна", capacity: 8 })
+      .select("id")
+      .single();
+    await admin.rpc("studio_ensure_sessions", { p_days: 7 });
+    const { data: before } = await admin
+      .from("studio_sessions")
+      .select("id")
+      .eq("slot_id", slot!.id)
+      .single();
+    const client = await signedInClient(await createUser(admin, "fix-slot-client"));
+    const { data: b } = await client.rpc("studio_book", { p_session_id: before!.id });
+    await client.rpc("studio_cancel", { p_booking_id: (b as { booking_id: string }).booking_id });
+
+    await trainer.from("studio_slots").update({ start_time: "19:00" }).eq("id", slot!.id);
+    await trainer.rpc("studio_reset_slot_sessions", { p_slot_id: slot!.id });
+    await admin.rpc("studio_ensure_sessions", { p_days: 7 });
+    const { data: after } = await admin
+      .from("studio_sessions")
+      .select("starts_at")
+      .eq("slot_id", slot!.id);
+    expect(after!.map((r) => utcToZoned(r.starts_at).time)).toEqual(["19:00"]);
+  });
+
+  it("deleting a client's account removes her cards and bookings", async () => {
+    const { admin } = await setup("fix-delete");
+    const user = await createUser(admin, "fix-delete-client");
+    await studioCard(admin, user.id);
+    const session = await studioSession(admin, hours(30));
+    await (await signedInClient(user)).rpc("studio_book", { p_session_id: session });
+    const { error } = await admin.auth.admin.deleteUser(user.id);
+    expect(error).toBeNull();
+    const { count } = await admin
+      .from("studio_bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    expect(count).toBe(0);
+  });
+});

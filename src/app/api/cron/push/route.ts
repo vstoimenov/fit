@@ -3,7 +3,6 @@ import { serverEnv } from "@/env";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { isCronAuthorized, notifyPublishedWorkouts, sendReminders } from "@/server/push/jobs";
 import { webPushTransport } from "@/server/push/send";
-import { utcToZoned } from "@/lib/admin/time";
 import { sendStudioWarnings } from "@/server/studio/warnings";
 
 /** Hourly (Vercel Cron): daily reminders for this hour, „Нова тренировка" for fresh publishes, gym card nudges. */
@@ -18,7 +17,7 @@ export async function GET(request: NextRequest) {
   const [workouts, reminders, studio] = await Promise.all([
     notifyPublishedWorkouts(admin, now, transport),
     sendReminders(admin, now, transport),
-    sendStudioWarnings(admin, transport, utcToZoned(now.toISOString()).date),
+    sendStudioWarnings(admin, transport, now),
   ]);
   return NextResponse.json({ at: now.toISOString(), workouts, reminders, studio });
 }

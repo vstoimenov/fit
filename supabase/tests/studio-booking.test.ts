@@ -186,3 +186,18 @@ describe("loadMyStudio", () => {
     expect(my.past.map((b) => b.sessionId)).toEqual([past]);
   });
 });
+
+describe("cancelled trainings", () => {
+  it("she sees that a training she was booked for was cancelled", async () => {
+    const { loadMyStudio } = await import("@/server/studio/booking");
+    const { createAdminUser } = await import("./helpers");
+    const { admin, user, db } = await client("cancelled-notice");
+    const { db: trainer } = await createAdminUser(admin, "cancelled-notice-admin");
+    const session = await studioSession(admin, hours(30));
+    await db.rpc("studio_book", { p_session_id: session });
+    await trainer.rpc("studio_cancel_session", { p_session_id: session });
+    const my = await loadMyStudio(db, user.id);
+    expect(my.upcoming).toEqual([]);
+    expect(my.cancelled.map((b) => b.sessionId)).toEqual([session]);
+  });
+});

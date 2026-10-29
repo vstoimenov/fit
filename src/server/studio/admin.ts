@@ -95,22 +95,25 @@ export async function listSessionRoster(
   db: TypedClient,
   sessionId: string,
 ): Promise<{ session: StudioSession; entries: RosterEntry[] }> {
-  const [sessionRes, bookingsRes] = await Promise.all([
-    db
-      .from("studio_sessions")
-      .select("id, title, starts_at, duration_min, capacity, cancelled_at")
-      .eq("id", sessionId)
-      .single(),
-    db
-      .from("studio_bookings")
-      .select(
-        "id, user_id, card_id, over_limit, source, created_at, profiles!studio_bookings_user_id_fkey(name, phone)",
-      )
-      .eq("session_id", sessionId)
-      .eq("status", "booked")
-      .order("created_at"),
-  ]);
+  const sessionRes = await db
+    .from("studio_sessions")
+    .select("id, title, starts_at, duration_min, capacity, cancelled_at")
+    .eq("id", sessionId)
+    .single();
   if (sessionRes.error) throw new Error(`load studio session failed: ${sessionRes.error.message}`);
+  const cancelledAt = sessionRes.data.cancelled_at;
+  // A cancelled training keeps the list of who was booked when it was called off: she may call them.
+  let bookingsQuery = db
+    .from("studio_bookings")
+    .select(
+      "id, user_id, card_id, over_limit, source, created_at, profiles!studio_bookings_user_id_fkey(name, phone)",
+    )
+    .eq("session_id", sessionId)
+    .order("created_at");
+  bookingsQuery = cancelledAt
+    ? bookingsQuery.eq("status", "cancelled").eq("cancelled_at", cancelledAt)
+    : bookingsQuery.eq("status", "booked");
+  const bookingsRes = await bookingsQuery;
   if (bookingsRes.error) throw new Error(`load roster failed: ${bookingsRes.error.message}`);
   const cardIds = bookingsRes.data.flatMap((b) => (b.card_id ? [b.card_id] : []));
   const cards = new Map<string, { kind: CardKind; remaining: number }>();
@@ -123,7 +126,7 @@ export async function listSessionRoster(
     for (const c of data) cards.set(c.id!, { kind: c.kind as CardKind, remaining: c.remaining! });
   }
   const s = sessionRes.data;
-  const booked = bookingsRes.data.length;
+  const booked = cancelledAt ? 0 : bookingsRes.data.length;
   return {
     session: {
       id: s.id,

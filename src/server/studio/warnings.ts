@@ -1,8 +1,13 @@
 import "server-only";
 
+import { utcToZoned } from "@/lib/admin/time";
 import { cardWarning, dayMonth } from "@/lib/studio/rules";
 import type { TypedClient } from "@/server/db/types";
 import { sendToUsers, type PushTransport } from "@/server/push/send";
+
+/** Nudges go out between 10:00 and 20:00 Sofia time, never at night. */
+const DAY_START = 10;
+const DAY_END = 20;
 
 /**
  * Daily nudges about her card: one visit left, or the card ending within 3 days. Each card is
@@ -11,8 +16,11 @@ import { sendToUsers, type PushTransport } from "@/server/push/send";
 export async function sendStudioWarnings(
   service: TypedClient,
   transport: PushTransport,
-  today: string,
+  now: Date,
 ): Promise<{ low: number; expiring: number }> {
+  const { date: today, time } = utcToZoned(now.toISOString());
+  const hour = Number(time.slice(0, 2));
+  if (hour < DAY_START || hour >= DAY_END) return { low: 0, expiring: 0 };
   const { data, error } = await service
     .from("studio_card_status")
     .select("id, user_id, ends_on, remaining, warned_low_at, warned_expiry_at")

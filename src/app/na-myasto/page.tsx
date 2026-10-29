@@ -8,7 +8,7 @@ import { MyCard } from "@/components/studio/my-card";
 import { StudioClient } from "@/components/studio/studio-client";
 import { buttonClass } from "@/components/ui/button";
 import { utcToZoned } from "@/lib/admin/time";
-import { dayLabel } from "@/lib/studio/format";
+import { cancelNotice, dayLabel } from "@/lib/studio/format";
 import { DROP_IN_PRICE_EUR, STUDIO_CARDS } from "@/lib/studio/rules";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
@@ -79,6 +79,15 @@ async function Studio() {
           </Link>
         </p>
       )}
+      {my?.cancelled.map((b) => (
+        <p
+          key={b.id}
+          role="status"
+          className="rounded-2xl bg-brick/10 p-4 font-semibold text-brick"
+        >
+          {cancelNotice(b.startsAt)}
+        </p>
+      ))}
       <StudioClient signedIn={Boolean(user)} sessions={sessions} upcoming={my?.upcoming ?? []} />
       {my && my.past.length > 0 && (
         <section>

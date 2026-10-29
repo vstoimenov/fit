@@ -7,9 +7,11 @@ import type { PushTransport } from "@/server/push/send";
 import { sendStudioWarnings } from "@/server/studio/warnings";
 import { adminClient, createAdminUser, createUser, type TestUser } from "./helpers";
 import { sofiaToday, studioCard } from "./studio-helpers";
-import { addDays } from "@/lib/admin/time";
+import { addDays, zonedToUtc } from "@/lib/admin/time";
 
 const admin = adminClient();
+/** Today at 12:00 Sofia: inside the daytime window for card nudges. */
+const noon = () => new Date(zonedToUtc(sofiaToday(), "12:00"));
 
 async function studioOnly(label: string): Promise<TestUser> {
   const user = await createUser(admin, label, { name: `Зала ${label}` });
@@ -81,13 +83,13 @@ describe("card warnings", () => {
     const phone = await device(gym.id);
     await studioCard(admin, gym.id, { usedBefore: 7 });
     const first = recorder();
-    await sendStudioWarnings(admin, first.transport, sofiaToday());
+    await sendStudioWarnings(admin, first.transport, noon());
     expect(first.sent.find((s) => s.endpoint === phone)?.payload).toMatchObject({
       body: "Остава ти 1 посещение по картата. Поднови я при Аксения.",
       url: "/na-myasto",
     });
     const second = recorder();
-    await sendStudioWarnings(admin, second.transport, sofiaToday());
+    await sendStudioWarnings(admin, second.transport, noon());
     expect(second.sent.some((s) => s.endpoint === phone)).toBe(false);
   });
 
@@ -98,14 +100,29 @@ describe("card warnings", () => {
     const ends = addDays(today, 3);
     await studioCard(admin, gym.id, { startsOn: addDays(today, -20), endsOn: ends });
     const first = recorder();
-    const report = await sendStudioWarnings(admin, first.transport, today);
+    const report = await sendStudioWarnings(admin, first.transport, noon());
     expect(report.expiring).toBeGreaterThanOrEqual(1);
     const [, mm, dd] = ends.split("-");
     expect(first.sent.find((s) => s.endpoint === phone)?.payload.body).toBe(
       `Картата ти изтича на ${Number(dd)}.${mm}. Остават ти 8 посещения.`,
     );
     const second = recorder();
-    await sendStudioWarnings(admin, second.transport, today);
+    await sendStudioWarnings(admin, second.transport, noon());
     expect(second.sent.some((s) => s.endpoint === phone)).toBe(false);
+  });
+});
+
+describe("card warnings timing", () => {
+  it("stays quiet at night in Sofia and speaks during the day", async () => {
+    const gym = await studioOnly("warn-night");
+    const phone = await device(gym.id);
+    await studioCard(admin, gym.id, { usedBefore: 7 });
+    const today = sofiaToday();
+    const night = recorder();
+    await sendStudioWarnings(admin, night.transport, new Date(zonedToUtc(today, "02:00")));
+    expect(night.sent.some((s) => s.endpoint === phone)).toBe(false);
+    const day = recorder();
+    await sendStudioWarnings(admin, day.transport, new Date(zonedToUtc(today, "10:00")));
+    expect(day.sent.some((s) => s.endpoint === phone)).toBe(true);
   });
 });

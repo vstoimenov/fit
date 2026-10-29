@@ -6,7 +6,7 @@ import { SlotFields } from "@/components/admin/studio/slot-fields";
 import { WalkInFields } from "@/components/admin/studio/walkin-fields";
 import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
-import { utcToZoned } from "@/lib/admin/time";
+import { utcToZoned, zonedToUtc } from "@/lib/admin/time";
 import { dayLabel } from "@/lib/studio/format";
 import { cardLine } from "@/lib/studio/rules";
 import { requireAdmin } from "@/server/admin/require-admin";
@@ -20,6 +20,7 @@ export const metadata = { title: "На място" };
 
 const TABS = [
   { key: "trenirovki", label: "Тренировки" },
+  { key: "minali", label: "Минали" },
   { key: "klientki", label: "Клиентки" },
   { key: "grafik", label: "График" },
 ] as const;
@@ -60,6 +61,7 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
         ))}
       </nav>
       {tab === "trenirovki" && <Sessions supabase={supabase} />}
+      {tab === "minali" && <Sessions supabase={supabase} past />}
       {tab === "klientki" && <Clients supabase={supabase} />}
       {tab === "grafik" && <Slots supabase={supabase} />}
     </div>
@@ -68,9 +70,19 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
 
 type Db = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
 
-async function Sessions({ supabase }: { supabase: Db }) {
+/** Coming trainings from the start of today (a started one stays reachable for walk-ins), or the last 14 days. */
+async function Sessions({ supabase, past = false }: { supabase: Db; past?: boolean }) {
   await ensureStudioSessions(createAdminSupabaseClient());
-  const sessions = await listStudioSchedule(supabase);
+  const now = new Date();
+  const startOfToday = new Date(zonedToUtc(utcToZoned(now.toISOString()).date, "00:00"));
+  const from = past ? new Date(startOfToday.getTime() - 14 * 86_400_000) : startOfToday;
+  const all = await listStudioSchedule(supabase, now, from);
+  const sessions = past
+    ? all.filter((s) => Date.parse(s.startsAt) < startOfToday.getTime()).reverse()
+    : all;
+  if (past && sessions.length === 0) {
+    return <p className="text-ink-soft">Няма тренировки през последните 14 дни.</p>;
+  }
   if (sessions.length === 0) {
     return (
       <p className="text-ink-soft">

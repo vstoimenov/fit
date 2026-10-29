@@ -20,13 +20,14 @@ export async function ensureStudioSessions(service: TypedClient): Promise<void> 
   if (error) throw new Error(`ensure studio sessions failed: ${error.message}`);
 }
 
-/** The bookable window: from now until BOOKING_DAYS ahead, soonest first. */
+/** The bookable window: from `from` (default now) until BOOKING_DAYS ahead, soonest first. */
 export async function listStudioSchedule(
   db: TypedClient,
   now = new Date(),
+  from = now,
 ): Promise<StudioSession[]> {
   const { data, error } = await db.rpc("studio_schedule", {
-    p_from: now.toISOString(),
+    p_from: from.toISOString(),
     p_to: new Date(now.getTime() + BOOKING_DAYS * 86_400_000).toISOString(),
   });
   if (error) throw new Error(`load studio schedule failed: ${error.message}`);
