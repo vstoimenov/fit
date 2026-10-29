@@ -13,7 +13,6 @@ const MESSAGES: [reason: string, copy: string][] = [
 
 export function studioErrorMessage(dbMessage: string): string {
   return (
-    MESSAGES.find(([reason]) => dbMessage.includes(reason))?.[1] ??
-    "Нещо се обърка. Опитай отново."
+    MESSAGES.find(([reason]) => dbMessage.includes(reason))?.[1] ?? "Нещо се обърка. Опитай отново."
   );
 }

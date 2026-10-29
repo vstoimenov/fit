@@ -2095,7 +2095,10 @@ export type Database = {
       };
       run_push_cron: { Args: Record<PropertyKey, never>; Returns: undefined };
       run_warm_ping: { Args: Record<PropertyKey, never>; Returns: undefined };
+      studio_book: { Args: { p_session_id: string }; Returns: Json };
+      studio_cancel: { Args: { p_booking_id: string }; Returns: undefined };
       studio_ensure_sessions: { Args: { p_days?: number; p_today?: string }; Returns: undefined };
+      studio_pick_card: { Args: { p_day: string; p_user: string }; Returns: string };
       studio_schedule: {
         Args: { p_from: string; p_to: string };
         Returns: {
