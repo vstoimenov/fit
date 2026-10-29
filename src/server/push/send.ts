@@ -139,11 +139,14 @@ export async function sendToUsers(
   userIds: string[] | "all",
   payload: PushPayload,
   transport: PushTransport,
+  opts: { exclude?: ReadonlySet<string> } = {},
 ): Promise<PushReport> {
   if (userIds !== "all" && userIds.length === 0) {
     return { users: 0, delivered: 0, pruned: 0, failed: 0 };
   }
-  const rows = await listSubscriptions(admin, userIds);
+  const rows = (await listSubscriptions(admin, userIds)).filter(
+    (r) => !opts.exclude?.has(r.user_id),
+  );
   return sendPush(rows, payload, transport, async (ids) => {
     for (const part of chunked(ids, IN_CHUNK)) {
       const { error } = await admin.from("push_subscriptions").delete().in("id", part);

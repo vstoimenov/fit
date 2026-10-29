@@ -13,14 +13,18 @@ export async function listAtRisk(
   pageSize?: number,
 ): Promise<{ client: ClientRow; reasons: RiskReason[] }[]> {
   const rows = await listAllClients(db, { search, pageSize });
-  return rows
-    .map((client) => ({ client, reasons: assessRisk(client, thresholds, now) }))
-    .filter((r) => r.reasons.length > 0)
-    .sort(
-      (a, b) =>
-        b.reasons.length - a.reasons.length ||
-        (a.client.lastDoneAt ?? "").localeCompare(b.client.lastDoneAt ?? ""),
-    );
+  return (
+    rows
+      // Gym-only clients never use the online club: "not training" would be noise here.
+      .filter((client) => !client.studioOnly)
+      .map((client) => ({ client, reasons: assessRisk(client, thresholds, now) }))
+      .filter((r) => r.reasons.length > 0)
+      .sort(
+        (a, b) =>
+          b.reasons.length - a.reasons.length ||
+          (a.client.lastDoneAt ?? "").localeCompare(b.client.lastDoneAt ?? ""),
+      )
+  );
 }
 
 /**

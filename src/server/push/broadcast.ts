@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { safeNext } from "@/lib/auth-redirect";
 import type { TypedClient } from "@/server/db/types";
+import { studioOnlyUserIds } from "@/server/studio/members";
 import { sendToUsers, type PushReport, type PushTransport } from "./send";
 
 /** The owner's broadcast form; links stay inside the app. */
@@ -41,6 +42,8 @@ export async function sendBroadcast(
       tag: `broadcast-${Date.now()}`,
     },
     transport,
+    // Gym-only clients did not join the online club: its news is not for them.
+    { exclude: await studioOnlyUserIds(admin) },
   );
   const { error } = await admin.from("push_sends").insert({
     kind: "broadcast",

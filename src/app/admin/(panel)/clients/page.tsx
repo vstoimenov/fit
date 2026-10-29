@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { LevelBadge } from "@/components/admin/level-badge";
+import { isPlaceholderEmail } from "@/lib/studio/rules";
 import { buttonClass } from "@/components/ui/button";
 import { inputClass } from "@/components/ui/field";
 import { utcToZoned } from "@/lib/admin/time";
@@ -85,7 +86,14 @@ async function Clients({ searchParams }: { searchParams: Search }) {
                   >
                     {c.name || "—"}
                   </Link>
-                  <p className="text-xs text-ink-soft">{c.email}</p>
+                  {c.studioOnly && (
+                    <span className="ml-2 rounded-full bg-sand px-2 py-0.5 text-xs font-semibold">
+                      На място
+                    </span>
+                  )}
+                  <p className="text-xs text-ink-soft">
+                    {isPlaceholderEmail(c.email) ? "без профил за вход" : c.email}
+                  </p>
                 </td>
                 <td className="p-3">
                   <LevelBadge level={c.level} />

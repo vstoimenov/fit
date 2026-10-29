@@ -42,6 +42,12 @@ const TABLES = [
   "leads",
   "live_attendance",
   "live_sessions",
+  "studio_slots",
+  "studio_sessions",
+  "studio_cards",
+  "studio_card_adjustments",
+  "studio_bookings",
+  "studio_invites",
 ];
 const ROLES = ["anon", "authenticated"];
 // MAINTAIN exists since Postgres 17 (VACUUM / ANALYZE / REINDEX / CLUSTER / REFRESH MATERIALIZED VIEW / LOCK).

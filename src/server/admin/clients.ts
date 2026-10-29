@@ -17,6 +17,8 @@ export interface ClientRow {
   joinedAt: string;
   lastSeenAt: string | null;
   onboardingDone: boolean;
+  /** Trains only in the gym: left out of the online club's reports. */
+  studioOnly: boolean;
   subStatus: string | null;
   subProvider: string | null;
   currentPeriodEnd: string | null;
@@ -44,6 +46,7 @@ export function toClientRow(r: StatsRow): ClientRow {
     joinedAt: r.joined_at,
     lastSeenAt: r.last_seen_at ?? null,
     onboardingDone: r.onboarding_done,
+    studioOnly: r.studio_only ?? false,
     subStatus: r.sub_status ?? null,
     subProvider: r.sub_provider ?? null,
     currentPeriodEnd: r.current_period_end ?? null,

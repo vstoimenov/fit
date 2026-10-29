@@ -2003,6 +2003,7 @@ export type Database = {
           phone_call_consent: boolean;
           published_14: number;
           snoozed_until: string;
+          studio_only: boolean;
           sub_provider: Database["public"]["Enums"]["payment_provider"];
           sub_status: Database["public"]["Enums"]["subscription_status"];
           total_count: number;
