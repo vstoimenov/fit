@@ -89,6 +89,8 @@ export interface RosterEntry {
   card: { kind: CardKind; remaining: number } | null;
   overLimit: boolean;
   source: "client" | "admin";
+  /** Ticked „Дошла“ on the day. */
+  attended: boolean;
 }
 
 export async function listSessionRoster(
@@ -106,7 +108,7 @@ export async function listSessionRoster(
   let bookingsQuery = db
     .from("studio_bookings")
     .select(
-      "id, user_id, card_id, over_limit, source, created_at, profiles!studio_bookings_user_id_fkey(name, phone)",
+      "id, user_id, card_id, over_limit, source, attended_at, created_at, profiles!studio_bookings_user_id_fkey(name, phone)",
     )
     .eq("session_id", sessionId)
     .order("created_at");
@@ -146,6 +148,7 @@ export async function listSessionRoster(
       card: b.card_id ? (cards.get(b.card_id) ?? null) : null,
       overLimit: b.over_limit,
       source: b.source as "client" | "admin",
+      attended: b.attended_at !== null,
     })),
   };
 }

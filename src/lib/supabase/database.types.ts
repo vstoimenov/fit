@@ -1354,6 +1354,7 @@ export type Database = {
       };
       studio_bookings: {
         Row: {
+          attended_at: string | null;
           cancelled_at: string | null;
           cancelled_by: string | null;
           card_id: string | null;
@@ -1367,6 +1368,7 @@ export type Database = {
         };
         ComputedFields: never;
         Insert: {
+          attended_at?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
           card_id?: string | null;
@@ -1379,6 +1381,7 @@ export type Database = {
           user_id: string;
         };
         Update: {
+          attended_at?: string | null;
           cancelled_at?: string | null;
           cancelled_by?: string | null;
           card_id?: string | null;
@@ -2167,6 +2170,10 @@ export type Database = {
           starts_at: string;
           title: string;
         }[];
+      };
+      studio_set_attended: {
+        Args: { p_attended: boolean; p_booking_id: string };
+        Returns: undefined;
       };
       studio_void_card: { Args: { p_card_id: string }; Returns: undefined };
       submit_lead: {

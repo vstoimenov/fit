@@ -9,6 +9,7 @@ const MESSAGES: [reason: string, copy: string][] = [
   ["card in use", "От картата вече има записвания. Коригирай посещенията вместо да я анулираш."],
   ["negative", "Остатъкът не може да стане отрицателен."],
   ["invalid invite", "Поканата е невалидна или изтекла."],
+  ["past day", "Тренировката е от минал ден."],
 ];
 
 export function studioErrorMessage(dbMessage: string): string {

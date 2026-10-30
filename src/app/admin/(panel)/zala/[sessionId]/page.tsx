@@ -4,6 +4,7 @@ import { connection } from "next/server";
 import { Suspense } from "react";
 import { z } from "zod";
 import { ActionForm } from "@/components/admin/action-form";
+import { AttendanceToggle } from "@/components/admin/studio/attendance-toggle";
 import { WalkInFields } from "@/components/admin/studio/walkin-fields";
 import { Chip } from "@/components/ui/chip";
 import { Field, inputClass } from "@/components/ui/field";
@@ -83,6 +84,9 @@ async function Roster({ params }: { params: Promise<{ sessionId: string }> }) {
                   {e.phone && <span className="text-ink-soft"> · {e.phone}</span>}
                   <p className="text-sm text-ink-soft">{rosterLabel(e)}</p>
                 </div>
+                {!session.cancelled && (
+                  <AttendanceToggle bookingId={e.bookingId} attended={e.attended} />
+                )}
                 {!session.cancelled && (
                   <ActionForm
                     action={removeBookingAction.bind(null, e.bookingId)}

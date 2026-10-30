@@ -2,6 +2,8 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { ActionForm } from "@/components/admin/action-form";
+import { AttendanceToggle } from "@/components/admin/studio/attendance-toggle";
+import { DoorAdd } from "@/components/admin/studio/door-add";
 import { SlotFields } from "@/components/admin/studio/slot-fields";
 import { WalkInFields } from "@/components/admin/studio/walkin-fields";
 import { Chip } from "@/components/ui/chip";
@@ -9,7 +11,8 @@ import { Field, inputClass } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { utcToZoned, zonedToUtc } from "@/lib/admin/time";
 import { nextDates } from "@/lib/studio/calendar";
-import { dayLabel } from "@/lib/studio/format";
+import { dayLabel, rosterLabel } from "@/lib/studio/format";
+import { attendanceLine, cashLine, telHref } from "@/lib/studio/today";
 import { cardLine, dayMonth } from "@/lib/studio/rules";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { createAdminSupabaseClient } from "@/server/db/admin";
@@ -17,11 +20,13 @@ import { getStudioAddress } from "@/server/studio/address";
 import { listStudioSlots } from "@/server/studio/admin";
 import { listStudioClients } from "@/server/studio/cards";
 import { ensureStudioSessions, listStudioSchedule } from "@/server/studio/schedule";
+import { boardDate, listDayBoard } from "@/server/studio/today";
 import { addWalkInAction, saveSlotAction, saveStudioAddressAction } from "./actions";
 
 export const metadata = { title: "На място" };
 
 const TABS = [
+  { key: "dnes", label: "Днес" },
   { key: "trenirovki", label: "Тренировки" },
   { key: "minali", label: "Минали" },
   { key: "klientki", label: "Клиентки" },
@@ -44,7 +49,7 @@ export default function StudioAdminPage({
 async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   await connection();
   const { tab: raw } = await searchParams;
-  const tab: Tab = TABS.some((t) => t.key === raw) ? (raw as Tab) : "trenirovki";
+  const tab: Tab = TABS.some((t) => t.key === raw) ? (raw as Tab) : "dnes";
   const { supabase } = await requireAdmin();
   return (
     <div className="space-y-6">
@@ -63,6 +68,7 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
           </Link>
         ))}
       </nav>
+      {tab === "dnes" && <Today supabase={supabase} />}
       {tab === "trenirovki" && <Sessions supabase={supabase} />}
       {tab === "minali" && <Sessions supabase={supabase} past />}
       {tab === "klientki" && <Clients supabase={supabase} />}
@@ -72,6 +78,94 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
 }
 
 type Db = Awaited<ReturnType<typeof requireAdmin>>["supabase"];
+
+/**
+ * „Днес“: the trainings of today (or of the next training day), each with who booked, a big
+ * „Дошла“ toggle per client, the cash to collect and „+ На вратата“.
+ */
+async function Today({ supabase }: { supabase: Db }) {
+  await ensureStudioSessions(createAdminSupabaseClient());
+  const today = utcToZoned(new Date().toISOString()).date;
+  const date = await boardDate(supabase, today);
+  const board = await listDayBoard(supabase, date);
+  if (board.length === 0) {
+    return (
+      <p className="text-ink-soft">
+        Няма тренировки за следващия месец. Добави ги в{" "}
+        <Link href="/admin/zala?tab=grafik" className="underline">
+          График
+        </Link>
+        .
+      </p>
+    );
+  }
+  return (
+    <div className="space-y-6">
+      <h2 className="text-lg font-bold">
+        {date === today ? `Днес · ${dayLabel(date)}` : `Следваща тренировка · ${dayLabel(date)}`}
+      </h2>
+      {board.map(({ session, entries }) => {
+        const cash = cashLine(entries);
+        return (
+          <section
+            key={session.id}
+            className="space-y-4 rounded-2xl bg-white p-4 ring-1 ring-line sm:p-5"
+          >
+            <header className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-lg font-bold">
+                {utcToZoned(session.startsAt).time} · {session.title}
+              </h3>
+              {session.cancelled ? (
+                <Chip>Отменена</Chip>
+              ) : (
+                <span className="font-semibold">{attendanceLine(entries)}</span>
+              )}
+            </header>
+            {entries.length === 0 ? (
+              <p className="text-ink-soft">Още няма записани.</p>
+            ) : (
+              <ul className="divide-y divide-line">
+                {entries.map((e) => (
+                  <li key={e.bookingId} className="flex items-center justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-base font-semibold">{e.name || "Без име"}</p>
+                      {e.phone && (
+                        <a href={telHref(e.phone)} className="text-sm text-ink-soft underline">
+                          {e.phone}
+                        </a>
+                      )}
+                      <p className="mt-1">
+                        <span
+                          className={cn(
+                            "rounded-full px-2 py-0.5 text-xs font-bold",
+                            e.card ? "bg-sand text-ink" : "bg-powder-light text-rose-deep",
+                          )}
+                        >
+                          {rosterLabel(e)}
+                        </span>
+                      </p>
+                    </div>
+                    {!session.cancelled && (
+                      <AttendanceToggle bookingId={e.bookingId} attended={e.attended} />
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {cash && !session.cancelled && (
+              <p className="rounded-xl bg-powder-light p-3 text-sm font-semibold text-rose-deep">
+                {cash}
+              </p>
+            )}
+            {!session.cancelled && (
+              <DoorAdd sessionId={session.id} hereIds={entries.map((e) => e.userId)} />
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
 
 /** Coming trainings from the start of today (a started one stays reachable for walk-ins), or the last 14 days. */
 async function Sessions({ supabase, past = false }: { supabase: Db; past?: boolean }) {

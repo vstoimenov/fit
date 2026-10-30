@@ -18,6 +18,7 @@ import {
 } from "@/server/studio/admin";
 import { adjustStudioCard, grantStudioCard, voidStudioCard } from "@/server/studio/cards";
 import { createStudioInvite } from "@/server/studio/invite";
+import { addAtDoor, searchClients, setAttended, type ClientHit } from "@/server/studio/today";
 import { createWalkIn } from "@/server/studio/walkin";
 
 const BASE = "/admin/zala";
@@ -204,6 +205,69 @@ export async function saveStudioAddressAction(
     await saveSetting(supabase, "studio_address", formString(form, "address"));
     refresh();
     return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „Дошла ✓“ on the day board (no page reload: the toggle updates itself). */
+export async function setAttendedAction(
+  bookingId: string,
+  attended: boolean,
+): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireAdmin();
+    const res = await setAttended(supabase, uuid(bookingId), Boolean(attended));
+    if (!res.ok) fail(res.message);
+    revalidatePath(BASE, "layout");
+    return actionOk(null);
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+export async function searchClientsAction(query: string): Promise<ActionResult<ClientHit[]>> {
+  try {
+    const { supabase } = await requireAdmin();
+    return actionOk(await searchClients(supabase, String(query).slice(0, 60)));
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „+ На вратата“ for someone already in the system: booked and ticked. */
+export async function doorAddAction(
+  sessionId: string,
+  userId: string,
+): Promise<ActionResult<{ message: string }>> {
+  try {
+    const { supabase } = await requireAdmin();
+    const res = await addAtDoor(supabase, uuid(sessionId), uuid(userId));
+    if (!res.ok) return fail(res.message);
+    refresh();
+    return actionOk({ message: res.overLimit ? "Добавена ✓ (над лимита)" : "Добавена ✓" });
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „Нова клиентка“ at the door: created with name and phone, booked and ticked. */
+export async function doorWalkInAction(
+  sessionId: string,
+  _prev: unknown,
+  form: FormData,
+): Promise<ActionResult<{ message: string }>> {
+  try {
+    const { supabase } = await requireAdmin();
+    const created = await createWalkIn(createAdminSupabaseClient(), {
+      name: formString(form, "name"),
+      phone: formString(form, "phone"),
+    });
+    if (!created.ok) return fail(created.message);
+    const res = await addAtDoor(supabase, uuid(sessionId), created.userId);
+    if (!res.ok) return fail(res.message);
+    refresh();
+    return actionOk({ message: "Добавена и отметната ✓" });
   } catch (error) {
     return actionFail(error);
   }
