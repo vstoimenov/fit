@@ -9,10 +9,13 @@ import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 /** The short sign-up for the gym: no questions, no app install. `onJoined` books what she picked. */
 export function JoinForm({
   title,
+  existingAccount = false,
   join,
   onJoined,
 }: {
   title: string;
+  /** Already signed in (e.g. with Google) but without a phone: ask only for name and phone. */
+  existingAccount?: boolean;
   join: (input: {
     name: string;
     phone: string;
@@ -21,7 +24,7 @@ export function JoinForm({
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [created, setCreated] = useState(false);
+  const [created, setCreated] = useState(existingAccount);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,30 +114,34 @@ export function JoinForm({
       <Button type="submit" disabled={busy} className="w-full">
         {busy ? "Момент…" : "Запиши ме"}
       </Button>
-      <p className="text-center text-xs leading-relaxed text-ink-soft">
-        Със създаването на профил приемаш{" "}
-        <a
-          href="/terms"
-          target="_blank"
-          className="font-semibold text-ink underline underline-offset-2"
-        >
-          Общите условия
-        </a>{" "}
-        и{" "}
-        <a
-          href="/privacy"
-          target="_blank"
-          className="font-semibold text-ink underline underline-offset-2"
-        >
-          Политиката за поверителност
-        </a>
-        .
-      </p>
-      <div className="flex justify-center">
-        <Link href="/login?next=/zala" className={buttonClass("link")}>
-          Имам профил
-        </Link>
-      </div>
+      {!existingAccount && (
+        <>
+          <p className="text-center text-xs leading-relaxed text-ink-soft">
+            Със създаването на профил приемаш{" "}
+            <a
+              href="/terms"
+              target="_blank"
+              className="font-semibold text-ink underline underline-offset-2"
+            >
+              Общите условия
+            </a>{" "}
+            и{" "}
+            <a
+              href="/privacy"
+              target="_blank"
+              className="font-semibold text-ink underline underline-offset-2"
+            >
+              Политиката за поверителност
+            </a>
+            .
+          </p>
+          <div className="flex justify-center">
+            <Link href="/login?next=/zala" className={buttonClass("link")}>
+              Имам профил
+            </Link>
+          </div>
+        </>
+      )}
     </form>
   );
 }

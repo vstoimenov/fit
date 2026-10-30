@@ -5,6 +5,7 @@ import { ActionForm } from "@/components/admin/action-form";
 import { SlotFields } from "@/components/admin/studio/slot-fields";
 import { WalkInFields } from "@/components/admin/studio/walkin-fields";
 import { Chip } from "@/components/ui/chip";
+import { Field, inputClass } from "@/components/ui/field";
 import { cn } from "@/lib/cn";
 import { utcToZoned, zonedToUtc } from "@/lib/admin/time";
 import { nextDates } from "@/lib/studio/calendar";
@@ -12,10 +13,11 @@ import { dayLabel } from "@/lib/studio/format";
 import { cardLine, dayMonth } from "@/lib/studio/rules";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { createAdminSupabaseClient } from "@/server/db/admin";
+import { getStudioAddress } from "@/server/studio/address";
 import { listStudioSlots } from "@/server/studio/admin";
 import { listStudioClients } from "@/server/studio/cards";
 import { ensureStudioSessions, listStudioSchedule } from "@/server/studio/schedule";
-import { addWalkInAction, saveSlotAction } from "./actions";
+import { addWalkInAction, saveSlotAction, saveStudioAddressAction } from "./actions";
 
 export const metadata = { title: "На място" };
 
@@ -47,7 +49,7 @@ async function StudioAdmin({ searchParams }: { searchParams: Promise<{ tab?: str
   return (
     <div className="space-y-6">
       <h1 className="font-display text-2xl font-extrabold">Тренировки на място</h1>
-      <nav className="flex gap-2">
+      <nav className="flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link
             key={t.key}
@@ -171,10 +173,27 @@ async function Clients({ supabase }: { supabase: Db }) {
 const WEEKDAY = ["", "Понеделник", "Вторник", "Сряда", "Четвъртък", "Петък", "Събота", "Неделя"];
 
 async function Slots({ supabase }: { supabase: Db }) {
-  const slots = await listStudioSlots(supabase);
+  const [slots, address] = await Promise.all([
+    listStudioSlots(supabase),
+    getStudioAddress(supabase),
+  ]);
   const today = utcToZoned(new Date().toISOString()).date;
   return (
     <div className="space-y-6">
+      <section className="rounded-xl bg-white p-5 ring-1 ring-line">
+        <h2 className="mb-4 font-semibold">Адрес на залата</h2>
+        <ActionForm action={saveStudioAddressAction} submitLabel="Запази">
+          <Field label="Адрес" hint="Показва се с карта най-долу на /zala. Празно = без карта.">
+            <input
+              name="address"
+              maxLength={200}
+              defaultValue={address}
+              placeholder="гр. Плевен, ул. …, зала …"
+              className={inputClass}
+            />
+          </Field>
+        </ActionForm>
+      </section>
       <p className="text-sm text-ink-soft">
         Седмичният график се повтаря. Промяна важи за бъдещите тренировки без записани; тези със
         записани остават както са.

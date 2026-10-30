@@ -7,7 +7,7 @@ import { Suspense, useState } from "react";
 import { AuthCard } from "@/components/ui/auth-card";
 import { Button, buttonClass } from "@/components/ui/button";
 import { Field, inputClass } from "@/components/ui/field";
-import { safeNext } from "@/lib/auth-redirect";
+import { safeNext, signupHref } from "@/lib/auth-redirect";
 import { createBrowserSupabaseClient } from "@/lib/supabase/browser";
 
 function signInErrorMessage(error: { status?: number; code?: string }): string {
@@ -77,7 +77,7 @@ function LoginForm() {
         <Link href="/forgot-password" className={buttonClass("link")}>
           Забравена парола
         </Link>
-        <Link href="/start" className={buttonClass("link")}>
+        <Link href={signupHref(next)} className={buttonClass("link")}>
           Нямам профил
         </Link>
       </div>

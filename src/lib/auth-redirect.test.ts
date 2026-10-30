@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideAuthRedirect, emailLinkType, safeNext } from "./auth-redirect";
+import { decideAuthRedirect, emailLinkType, safeNext, signupHref } from "./auth-redirect";
 
 describe("decideAuthRedirect", () => {
   it("sends signed-out visitors of /app and /admin to login with a return path", () => {
@@ -78,5 +78,14 @@ describe("emailLinkType", () => {
     for (const t of [null, "", "signup", "sms", "phone_change", "MAGICLINK", "magiclink "]) {
       expect(emailLinkType(t)).toBeNull();
     }
+  });
+});
+
+describe("signupHref", () => {
+  it("sends a gym client back to the gym sign-up, everyone else to the online questions", () => {
+    expect(signupHref("/zala")).toBe("/zala");
+    expect(signupHref("/zala/pokana/abc")).toBe("/zala");
+    expect(signupHref("/app")).toBe("/start");
+    expect(signupHref("/zalazzz")).toBe("/start");
   });
 });

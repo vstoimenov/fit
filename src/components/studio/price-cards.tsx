@@ -62,6 +62,7 @@ export function PriceCards() {
               type="button"
               role="radio"
               aria-checked={active}
+              aria-label={`${o.title}, ${eur(o.price)}`}
               onClick={() => setPicked(o.key)}
               className={cn(
                 "relative flex flex-col gap-1.5 rounded-2xl p-3 text-left sm:gap-3 sm:rounded-3xl sm:p-5 transition-[transform,box-shadow,background-color] duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink motion-reduce:transition-none",

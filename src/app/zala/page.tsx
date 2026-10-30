@@ -2,9 +2,10 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { SiteFooter } from "@/components/site/site-footer";
-import { SiteHeader } from "@/components/site/site-header";
 import { DISPLAY, EYEBROW, WRAP } from "@/components/site/styles";
 import { MyCard } from "@/components/studio/my-card";
+import { StudioHeader } from "@/components/studio/studio-header";
+import { StudioMap } from "@/components/studio/studio-map";
 import { PriceCards } from "@/components/studio/price-cards";
 import { StudioClient } from "@/components/studio/studio-client";
 import { buttonClass } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { cancelNotice, dayLabel } from "@/lib/studio/format";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { createServerSupabaseClient } from "@/server/db/server";
 import { getSiteFlags, getSiteLinks } from "@/server/site/content";
+import { getStudioAddress } from "@/server/studio/address";
 import { loadMyStudio } from "@/server/studio/booking";
 import { ensureStudioSessions, listStudioSchedule } from "@/server/studio/schedule";
 
@@ -26,7 +28,9 @@ export default async function StudioPage() {
   const [links, flags] = await Promise.all([getSiteLinks(), getSiteFlags()]);
   return (
     <>
-      <SiteHeader showFounders={flags.showFounders} />
+      <Suspense fallback={<StudioHeader signedIn={false} />}>
+        <Header />
+      </Suspense>
       <main className={`${WRAP} max-w-3xl py-12 lg:py-16`}>
         <p className={`${EYEBROW} text-rose-deep`}>Тренировки на място</p>
         <h1 className={`${DISPLAY} mt-3 text-[40px] sm:text-6xl`}>Тренирай с Аксения в залата.</h1>
@@ -42,24 +46,42 @@ export default async function StudioPage() {
           </Suspense>
         </div>
       </main>
-      <SiteFooter instagramUrl={links.instagramUrl} year={flags.year} />
+      <SiteFooter
+        instagramUrl={links.instagramUrl}
+        year={flags.year}
+        loginHref="/login?next=/zala"
+      />
     </>
   );
+}
+
+async function Header() {
+  await connection();
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return <StudioHeader signedIn={Boolean(user)} />;
 }
 
 async function Studio() {
   await connection();
   // The weekly slots become dated trainings lazily: whoever opens the page first creates them.
-  await ensureStudioSessions(createAdminSupabaseClient());
+  const service = createAdminSupabaseClient();
+  await ensureStudioSessions(service);
   const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   const now = new Date();
-  const [sessions, my] = await Promise.all([
+  const [sessions, my, address, contact] = await Promise.all([
     listStudioSchedule(supabase, now),
     user ? loadMyStudio(supabase, user.id, now) : null,
+    getStudioAddress(service),
+    user ? supabase.from("profiles").select("phone").eq("id", user.id).maybeSingle() : null,
   ]);
+  // Signed in with Google or through the online club without a phone: Аксения needs one.
+  const needsContact = Boolean(user) && !contact?.data?.phone;
   const today = utcToZoned(now.toISOString()).date;
   return (
     <div className="space-y-10">
@@ -90,6 +112,8 @@ async function Studio() {
         sessions={sessions}
         upcoming={my?.upcoming ?? []}
         today={today}
+        needsContact={needsContact}
+        card={my?.current && !my.current.voided ? my.current : null}
       />
       {my && my.past.length > 0 && (
         <section>
@@ -106,6 +130,7 @@ async function Studio() {
           </ul>
         </section>
       )}
+      {address && <StudioMap address={address} />}
     </div>
   );
 }

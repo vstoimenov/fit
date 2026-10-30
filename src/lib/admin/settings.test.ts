@@ -38,3 +38,13 @@ describe("settings", () => {
     );
   });
 });
+
+describe("studio_address", () => {
+  it("keeps a trimmed address and defaults to empty", () => {
+    expect(parseSetting("studio_address", "  гр. Плевен, ул. Дойран 12 ")).toBe(
+      "гр. Плевен, ул. Дойран 12",
+    );
+    expect(parseSetting("studio_address", undefined)).toBe("");
+    expect(SETTINGS.studio_address.safeParse("x".repeat(201)).success).toBe(false);
+  });
+});

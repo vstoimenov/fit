@@ -70,3 +70,9 @@ describe("in-person trainings", () => {
     expect(text({ ...PRIVACY, sections: [section!] })).toContain("Тренировки на място");
   });
 });
+
+describe("gym map", () => {
+  it("PRIVACY says the Google map loads only on request", () => {
+    expect(text(PRIVACY)).toContain("Покажи картата");
+  });
+});

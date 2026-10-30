@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { utcToZoned } from "@/lib/admin/time";
 import { dayLabel } from "@/lib/studio/format";
-import { canCancel, DROP_IN_PRICE_EUR } from "@/lib/studio/rules";
+import { bookingSummary } from "@/lib/studio/confirm";
+import { DROP_IN_PRICE_EUR, type CardKind } from "@/lib/studio/rules";
 import type { MyBooking } from "@/server/studio/booking";
 import type { StudioSession } from "@/server/studio/schedule";
 import { bookAction, cancelAction, joinAction } from "@/app/zala/actions";
@@ -17,17 +18,20 @@ const when = (iso: string) => {
   return `${dayLabel(date)}, ${time}`;
 };
 
-const LATE_WARNING =
-  "Внимание: до началото остават по-малко от 6 часа и няма да можеш да откажеш. Да те запиша ли?";
-
 /** Booking, cancelling and the sign-up that appears when a signed-out visitor picks a training. */
 export function StudioClient({
   signedIn,
   sessions,
   upcoming,
   today,
+  needsContact = false,
+  card = null,
 }: {
+  /** The card a booking would use (for the confirm step's „взема се 1 посещение“). */
+  card?: { kind: CardKind; startsOn: string; endsOn: string; remaining: number } | null;
   signedIn: boolean;
+  /** Signed in without a phone (e.g. via Google): ask for name and phone before the first booking. */
+  needsContact?: boolean;
   sessions: StudioSession[];
   upcoming: MyBooking[];
   today: string;
@@ -36,6 +40,11 @@ export function StudioClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState<{ tone: "ok" | "error"; text: string } | null>(null);
   const [picked, setPicked] = useState<StudioSession | null>(null);
+  // Derived on every render, not frozen in state: after she signs in on another page the same
+  // component instance stays mounted, and an initial-state value would keep asking her to sign up.
+  const [contactSaved, setContactSaved] = useState(false);
+  const askContact = (!signedIn || needsContact) && !contactSaved;
+  const [confirming, setConfirming] = useState<StudioSession | null>(null);
   const joinRef = useRef<HTMLDivElement>(null);
 
   async function book(session: StudioSession) {
@@ -57,13 +66,13 @@ export function StudioClient({
   }
 
   function onBook(session: StudioSession) {
-    if (!signedIn) {
+    if (askContact) {
       setPicked(session);
       requestAnimationFrame(() => joinRef.current?.scrollIntoView({ behavior: "smooth" }));
       return;
     }
-    if (!canCancel(session.startsAt, new Date()) && !window.confirm(LATE_WARNING)) return;
-    void book(session);
+    // One tap must not spend a visit by accident: say what happens and let her confirm.
+    setConfirming(session);
   }
 
   async function cancel(booking: MyBooking) {
@@ -139,18 +148,76 @@ export function StudioClient({
         />
       </section>
 
-      {!signedIn && picked && (
+      {askContact && picked && (
         <div ref={joinRef}>
           <JoinForm
             title={`Запиши се за ${when(picked.startsAt)}`}
+            existingAccount={signedIn}
             join={joinAction}
             onJoined={async () => {
+              setContactSaved(true);
               await book(picked);
               setPicked(null);
             }}
           />
         </div>
       )}
+      {confirming && (
+        <ConfirmSheet
+          summary={bookingSummary(confirming, card, new Date())}
+          busy={busyId !== null}
+          onCancel={() => setConfirming(null)}
+          onConfirm={async () => {
+            await book(confirming);
+            setConfirming(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** Bottom sheet: the training, what it costs, and the 6-hour warning, before anything is booked. */
+function ConfirmSheet({
+  summary,
+  busy,
+  onCancel,
+  onConfirm,
+}: {
+  summary: { when: string; payment: string; late: boolean };
+  busy: boolean;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 sm:items-center">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-title"
+        className="w-full max-w-md space-y-4 rounded-t-3xl bg-white p-6 pb-safe sm:rounded-3xl"
+      >
+        <h2 id="confirm-title" className="text-lg font-bold">
+          Потвърди записването
+        </h2>
+        <p className="font-semibold">{summary.when}</p>
+        <p>{summary.payment}</p>
+        {summary.late ? (
+          <p className="rounded-2xl bg-brick/10 p-3 text-sm font-semibold text-brick">
+            До началото остават по-малко от 6 часа: след записване няма да можеш да откажеш.
+          </p>
+        ) : (
+          <p className="text-sm text-ink-soft">Можеш да откажеш до 6 часа преди началото.</p>
+        )}
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onCancel} disabled={busy}>
+            Назад
+          </Button>
+          <Button className="flex-1" onClick={() => void onConfirm()} disabled={busy}>
+            {busy ? "Записвам…" : "Потвърди"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { actionFail, actionOk, type ActionResult } from "@/lib/action-result";
 import { AppError } from "@/lib/app-error";
 import { formBool, formInt, formString } from "@/lib/form-data";
 import { requireAdmin } from "@/server/admin/require-admin";
+import { saveSetting } from "@/server/admin/settings";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { webPushTransport } from "@/server/push/send";
 import {
@@ -188,6 +189,21 @@ export async function inviteAction(userId: string): Promise<ActionResult<{ messa
     const token = await createStudioInvite(createAdminSupabaseClient(), uuid(userId), user.id);
     const base = serverEnv.APP_URL.replace(/\/$/, "");
     return actionOk({ message: `${base}/zala/pokana/${token}` });
+  } catch (error) {
+    return actionFail(error);
+  }
+}
+
+/** „Адрес на залата“: shown with a map at the bottom of /zala (empty hides the map). */
+export async function saveStudioAddressAction(
+  _prev: unknown,
+  form: FormData,
+): Promise<ActionResult<null>> {
+  try {
+    const { supabase } = await requireAdmin();
+    await saveSetting(supabase, "studio_address", formString(form, "address"));
+    refresh();
+    return actionOk(null);
   } catch (error) {
     return actionFail(error);
   }

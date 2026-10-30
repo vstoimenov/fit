@@ -6,7 +6,16 @@ import { brand } from "@/lib/brand";
  * Public-site footer. `instagramUrl` comes from the admin settings (null hides the link); `year`
  * comes from `getSiteFlags()` because `new Date()` is not allowed while prerendering.
  */
-export function SiteFooter({ instagramUrl, year }: { instagramUrl: string | null; year: number }) {
+export function SiteFooter({
+  instagramUrl,
+  year,
+  loginHref = "/login",
+}: {
+  instagramUrl: string | null;
+  year: number;
+  /** Where „Вход“ leads, e.g. back to /zala for the gym page. */
+  loginHref?: string;
+}) {
   return (
     <footer id="site-footer" className="border-t border-line bg-white">
       <div className="mx-auto grid max-w-[1180px] gap-8 px-6 py-12 lg:grid-cols-12 lg:px-10">
@@ -40,7 +49,7 @@ export function SiteFooter({ instagramUrl, year }: { instagramUrl: string | null
           <Link href="/privacy" className="w-fit underline-offset-4 hover:underline">
             Поверителност
           </Link>
-          <Link href="/login" className="w-fit underline-offset-4 hover:underline">
+          <Link href={loginHref} className="w-fit underline-offset-4 hover:underline">
             Вход
           </Link>
         </nav>

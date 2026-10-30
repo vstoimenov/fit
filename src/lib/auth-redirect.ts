@@ -43,3 +43,10 @@ export function emailLinkType(type: string | null): EmailLinkType | null {
     ? (type as EmailLinkType)
     : null;
 }
+
+/** „Нямам профил“ on /login: a gym client signs up on /zala, not through the online questions. */
+export function signupHref(next: string): string {
+  return next === "/zala" || next.startsWith("/zala/") || next.startsWith("/zala?")
+    ? "/zala"
+    : "/start";
+}

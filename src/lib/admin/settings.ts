@@ -30,6 +30,8 @@ export const SETTINGS = {
   // Public site: the trainer's 60-second video and the Instagram profile (empty = hidden).
   trainer_video_url: httpsUrlOrEmpty(),
   instagram_url: httpsUrlOrEmpty(),
+  // Where Аксения's gym is: shown with a map at the bottom of /zala (empty = no map).
+  studio_address: z.string().trim().max(200, "До 200 знака"),
 } as const;
 
 function httpsUrlOrEmpty() {
@@ -62,6 +64,7 @@ export const SETTING_DEFAULTS: Settings = {
   community_url: "",
   trainer_video_url: "",
   instagram_url: "",
+  studio_address: "",
 };
 
 export function parseSetting<K extends SettingKey>(key: K, raw: unknown): SettingValue<K> {

@@ -124,3 +124,17 @@ describe("studio schedule", () => {
     expect(cards).toEqual([{ user_id: a.id, remaining: 8 }]);
   });
 });
+
+describe("studio address", () => {
+  it("reads the gym address from settings, empty when unset or invalid", async () => {
+    const { getStudioAddress } = await import("@/server/studio/address");
+    const admin = adminClient();
+    await admin.from("settings").delete().eq("key", "studio_address");
+    expect(await getStudioAddress(admin)).toBe("");
+    await admin
+      .from("settings")
+      .upsert({ key: "studio_address", value: "гр. Плевен, ул. Дойран 12" });
+    expect(await getStudioAddress(admin)).toBe("гр. Плевен, ул. Дойран 12");
+    await admin.from("settings").delete().eq("key", "studio_address");
+  });
+});
