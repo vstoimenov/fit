@@ -7,8 +7,9 @@ import { WalkInFields } from "@/components/admin/studio/walkin-fields";
 import { Chip } from "@/components/ui/chip";
 import { cn } from "@/lib/cn";
 import { utcToZoned, zonedToUtc } from "@/lib/admin/time";
+import { nextDates } from "@/lib/studio/calendar";
 import { dayLabel } from "@/lib/studio/format";
-import { cardLine } from "@/lib/studio/rules";
+import { cardLine, dayMonth } from "@/lib/studio/rules";
 import { requireAdmin } from "@/server/admin/require-admin";
 import { createAdminSupabaseClient } from "@/server/db/admin";
 import { listStudioSlots } from "@/server/studio/admin";
@@ -171,6 +172,7 @@ const WEEKDAY = ["", "Понеделник", "Вторник", "Сряда", "Ч
 
 async function Slots({ supabase }: { supabase: Db }) {
   const slots = await listStudioSlots(supabase);
+  const today = utcToZoned(new Date().toISOString()).date;
   return (
     <div className="space-y-6">
       <p className="text-sm text-ink-soft">
@@ -182,6 +184,11 @@ async function Slots({ supabase }: { supabase: Db }) {
           <h2 className="mb-4 font-semibold">
             {WEEKDAY[s.weekday]}, {s.startTime} · {s.title} {!s.active && <Chip>Спряна</Chip>}
           </h2>
+          {s.active && (
+            <p className="-mt-2 mb-4 text-sm text-ink-soft">
+              Следващи дати: {nextDates(s.weekday, today, 4).map(dayMonth).join(", ")}
+            </p>
+          )}
           <ActionForm action={saveSlotAction.bind(null, s.id)} submitLabel="Запази">
             <SlotFields slot={s} />
           </ActionForm>

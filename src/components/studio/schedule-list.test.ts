@@ -49,3 +49,13 @@ describe("ScheduleList", () => {
     expect(html).not.toContain("Запиши се");
   });
 });
+
+describe("ScheduleList dates", () => {
+  it("puts a date tile on every training", () => {
+    const html = render([session("a")]);
+    expect(html).toContain(">3<");
+    expect(html).toContain(">ное<");
+    expect(html).toContain(">вт<");
+    expect(html).toContain('aria-label="Вторник, 3.11, 18:00 · Кръгова тренировка"');
+  });
+});

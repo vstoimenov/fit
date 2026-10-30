@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayCellLabel, dayState, rollingGrid } from "./calendar";
+import { dateTile, dayCellLabel, dayState, nextDates, rollingGrid } from "./calendar";
 
 describe("rollingGrid", () => {
   it("shows whole Monday-first weeks from this week until the booking window ends", () => {
@@ -47,5 +47,20 @@ describe("dayState", () => {
   });
   it("is cancelled when every training is off", () => {
     expect(dayState([s({ cancelled: true })], [])).toBe("cancelled");
+  });
+});
+
+describe("nextDates", () => {
+  it("lists the coming dates of a weekly slot, today included", () => {
+    // 2026-10-30 is a Friday (ISO 5).
+    expect(nextDates(5, "2026-10-30", 3)).toEqual(["2026-10-30", "2026-11-06", "2026-11-13"]);
+    expect(nextDates(6, "2026-10-30", 2)).toEqual(["2026-10-31", "2026-11-07"]);
+    expect(nextDates(1, "2026-10-30", 1)).toEqual(["2026-11-02"]);
+  });
+});
+
+describe("weekday and month shorts", () => {
+  it("names a date tile", () => {
+    expect(dateTile("2026-11-03")).toEqual({ day: "3", month: "ное", weekday: "вт" });
   });
 });

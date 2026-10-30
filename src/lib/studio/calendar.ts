@@ -51,3 +51,20 @@ export function dayState(
   if (live.length === 0) return "cancelled";
   return live.some((s) => s.spotsLeft > 0) ? "open" : "full";
 }
+
+/** The next `n` dates of a weekly slot (ISO weekday, 1 = Monday), today included. */
+export function nextDates(weekday: number, today: string, n: number): string[] {
+  const first = addDays(today, (weekday - 1 - weekdayOf(today) + 7) % 7);
+  return Array.from({ length: n }, (_, i) => addDays(first, i * 7));
+}
+
+const WEEKDAYS_SHORT = ["пн", "вт", "ср", "чт", "пт", "сб", "нд"];
+
+/** The little calendar leaf next to a training: "3" / "ное" / "вт". */
+export function dateTile(date: string): { day: string; month: string; weekday: string } {
+  return {
+    day: String(Number(date.slice(8, 10))),
+    month: MONTHS_SHORT[Number(date.slice(5, 7)) - 1]!,
+    weekday: WEEKDAYS_SHORT[weekdayOf(date)]!,
+  };
+}
