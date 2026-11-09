@@ -9,7 +9,7 @@ import type { VideoRef } from "@/lib/video/parse-video-url";
 import { CTA, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
 import { VideoFacade } from "./video-facade";
 
-/** Аксения: photo, three short paragraphs in the first person, an optional 60-second video. */
+/** Аксения: photo, her own introduction in the first person, an optional 60-second video. */
 export function Trainer({ video }: { video: VideoRef | null }) {
   const dialog = useRef<HTMLDialogElement>(null);
   // The facade is mounted only while the dialog is open, so closing it also stops the video.
@@ -32,21 +32,32 @@ export function Trainer({ video }: { video: VideoRef | null }) {
           />
         </div>
         <div className="lg:col-span-6 lg:col-start-7">
-          <p className={cn(EYEBROW, "text-white/70")}>Треньорката</p>
+          <p className={cn(EYEBROW, "text-white/70")}>Запознай се с мен!</p>
           <h2 className={`${DISPLAY} mt-3 text-4xl sm:text-[56px]`}>Аксения Михайлова</h2>
-          {/* TODO owner copy: the three paragraphs below are working text in Аксения's voice. */}
           <div className="mt-6 flex flex-col gap-4 text-lg leading-relaxed text-white/85">
             <p>
-              Тренирам жени от години и знам кога се отказват: не когато е трудно, а когато няма
-              време. Затова всичко тук е 20 минути.
+              Тренирам повече от 15 години. През това време преминах през различни спортове и
+              тренировъчни методи – лека атлетика, фитнес, йога, HIIT и Tabata, както и още много
+              други физически активности.
             </p>
             <p>
-              Няма да ти обещавам тяло като от реклама. Обещавам ти, че след две седмици ще се
-              качваш по стълбите по-леко и ще спиш по-добре.
+              Натрупаният опит и знания ми помогнаха да изградя собствена методика на трениране и да
+              открия формулата, която съчетава динамика, разнообразие и ефективност и води до реални
+              резултати.
             </p>
             <p>
-              Клубът е за теб, ако искаш да започнеш и да не спираш. Не е за теб, ако търсиш бързо
-              отслабване за две седмици.
+              Днес споделям опита си с други жени. Моята мисия е да ги вдъхновявам да направят
+              първата крачка към по-добрата версия на себе си, да открият силата на движението, да
+              изградят увереност и да се научат да вярват и обичат себе си.
+            </p>
+            <p>
+              Вярвам, че всичко започва с една малка стъпка, а постоянството е това, което ни
+              отвежда до желаните резултати – и до мечтаното тяло, и до удовлетворението от самите
+              нас.
+            </p>
+            <p className="font-bold text-white">
+              Не е нужно да си силна, за да започнеш. Нужно е да започнеш, за да откриеш колко силна
+              можеш да бъдеш!
             </p>
           </div>
           {video && (
