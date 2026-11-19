@@ -4,5 +4,5 @@
 
 insert into public.plans (name, interval, price_cents, sort)
 select v.name, v.interval::public.plan_interval, v.price_cents, v.sort
-from (values ('Месечен', 'month', 2900, 1), ('Годишен', 'year', 25700, 2)) as v(name, interval, price_cents, sort)
+from (values ('Месечен', 'month', 3900, 1), ('Годишен', 'year', 28080, 2)) as v(name, interval, price_cents, sort)
 where not exists (select 1 from public.plans p where p.name = v.name and p.interval = v.interval::public.plan_interval);

@@ -6,14 +6,14 @@ const month = {
   id: "m",
   name: "Месечен",
   interval: "month" as const,
-  price_cents: 2900,
+  price_cents: 3900,
   currency: "EUR",
 };
 const year = {
   id: "y",
   name: "Годишен",
   interval: "year" as const,
-  price_cents: 25700,
+  price_cents: 28080,
   currency: "EUR",
 };
 
@@ -29,7 +29,12 @@ describe("pickPlan", () => {
 
 describe("yearlySavings", () => {
   it("shows the per-month price and the saving when the year is cheaper", () => {
-    expect(yearlySavings(2900, 25700)).toEqual({ perMonthCents: 2142, savesCents: 9100 });
+    // €39 × 12 = €468; the year is €280.80 (40% off): €23.40 a month, €187.20 saved.
+    expect(yearlySavings(3900, 28080)).toEqual({
+      perMonthCents: 2340,
+      savesCents: 18720,
+      percent: 40,
+    });
   });
 
   it("is null when a plan is missing or the year does not save anything", () => {
@@ -40,13 +45,13 @@ describe("yearlySavings", () => {
 });
 
 describe("GIFT_OPTIONS", () => {
-  it("offers 1, 3 and 12 months at the spec prices", () => {
+  it("offers 1, 3 and 12 months at the base prices", () => {
     expect(GIFT_OPTIONS.map((o) => [o.months, o.priceCents])).toEqual([
-      [1, 2900],
-      [3, 7900],
-      [12, 25700],
+      [1, 3900],
+      [3, 11700],
+      [12, 28080],
     ]);
-    expect(GIFT_OPTIONS[1].regularCents).toBe(8700);
+    expect(GIFT_OPTIONS[2].regularCents).toBe(46800);
   });
 });
 

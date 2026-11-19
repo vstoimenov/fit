@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useId, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import { formatPrice } from "@/lib/format";
+import { GIFT_OPTIONS } from "@/lib/site/gift";
 import { nextPeriod, pickPlan, yearlySavings, type PricingPeriod } from "@/lib/site/pricing";
 import type { PublicPlan } from "@/server/content/public-plans";
 import { CTA, CTA_SECONDARY, DISPLAY, EYEBROW, WRAP } from "./styles";
@@ -81,7 +82,7 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
                 <p className="mt-3 text-lg">
                   ≈ {formatPrice(savings.perMonthCents, currency)} на месец ·{" "}
                   <span className="rounded-lg bg-powder px-2 py-0.5 font-bold text-ink">
-                    спестяваш {formatPrice(savings.savesCents, currency)}
+                    −{savings.percent}% · спестяваш {formatPrice(savings.savesCents, currency)}
                   </span>
                 </p>
               ) : (
@@ -99,7 +100,9 @@ export function Pricing({ plans }: { plans: PublicPlan[] }) {
             <p className={cn(EYEBROW, "flex items-center gap-2 text-rose-deep")}>
               <Gift size={16} aria-hidden="true" /> Подари
             </p>
-            <p className="mt-3 text-3xl font-extrabold tracking-[-0.02em]">от €29</p>
+            <p className="mt-3 text-3xl font-extrabold tracking-[-0.02em]">
+              от {formatPrice(GIFT_OPTIONS[0].priceCents, "EUR")}
+            </p>
             <p className="mt-3 text-[15px] leading-relaxed text-rose-deep">
               Ваучер за 1, 3 или 12 месеца. Получаваш картичка за печат и код, който тя активира,
               когато е готова.
