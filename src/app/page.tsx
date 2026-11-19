@@ -1,3 +1,4 @@
+import { AboutClub } from "@/components/site/about-club";
 import { FactsStrip } from "@/components/site/facts-strip";
 import { FinalCta } from "@/components/site/final-cta";
 import { First14 } from "@/components/site/first-14";
@@ -15,23 +16,32 @@ import { Faq } from "@/components/site/faq";
 import { JsonLd } from "@/components/site/json-ld";
 import { Pricing } from "@/components/site/pricing";
 import { ScrollReveal } from "@/components/site/scroll-reveal";
+import type { Metadata } from "next";
 import { serverEnv } from "@/env";
 import { brand } from "@/lib/brand";
 import { faqJsonLd } from "@/lib/site/faq";
+import { clubJsonLd, homeDescription, homeFaq, priceText } from "@/lib/site/seo";
 import { getSiteFlags, getFreeWorkout, getPublicPlans, getSiteLinks } from "@/server/site/content";
 
-export const metadata = {
-  title: { absolute: "I AM STRONG — тренировки у дома за 20 минути на ден" },
-  description: brand.description,
-  alternates: { canonical: "/" },
-  openGraph: {
-    title: "I AM STRONG — тренировки у дома за 20 минути на ден",
-    description: brand.description,
-    type: "website",
-    locale: "bg_BG",
-    siteName: brand.name,
-  },
-};
+const TITLE = "I AM STRONG — онлайн тренировки у дома за жени, 20 минути на ден";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const description = homeDescription(await getPublicPlans());
+  return {
+    title: { absolute: TITLE },
+    description,
+    metadataBase: new URL(serverEnv.APP_URL),
+    alternates: { canonical: "/" },
+    openGraph: {
+      title: TITLE,
+      description,
+      url: "/",
+      type: "website",
+      locale: "bg_BG",
+      siteName: brand.name,
+    },
+  };
+}
 
 /** The public home page. Signed-in members never reach it: the proxy sends them to /app. */
 export default async function HomePage() {
@@ -41,19 +51,15 @@ export default async function HomePage() {
     getSiteFlags(),
     getPublicPlans(),
   ]);
+  const faq = homeFaq(plans);
   return (
     <>
       <JsonLd
-        data={{
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          name: brand.name,
-          url: serverEnv.APP_URL,
-          logo: `${serverEnv.APP_URL}/pwa-icon/512`,
-        }}
+        data={clubJsonLd({ baseUrl: serverEnv.APP_URL, plans, instagramUrl: links.instagramUrl })}
       />
-      <JsonLd data={faqJsonLd()} />
-      <SiteHeader showFounders={flags.showFounders} />
+      <JsonLd data={faqJsonLd(faq)} />
+      {/* The founders offer is not promoted on the home page; /landing stays reachable directly. */}
+      <SiteHeader showFounders={false} />
       <main>
         <Hero hasFreeWorkout={freeWorkout !== null} />
         <FactsStrip />
@@ -84,8 +90,9 @@ export default async function HomePage() {
           <Pricing plans={plans} />
         </ScrollReveal>
         <ScrollReveal>
-          <Faq />
+          <Faq items={faq} />
         </ScrollReveal>
+        <AboutClub price={priceText(plans)} />
         <ScrollReveal>
           <FinalCta />
         </ScrollReveal>

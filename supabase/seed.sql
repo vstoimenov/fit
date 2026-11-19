@@ -1,7 +1,7 @@
 -- Demo content for local work. Video links are placeholders the admin replaces.
 insert into public.plans (name, interval, price_cents, sort) values
-  ('Месечен', 'month', 2900, 1),
-  ('Годишен', 'year', 25700, 2);
+  ('Месечен', 'month', 3900, 1),
+  ('Годишен', 'year', 28080, 2);
 
 with w as (
   insert into public.workouts (title, description, kind, level, duration_min, focus, starter_order, publish_at)

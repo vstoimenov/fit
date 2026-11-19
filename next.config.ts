@@ -8,8 +8,18 @@ const nextConfig: NextConfig = {
   // The client router keeps a visited app page for 30 s, so switching tabs back and forth is
   // instant instead of a server render each time; server actions still revalidate on write.
   experimental: { staleTimes: { dynamic: 30 } },
-  // The founders landing lived at /osnovatelki before it became /landing.
-  redirects: async () => [{ source: "/osnovatelki", destination: "/landing", permanent: true }],
+  redirects: async () => [
+    // One address for search engines and AI assistants: www.iamstrong.bg → iamstrong.bg.
+    // Works once www.iamstrong.bg is attached to this Vercel project (DNS: CNAME to Vercel).
+    {
+      source: "/:path*",
+      has: [{ type: "host", value: "www.iamstrong.bg" }],
+      destination: "https://iamstrong.bg/:path*",
+      permanent: true,
+    },
+    // The founders landing lived at /osnovatelki before it became /landing.
+    { source: "/osnovatelki", destination: "/landing", permanent: true },
+  ],
   headers: async () => [{ source: "/:path*", headers: securityHeaders }],
   turbopack: {
     rules: {

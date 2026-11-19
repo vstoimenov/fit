@@ -35,11 +35,11 @@ export const FAQ: readonly { q: string; a: string }[] = [
 ];
 
 /** schema.org FAQPage for the home page's JSON-LD. */
-export function faqJsonLd(): object {
+export function faqJsonLd(items: readonly { q: string; a: string }[] = FAQ): object {
   return {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    mainEntity: FAQ.map(({ q, a }) => ({
+    mainEntity: items.map(({ q, a }) => ({
       "@type": "Question",
       name: q,
       acceptedAnswer: { "@type": "Answer", text: a },
